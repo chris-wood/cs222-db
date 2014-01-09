@@ -11,3 +11,8 @@
 *.lai
 *.la
 *.a
+
+# Ignore QTCreator build files
+*.pro.user
+qt-project/build-debug/*
+qt-project/build-release/*
