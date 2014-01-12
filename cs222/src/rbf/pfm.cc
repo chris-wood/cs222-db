@@ -72,17 +72,28 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
         return rc::FILE_COULD_NOT_OPEN;
     }
 
-    // TODO: Check fileHandle hasn't alreaedy been initialized
-    // TODO: Initialize fileHandle with file
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    if (fileHandle.HasFile())
+    {
+        return rc::FILE_HANDLE_ALREADY_INITIALIZED;
+    }
+
+    fileHandle.SetFile(file);
+    return rc::OK;
 }
 
 
 RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 {
-    // TODO: Check fileHandle is properly initialized
+    if (!fileHandle.HasFile())
+    {
+        return rc::FILE_HANDLE_NOT_INITIALIZED;
+    }
+
     // TODO: Write out data
-    // TODO: Uninitialize fileHandle
+
+    fclose(fileHandle.GetFile());
+    fileHandle.SetFile(NULL);
+
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
