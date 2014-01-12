@@ -41,8 +41,12 @@ public:
     RC AppendPage(const void *data);                                    // Append a specific page
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
-private:
+    void SetFile(FILE* file) { _file = file; }
+    FILE* GetFile() { return _file; }
+    bool HasFile() const { return _file != NULL; }
 
- };
+private:
+    FILE* _file;
+};
 
 #endif // _pfm_h_

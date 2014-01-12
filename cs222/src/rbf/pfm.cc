@@ -88,6 +88,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
 
 FileHandle::FileHandle()
+    : _file(NULL)
 {
 }
 
