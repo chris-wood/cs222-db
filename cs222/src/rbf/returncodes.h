@@ -23,7 +23,7 @@ namespace rc
         RECORD_DOES_NOT_EXIST,
         RECORD_CORRUPT
     };
-
+/*
     const char* toString(ReturnCode rc)
     {
         switch(rc)
@@ -44,6 +44,7 @@ namespace rc
 
         return "UNKNOWN_ERROR_CODE";
     }
+*/
 }
 
 #endif // _returncodes_h_
