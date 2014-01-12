@@ -1,6 +1,8 @@
 #ifndef _pfm_h_
 #define _pfm_h_
 
+#include <cstdio>
+
 typedef int RC;
 typedef unsigned PageNum;
 
@@ -38,6 +40,9 @@ public:
     RC WritePage(PageNum pageNum, const void *data);                    // Write a specific page
     RC AppendPage(const void *data);                                    // Append a specific page
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
+
+private:
+
  };
 
 #endif // _pfm_h_

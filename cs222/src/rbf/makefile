@@ -8,8 +8,8 @@ librbf.a: librbf.a(pfm.o)  # and possibly other .o files
 librbf.a: librbf.a(rbfm.o)
 
 # c file dependencies
-pfm.o: pfm.h
-rbfm.o: rbfm.h
+pfm.o: pfm.h returncodes.h
+rbfm.o: rbfm.h returncodes.h
 
 rbftest.o: pfm.h rbfm.h
 

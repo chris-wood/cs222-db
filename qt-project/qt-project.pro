@@ -10,5 +10,6 @@ SOURCES += \
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \
-    ../cs222/src/rbf/pfm.h
+    ../cs222/src/rbf/pfm.h \
+    ../cs222/src/rbf/returncodes.h
 

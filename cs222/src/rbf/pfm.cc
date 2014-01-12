@@ -1,4 +1,6 @@
 #include "pfm.h"
+#include "returncodes.h"
+
 
 PagedFileManager* PagedFileManager::_pf_manager = 0;
 
@@ -24,25 +26,25 @@ PagedFileManager::~PagedFileManager()
 
 RC PagedFileManager::CreateFile(const char *fileName)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 RC PagedFileManager::DestroyFile(const char *fileName)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
@@ -58,25 +60,25 @@ FileHandle::~FileHandle()
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 RC FileHandle::WritePage(PageNum pageNum, const void *data)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 RC FileHandle::AppendPage(const void *data)
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
 unsigned FileHandle::GetNumberOfPages()
 {
-    return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 
