@@ -59,12 +59,12 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {};
-  ~RBFM_ScanIterator() {};
+  RBFM_ScanIterator() {}
+  ~RBFM_ScanIterator() {}
 
   // "data" follows the same format as RecordBasedFileManager::insertTuple()
-  RC getNextTuple(RID &rid, void *data) { return RBFM_EOF; };
-  RC close() { return -1; };
+  RC getNextTuple(RID & /*rid*/, void * /*data*/) { return RBFM_EOF; }
+  RC close() { return -1; }
 };
 
 
@@ -125,4 +125,4 @@ private:
   static RecordBasedFileManager *_rbf_manager;
 };
 
-#endif
+#endif // _rbfm_h_

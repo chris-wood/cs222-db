@@ -40,4 +40,4 @@ public:
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
  };
 
- #endif
+#endif // _pfm_h_
