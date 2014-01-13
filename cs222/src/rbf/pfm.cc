@@ -35,10 +35,21 @@ RC PagedFileManager::CreateFile(const char *fileName)
 
     file = fopen(fileName, "w");
 
-    // TODO: Write any header data for the file
-    // TODO: Keep track that we have created this file
+    PFHeader header;
+    header.headerSize = sizeof(header);
+    header.version = CURRENT_PF_VERSION;
+    header.numPages = 0;
 
+    // Write out header to file
+    size_t written = fwrite(&header, header.headerSize, 1, file);
     fclose(file);
+
+    if (written != 1)
+    {
+        return rc::UNKNOWN_FAILURE;
+    }
+
+    // TODO: Keep track that we have created this file
 
     return rc::OK;
 }
@@ -76,7 +87,23 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
         return rc::FILE_COULD_NOT_OPEN;
     }
 
+    // Read in header data
+    PFHeader header;
+    size_t read = fread(&header, sizeof(header), 1, file);
+    if (read != 1 || header.headerSize != sizeof(header))
+    {
+        return rc::FILE_CORRUPT;
+    }
+
+    if (header.version != CURRENT_PF_VERSION)
+    {
+        return rc::FILE_OUT_OF_DATE;
+    }
+
+    // Initialize the FileHandle
     fileHandle.SetFile(file);
+    fileHandle.SetNumberOfPages(header.numPages);
+
     return rc::OK;
 }
 
@@ -88,6 +115,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
+    // TODO: Write out any changes to the header
     // TODO: Write out data
 
     fclose(fileHandle.GetFile());
@@ -98,7 +126,8 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
 
 FileHandle::FileHandle()
-    : _file(NULL)
+    : _file(NULL),
+      _numPages(0)
 {
 }
 
@@ -128,7 +157,7 @@ RC FileHandle::AppendPage(const void *data)
 
 unsigned FileHandle::GetNumberOfPages()
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _numPages;
 }
 
 

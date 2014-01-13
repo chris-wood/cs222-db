@@ -16,6 +16,7 @@ namespace rc
             case FILE_CORRUPT:                       return "FILE_CORRUPT";
             case FILE_COULD_NOT_OPEN:                return "FILE_COULD_NOT_APPEND";
             case FILE_COULD_NOT_DELETE:              return "FILE_COULD_NOT_DELETE";
+            case FILE_OUT_OF_DATE:                      return "FILE_OUT_OF_DATE";
 
             case FILE_HANDLE_ALREADY_INITIALIZED:    return "FILE_HANDLE_ALREADY_INITIALIZED";
             case FILE_HANDLE_NOT_INITIALIZED:        return "FILE_HANDLE_NOT_INITIALIZED";

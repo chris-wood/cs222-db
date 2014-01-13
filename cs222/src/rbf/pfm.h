@@ -7,9 +7,17 @@ typedef int RC;
 typedef unsigned PageNum;
 
 #define PAGE_SIZE 4096
+#define CURRENT_PF_VERSION 1
 
 class FileHandle;
 
+// PageFile Header
+typedef struct
+{
+  unsigned headerSize;
+  unsigned version;
+  unsigned numPages;
+} PFHeader;
 
 class PagedFileManager
 {
@@ -41,12 +49,14 @@ public:
     RC AppendPage(const void *data);                                    // Append a specific page
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
+    void SetNumberOfPages(unsigned pages) { _numPages = pages; }
     void SetFile(FILE* file) { _file = file; }
     FILE* GetFile() { return _file; }
     bool HasFile() const { return _file != NULL; }
 
 private:
     FILE* _file;
+    unsigned _numPages;
 };
 
 #endif // _pfm_h_
