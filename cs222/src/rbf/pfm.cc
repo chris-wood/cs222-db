@@ -1,7 +1,6 @@
 #include "pfm.h"
 #include "returncodes.h"
 
-
 PagedFileManager* PagedFileManager::_pf_manager = 0;
 
 
@@ -30,16 +29,17 @@ RC PagedFileManager::CreateFile(const char *fileName)
     FILE* file = fopen(fileName, "r");
     if (file)
     {
+        fclose(file);
         return rc::FILE_ALREADY_EXISTS;
     }
 
-    fclose(file);
     file = fopen(fileName, "w");
 
     // TODO: Write any header data for the file
     // TODO: Keep track that we have created this file
 
     fclose(file);
+
     return rc::OK;
 }
 
