@@ -2,6 +2,7 @@
 #define _pfm_h_
 
 #include <cstdio>
+#include <vector>
 
 typedef int RC;
 typedef unsigned PageNum;
@@ -29,6 +30,15 @@ private:
     static PagedFileManager *_pf_manager;
 };
 
+typedef struct 
+{
+    PageNum pageNum;
+    unsigned int free;
+    bool loaded;
+    void* data;
+    int offset;
+    int nextEntryAbsoluteOffset; // -1 if end of directory entry list, a real file offset otherwise
+} PageEntry;
 
 class FileHandle
 {
@@ -41,12 +51,14 @@ public:
     RC AppendPage(const void *data);                                    // Append a specific page
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
-    void SetFile(FILE* file) { _file = file; }
+    RC SetFile(FILE* file); 
     FILE* GetFile() { return _file; }
     bool HasFile() const { return _file != NULL; }
 
 private:
     FILE* _file;
+    vector<PageEntry*> _directory; // always non-empty list, initialized when openfile is called
+
 };
 
 #endif // _pfm_h_

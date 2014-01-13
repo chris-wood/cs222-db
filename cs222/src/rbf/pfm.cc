@@ -100,7 +100,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
 FileHandle::FileHandle()
     : _file(NULL)
-{
+{   
 }
 
 
@@ -108,28 +108,127 @@ FileHandle::~FileHandle()
 {
 }
 
+RC FileHandle::SetFile(FILE* file)
+{
+    int bytesRead;
+    int result;
+    _file = file;
+
+    // Read in the first directory entry
+    PageEntry* entry = (PageEntry*)malloc(sizeof(PageEntry));
+    bytesRead = fread((void*)entry, sizeof(PageEntry), 1, _file);
+    _directory.push_back(entry);
+
+    // Continue reading more entries, if indicated to do so by the directory entry
+    while (entry->nextEntryAbsoluteOffset != -1)
+    {
+        result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
+        if (result != 0)
+        {
+            return rc::FILE_SEEK_FAILED;
+        }
+        entry = (PageEntry*)malloc(sizeof(PageEntry));
+        bytesRead = fread((void*)entry, sizeof(PageEntry), 1, _file);
+        _directory.push_back(entry);
+    }
+}
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    int result = 0;
+    int bytesRead = 0;
+
+    for (vector<PageEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
+    {
+        if ((*itr)->pageNum == pageNum)
+        {
+            PageEntry* entry = *itr;
+
+            // If not in memory, seek to the offset for this page and load it into memory
+            if (entry->loaded == false)
+            {
+                result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
+                if (result != 0)
+                {
+                    return rc::FILE_SEEK_FAILED;
+                }
+                bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
+                entry->loaded = true;
+            }
+
+            // Copy over the data and return OK
+            memcpy(data, entry->data, PAGE_SIZE);
+            return rc::OK;
+        }
+    }
+
+    return rc::FILE_PAGE_NOT_FOUND;
 }
 
 
 RC FileHandle::WritePage(PageNum pageNum, const void *data)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    int result = 0;
+    int bytesRead = 0;
+
+    for (vector<PageEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
+    {
+        if ((*itr)->pageNum == pageNum)
+        {
+            PageEntry* entry = *itr;
+
+            // If not in memory, seek to the offset for this page and load it into memory
+            if (entry->loaded == false)
+            {
+                result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
+                if (result != 0)
+                {
+                    return rc::FILE_SEEK_FAILED;
+                }
+                bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
+                entry->loaded = true;
+            }
+
+            // Re-allocate some space and then copy over the data and return OK
+            // caw: need to check that this was actually malloc'd to begin with
+            free(entry->data);
+            entry->data = (void*)malloc(PAGE_SIZE);
+
+
+            memcpy(entry->data, data, PAGE_SIZE);
+            return rc::OK;
+        }
+    }
+
+    return rc::FILE_PAGE_NOT_FOUND;
 }
 
-
+// file stream format: entry header, data, entry header, data, entry header, data, ...
 RC FileHandle::AppendPage(const void *data)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    int result = 0;
+    int bytesRead = 0;
+
+    // Add a new page to the directory
+    int offset = _directory.size() * (sizeof(PageEntry) + PAGE_SIZE);
+    _directory.at(_directory.size() - 1)->nextEntryAbsoluteOffset = offset;
+
+    // Create the new page entry, copy over the data, and add it to the directory
+    PageEntry* entry = (PageEntry*)malloc(sizeof(PageEntry));
+    entry->data = (void*)malloc(PAGE_SIZE);
+    memcpy(entry->data, data, PAGE_SIZE);
+    entry->pageNum = _directory.size() + 1;
+    // free?
+    entry->loaded = true;
+    entry->nextEntryAbsoluteOffset = -1;
+    entry->offset = offset + sizeof(PageEntry);
+    _directory.push_back(entry);
 }
 
 
 unsigned FileHandle::GetNumberOfPages()
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _directory.size();
 }
 
 
