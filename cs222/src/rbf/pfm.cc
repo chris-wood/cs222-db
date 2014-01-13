@@ -1,6 +1,9 @@
 #include "pfm.h"
 #include "returncodes.h"
 
+#include <cstring>
+#include <cstdlib>
+
 PagedFileManager* PagedFileManager::_pf_manager = 0;
 
 
