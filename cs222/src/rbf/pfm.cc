@@ -126,14 +126,8 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
 
 FileHandle::FileHandle()
-<<<<<<< HEAD
-    : _file(NULL)
-{   
-=======
-    : _file(NULL),
-      _numPages(0)
+    : _file(NULL), _numPages(0)
 {
->>>>>>> 5ced45340d72508c7bd8709cc690699f88a91164
 }
 
 
@@ -261,11 +255,7 @@ RC FileHandle::AppendPage(const void *data)
 
 unsigned FileHandle::GetNumberOfPages()
 {
-<<<<<<< HEAD
     return _directory.size();
-=======
-    return _numPages;
->>>>>>> 5ced45340d72508c7bd8709cc690699f88a91164
 }
 
 
