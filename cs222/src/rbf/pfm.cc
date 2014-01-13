@@ -155,6 +155,12 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
     _header = header;
     if (_header->numPages > 0)
     {
+        int result = fseek(_file, sizeof(PFHeader), 0);
+        if (result != 0)
+        {
+            return rc::FILE_SEEK_FAILED;
+        }
+
         // Read in the first directory entry
         PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
         bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
@@ -198,13 +204,15 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
             PFEntry* entry = *itr;
 
             // Read the data from disk into the user buffer
-            result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
+            result = fseek(_file, entry->offset, 0);
             if (result != 0)
             {
+                printf("wut?\n");
                 return rc::FILE_SEEK_FAILED;
             }
             bytesRead = fread(data, PAGE_SIZE, 1, _file);
 
+            // OK
             return rc::OK;
         }
     }
@@ -216,7 +224,6 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
 RC FileHandle::WritePage(PageNum pageNum, const void *data)
 {
     int result = 0;
-    int bytesRead = 0;
 
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
@@ -224,26 +231,16 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
         {
             PFEntry* entry = *itr;
 
-            // If not in memory, seek to the offset for this page and load it into memory
-            if (entry->loaded == false)
+            // Flush the content in the user buffer to disk and update the page entry
+            result = fseek(_file, entry->offset - sizeof(PFEntry), 0);
+            if (result != 0)
             {
-                result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
-                if (result != 0)
-                {
-                    return rc::FILE_SEEK_FAILED;
-                }
-                // entry->data = (void*)malloc(PAGE_SIZE);
-                bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
-                entry->loaded = true;
+                return rc::FILE_SEEK_FAILED;
             }
-
-            // TODO
-            // memcpy(entry->data, data, PAGE_SIZE);
-            fseek(_file, entry->nextEntryAbsoluteOffset + sizeof(PFEntry), 0);
+            fwrite((void*)entry, sizeof(PFEntry), 1, _file);
             fwrite(data, PAGE_SIZE, 1, _file);
-            // TODO: write to the file here
 
-            // free(entry->data);
+            // OK
             return rc::OK;
         }
     }
@@ -255,11 +252,11 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 RC FileHandle::AppendPage(const void *data)
 {
     // Determine the offset for this directory entry
-    int offset = _directory.size() * (sizeof(PFEntry) + PAGE_SIZE);
+    int offset = _directory.size() * (sizeof(PFEntry) + PAGE_SIZE) + sizeof(PFHeader);
 
     // Create the new page entry, copy over the data, and add it to the directory
     PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
-    entry->pageNum = _directory.size() + 1;
+    entry->pageNum = _directory.size();
     entry->loaded = false;
     entry->nextEntryAbsoluteOffset = -1;
     entry->offset = offset + sizeof(PFEntry);
@@ -267,12 +264,14 @@ RC FileHandle::AppendPage(const void *data)
     // Update the number of pages
     _header->numPages++;
 
-    // TODO: write to the file here
-    // entry->data = (void*)malloc(PAGE_SIZE);
-    fseek(_file, offset + sizeof(PFEntry), 0);
-    fwrite(data, PAGE_SIZE, 1, _file);
-    // memcpy(entry->data, data, PAGE_SIZE);
-    // size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
+    // Push the contents to disk
+    int result = fseek(_file, offset, 0);
+    if (result != 0)
+    {
+        return rc::FILE_SEEK_FAILED;
+    }
+    fwrite((void*)entry, sizeof(PFEntry), 1, _file); // write the header
+    fwrite(data, PAGE_SIZE, 1, _file);               // write the data
 
     // Update the existing directory collection if necessary
     if (_directory.size() > 0)
