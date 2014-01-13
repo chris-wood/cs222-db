@@ -47,7 +47,6 @@ typedef struct
     PageNum pageNum;
     unsigned int free;
     bool loaded;
-    bool dirty;
     void* data;
     int offset;
     int nextEntryAbsoluteOffset; // -1 if end of directory entry list, a real file offset otherwise
@@ -67,6 +66,7 @@ public:
     RC LoadFile(FILE* file, PFHeader* header); 
     void SetFile(FILE* file) { _file = file; };
     FILE* GetFile() { return _file; }
+    PFHeader* GetHeader() { return _header; };
     bool HasFile() const { return _file != NULL; }
 
 private:
@@ -74,11 +74,8 @@ private:
     FILE* _file;
 
     // Collection of page headers - bookkepping
-    vector<PFEntry*> _directory; // always non-empty list, initialized when openfile is called
-    unsigned _numPages;
-    unsigned _numLoadedPages;
-
-    void FlushPages();
+    vector<PFEntry*> _directory; 
+    PFHeader* _header;
 };
 
 #endif // _pfm_h_

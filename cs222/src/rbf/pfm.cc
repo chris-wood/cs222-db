@@ -91,20 +91,20 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Read in header data
-    PFHeader header;
-    size_t read = fread(&header, sizeof(header), 1, file);
-    if (read != 1 || header.headerSize != sizeof(header))
+    PFHeader* header = (PFHeader*)malloc(sizeof(PFHeader));
+    size_t read = fread(header, sizeof(PFHeader), 1, file);
+    if (read != 1 || header->headerSize != sizeof(PFHeader))
     {
         return rc::FILE_CORRUPT;
     }
 
-    if (header.version != CURRENT_PF_VERSION)
+    if (header->version != CURRENT_PF_VERSION)
     {
         return rc::FILE_OUT_OF_DATE;
     }
 
     // Initialize the FileHandle
-    fileHandle.LoadFile(file, &header);
+    fileHandle.LoadFile(file, header);
 
     return rc::OK;
 }
@@ -119,6 +119,14 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
     // TODO: Write out any changes to the header
     // TODO: Write out data
+    int result = fseek(fileHandle.GetFile(), 0, 0);
+    if (result != 0)
+    {
+        return rc::FILE_SEEK_FAILED;
+    }
+    fwrite(fileHandle.GetHeader(), sizeof(PFHeader), 1, fileHandle.GetFile());
+
+    // TODO: destroy the file handle, and deallocate the header information and directory
 
     fclose(fileHandle.GetFile());
     fileHandle.SetFile(NULL);
@@ -128,7 +136,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
 
 FileHandle::FileHandle()
-    : _file(NULL), _numPages(0)
+    : _file(NULL), _header(NULL)
 {
 }
 
@@ -144,7 +152,8 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
     _file = file;
 
     // If there are pages in the file, read in the directory information
-    if (header->numPages > 0)
+    _header = header;
+    if (_header->numPages > 0)
     {
         // Read in the first directory entry
         PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
@@ -167,7 +176,7 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 
     // Integrity constraint - check to make sure that what's in the header
     // is what we pulled from disk
-    if (header->numPages != _directory.size()) 
+    if (_header->numPages != _directory.size()) 
     {
         return rc::FILE_HEADER_CORRUPT;
     }
@@ -196,12 +205,14 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
                 {
                     return rc::FILE_SEEK_FAILED;
                 }
+                entry->data = (void*)malloc(PAGE_SIZE);
                 bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
                 entry->loaded = true;
             }
 
             // Copy over the data and return OK
             memcpy(data, entry->data, PAGE_SIZE);
+            free(entry->data);
             return rc::OK;
         }
     }
@@ -229,17 +240,18 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
                 {
                     return rc::FILE_SEEK_FAILED;
                 }
+                // entry->data = (void*)malloc(PAGE_SIZE);
                 bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
                 entry->loaded = true;
             }
 
-            // Re-allocate some space and then copy over the data and return OK
-            // caw: need to check that this was actually malloc'd to begin with
-            free(entry->data);
-            entry->data = (void*)malloc(PAGE_SIZE);
-            entry->dirty = true;
+            // TODO
+            // memcpy(entry->data, data, PAGE_SIZE);
+            fseek(_file, entry->nextEntryAbsoluteOffset + sizeof(PFEntry), 0);
+            fwrite(data, PAGE_SIZE, 1, _file);
+            // TODO: write to the file here
 
-            memcpy(entry->data, data, PAGE_SIZE);
+            // free(entry->data);
             return rc::OK;
         }
     }
@@ -255,14 +267,20 @@ RC FileHandle::AppendPage(const void *data)
 
     // Create the new page entry, copy over the data, and add it to the directory
     PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
-    entry->data = (void*)malloc(PAGE_SIZE);
-    memcpy(entry->data, data, PAGE_SIZE);
     entry->pageNum = _directory.size() + 1;
-    // free?
-    entry->loaded = true;
+    entry->loaded = false;
     entry->nextEntryAbsoluteOffset = -1;
     entry->offset = offset + sizeof(PFEntry);
-    entry->dirty = true;
+
+    // Update the number of pages
+    _header->numPages++;
+
+    // TODO: write to the file here
+    // entry->data = (void*)malloc(PAGE_SIZE);
+    fseek(_file, offset + sizeof(PFEntry), 0);
+    fwrite(data, PAGE_SIZE, 1, _file);
+    // memcpy(entry->data, data, PAGE_SIZE);
+    // size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
 
     // Update the existing directory collection if necessary
     if (_directory.size() > 0)
