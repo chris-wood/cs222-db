@@ -17,8 +17,54 @@ void pfmTest()
     PagedFileManager *pfm = PagedFileManager::Instance();
 
     // Clean up old files
+    pfm->DestroyFile("testFile0.db");
     pfm->DestroyFile("testFile1.db");
     pfm->DestroyFile("testFile2.db");
+
+    ++numTests;
+    if ((rc = pfm->CreateFile("testFile0.db")) == 0)
+    {
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") CreateFile did not succesfully create a testFile0.db (" << rc << ")" << endl;
+    }
+
+    ++numTests;
+    FileHandle handle0;
+    if ((rc = pfm->OpenFile("testFile0.db", handle0)) == 0)
+    {
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") OpenFile did not succesfully open testFile0.db (" << rc << ")" << endl;
+    }
+
+    ++numTests;
+    if ((rc = pfm->CloseFile(handle0)) == 0)
+    {
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") CloseFile did not succesfully close handle0 (testFile0.db) (" << rc << ")" << endl;
+    }
+
+    ++numTests;
+    if ((rc = pfm->DestroyFile("testFile0.db")) == 0)
+    {
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") DestroyFile did not succesfully destroy testFile0.db (" << rc << ")" << endl;
+    }
 
     ++numTests;
     if ((rc = pfm->DestroyFile("testFile1.db")) == 0)
