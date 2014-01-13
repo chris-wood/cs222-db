@@ -1,8 +1,12 @@
 #ifndef _pfm_h_
 #define _pfm_h_
 
+#include <cstdlib>
 #include <cstdio>
 #include <vector>
+
+// For convenience
+using namespace std;
 
 typedef int RC;
 typedef unsigned PageNum;
