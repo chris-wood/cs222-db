@@ -34,7 +34,6 @@ RC PagedFileManager::CreateFile(const char *fileName)
     }
 
     fclose(file);
-    // NOTE: Possible concurrency issue, file may be created within this window
     file = fopen(fileName, "w");
 
     // TODO: Write any header data for the file
@@ -59,6 +58,11 @@ RC PagedFileManager::DestroyFile(const char *fileName)
 
 RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 {
+    if (fileHandle.HasFile())
+    {
+        return rc::FILE_HANDLE_ALREADY_INITIALIZED;
+    }
+
     FILE* file = fopen(fileName, "r");
     if (!file)
     {
@@ -70,11 +74,6 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
     if (!file)
     {
         return rc::FILE_COULD_NOT_OPEN;
-    }
-
-    if (fileHandle.HasFile())
-    {
-        return rc::FILE_HANDLE_ALREADY_INITIALIZED;
     }
 
     fileHandle.SetFile(file);
@@ -94,7 +93,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
     fclose(fileHandle.GetFile());
     fileHandle.SetFile(NULL);
 
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return rc::OK;
 }
 
 

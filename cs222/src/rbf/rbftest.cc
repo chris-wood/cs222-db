@@ -11,6 +11,7 @@ void pfmTest()
 {
     unsigned numTests = 0;
     unsigned numPassed = 0;
+    RC rc;
 
     cout << "PagedFileManager tests" << endl;
     PagedFileManager *pfm = PagedFileManager::Instance();
@@ -20,139 +21,176 @@ void pfmTest()
     pfm->DestroyFile("testFile2.db");
 
     ++numTests;
-    if (pfm->DestroyFile("testFile1.db") == 0)
+    if ((rc = pfm->DestroyFile("testFile1.db")) == 0)
     {
-        cout << "\nDestroyFile did not return an error when trying to destroy a non-existant file" << endl;
+        cout << numTests << ") DestroyFile did not return an error when trying to destroy a non-existant file" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
-    if (pfm->CreateFile("testFile1.db") == 0)
+    if ((rc = pfm->CreateFile("testFile1.db")) == 0)
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
     else
     {
-        cout << "\nCreateFile did not succesfully create a new file" << endl;
+        cout << numTests << ") CreateFile did not succesfully create a new file (" << rc << ")" << endl;
     }
 
     ++numTests;
-    if (pfm->CreateFile("testFile1.db") == 0)
+    if ((rc = pfm->CreateFile("testFile1.db")) == 0)
     {
-        cout << "\nCreateFile did not return an error when trying to create a file that already exists" << endl;
+        cout << numTests << ") CreateFile did not return an error when trying to create a file that already exists" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
     FileHandle handle1;
-    if (pfm->CloseFile(handle1) == 0)
+    if ((rc = pfm->CloseFile(handle1)) == 0)
     {
-        cout << "\nCloseFile did not return an error when trying to close a file that was never opened" << endl;
+        cout << numTests << ") CloseFile did not return an error when trying to close a file that was never opened" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
     FileHandle handle2;
-    if (pfm->OpenFile("testFile2.db", handle2) == 0)
+    if ((rc = pfm->OpenFile("testFile2.db", handle2)) == 0)
     {
-        cout << "\nOpenFile did not return an error when trying to open a file that does not exist" << endl;
+        cout << numTests << ") OpenFile did not return an error when trying to open a file that does not exist" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
-    if (pfm->OpenFile("testFile1.db", handle1) == 0)
+    if ((rc = pfm->CloseFile(handle2)) == 0)
     {
-        ++numPassed;
-        cout << ".";
+        cout << numTests << ") CloseFile did not return an error when trying to close a file that was never opened on a handle that had an illegal OpenFile called on it" << endl;
     }
     else
     {
-        cout << "\nOpenFile did not succesfully open a valid file" << endl;
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
-    if (pfm->OpenFile("testFile2.db", handle1) == 0)
+    if ((rc = pfm->OpenFile("testFile1.db", handle1)) == 0)
     {
-        cout << "\nOpenFile did not return an error when we tried to overwrite an existing file handle" << endl;
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") OpenFile did not succesfully open a valid file (" << rc << ")" << endl;
+    }
+
+    ++numTests;
+    if ((rc = pfm->OpenFile("testFile2.db", handle1)) == 0)
+    {
+        cout << numTests << ") OpenFile did not return an error when we tried to overwrite an existing file handle" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
     FileHandle handle1_copy;
-    if (pfm->OpenFile("testFile1.db", handle1_copy) == 0)
+    if ((rc = pfm->OpenFile("testFile1.db", handle1_copy)) == 0)
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
     else
     {
-        cout << "\nOpenFile did not succesfully open a file (which we already opened) on a different handle" << endl;
+        cout << numTests << ") OpenFile did not succesfully open a file (which we already opened) on a different handle (" << rc << ")" << endl;
     }
 
     ++numTests;
-    if (pfm->CloseFile(handle1_copy) == 0)
+    if ((rc = pfm->CloseFile(handle1_copy)) == 0)
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
     else
     {
-        cout << "\nCloseFile did not succesfully close a valid file" << endl;
+        cout << numTests << ") CloseFile did not succesfully close a valid file (" << rc << ")" << endl;
     }
 
     ++numTests;
-    if (pfm->CloseFile(handle1_copy) == 0)
+    if ((rc = pfm->CloseFile(handle1_copy)) == 0)
     {
-        cout << "\nCloseFile did not return an error when we tried to close a handle that was already closed" << endl;
+        cout << numTests << ") CloseFile did not return an error when we tried to close a handle that was already closed" << endl;
     }
     else
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
 
     ++numTests;
-    if (pfm->OpenFile("testFile1.db", handle1_copy) == 0)
+    if ((rc = pfm->OpenFile("testFile1.db", handle1_copy)) == 0)
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
     else
     {
-        cout << "\nOpenFile did not succesfully open a file (using a recycled handle)" << endl;
+        cout << numTests << ") OpenFile did not succesfully open a file using a recycled handle (" << rc << ")" << endl;
     }
 
     ++numTests;
-    if (pfm->DestroyFile("testFile1.db") == 0)
+    if ((rc = pfm->CloseFile(handle1)) == 0)
     {
         ++numPassed;
-        cout << ".";
+        cout << numTests << ") OK" << endl;
     }
     else
     {
-        cout << "\nDestroyFile did not succesfully destroy a file" << endl;
+        cout << numTests << ") CloseFile did not succesfully close a valid file (" << rc << ")" << endl;
     }
+
+    ++numTests;
+    if ((rc = pfm->CloseFile(handle1_copy)) == 0)
+    {
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") CloseFile did not succesfully close a valid file that was recycled (" << rc << ")" << endl;
+    }
+
+    ++numTests;
+    if ((rc = pfm->DestroyFile("testFile1.db")) == 0)
+    {
+        // TODO: Are we supposed to be able to destroy a file if there are open handles to it?
+        // Right now we will fail to delete a file if a handle is left open
+        ++numPassed;
+        cout << numTests << ") OK" << endl;
+    }
+    else
+    {
+        cout << numTests << ") DestroyFile did not succesfully destroy a file (" << rc << ")" << endl;
+    }
+
+    cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << endl;
 }
 
 void rbfTest()
