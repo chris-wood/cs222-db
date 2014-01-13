@@ -158,6 +158,8 @@ RC FileHandle::SetFile(FILE* file)
         bytesRead = fread((void*)entry, sizeof(PageEntry), 1, _file);
         _directory.push_back(entry);
     }
+
+    return rc::OK;
 }
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
@@ -233,9 +235,6 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 // file stream format: entry header, data, entry header, data, entry header, data, ...
 RC FileHandle::AppendPage(const void *data)
 {
-    int result = 0;
-    int bytesRead = 0;
-
     // Add a new page to the directory
     int offset = _directory.size() * (sizeof(PageEntry) + PAGE_SIZE);
     _directory.at(_directory.size() - 1)->nextEntryAbsoluteOffset = offset;
@@ -250,6 +249,9 @@ RC FileHandle::AppendPage(const void *data)
     entry->nextEntryAbsoluteOffset = -1;
     entry->offset = offset + sizeof(PageEntry);
     _directory.push_back(entry);
+
+    // OK
+    return rc::OK;
 }
 
 
