@@ -6,7 +6,8 @@ CONFIG -= qt
 SOURCES += \
     ../cs222/src/rbf/rbftest.cc \
     ../cs222/src/rbf/rbfm.cc \
-    ../cs222/src/rbf/pfm.cc
+    ../cs222/src/rbf/pfm.cc \
+    ../cs222/src/rbf/returncodes.cpp
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \
