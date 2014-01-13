@@ -197,22 +197,14 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
         {
             PFEntry* entry = *itr;
 
-            // If not in memory, seek to the offset for this page and load it into memory
-            if (entry->loaded == false)
+            // Read the data from disk into the user buffer
+            result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
+            if (result != 0)
             {
-                result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
-                if (result != 0)
-                {
-                    return rc::FILE_SEEK_FAILED;
-                }
-                entry->data = (void*)malloc(PAGE_SIZE);
-                bytesRead = fread(entry->data, PAGE_SIZE, 1, _file);
-                entry->loaded = true;
+                return rc::FILE_SEEK_FAILED;
             }
+            bytesRead = fread(data, PAGE_SIZE, 1, _file);
 
-            // Copy over the data and return OK
-            memcpy(data, entry->data, PAGE_SIZE);
-            free(entry->data);
             return rc::OK;
         }
     }
