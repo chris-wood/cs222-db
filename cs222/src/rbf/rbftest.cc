@@ -4,13 +4,14 @@
 
 #include "pfm.h"
 #include "rbfm.h"
+#include "returncodes.h"
 
 using namespace std;
 
 // TODO: Some actual testing framework
 #define TEST_FN_PREFIX ++numTests;
 #define TEST_FN_POSTFIX(msg) { ++numPassed; cout << ' ' << numTests << ") OK: " << msg << endl; } \
-                        else { cout << numTests << ") FAIL: " << msg << endl; }
+                        else { cout << ' ' << numTests << ") FAIL: " << msg << "<" << rc::rcToString(rc) << ">" << endl; }
 
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
@@ -43,7 +44,7 @@ void pfmTest()
     TEST_FN_NEQ(0, pfm->OpenFile("testFile2.db", handle2), "Open testFile2.db and store in handle2 (does not exist, should fail)");
     TEST_FN_NEQ(0, pfm->CloseFile(handle2), "Close handle2 (should never have been initialized, should fail)");
     TEST_FN_EQ( 0, pfm->OpenFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
-    TEST_FN_NEQ(0, pfm->OpenFile("testFile2.db", handle1), "Open testFile2.db and store in handle2 (already initialized, should fail)");
+    TEST_FN_NEQ(0, pfm->OpenFile("testFile2.db", handle1), "Open testFile2.db and store in handle2 (initialized, should fail)");
     TEST_FN_EQ( 0, pfm->OpenFile("testFile1.db", handle1_copy), "Open testFile1.db and store in handle1_copy");
     TEST_FN_EQ( 0, pfm->CloseFile(handle1_copy), "Close handle1_copy");
     TEST_FN_NEQ(0, pfm->CloseFile(handle1_copy), "Close handle1_copy (should fail, already closed)");
