@@ -11,9 +11,7 @@ namespace rc
         FEATURE_NOT_YET_IMPLEMENTED,
 
         FILE_PAGE_NOT_FOUND,
-
         FILE_SEEK_FAILED,
-
         FILE_NOT_FOUND,
         FILE_ALREADY_EXISTS,
         FILE_CORRUPT,
