@@ -16,6 +16,7 @@ namespace rc
 
         FILE_NOT_FOUND,
         FILE_ALREADY_EXISTS,
+        FILE_HEADER_CORRUPT,
         FILE_CORRUPT,
         FILE_COULD_NOT_OPEN,
         FILE_COULD_NOT_DELETE,

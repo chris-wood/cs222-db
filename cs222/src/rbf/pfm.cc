@@ -101,8 +101,7 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Initialize the FileHandle
-    fileHandle.SetFile(file);
-    fileHandle.SetNumberOfPages(header.numPages);
+    fileHandle.LoadFile(file, &header);
 
     return rc::OK;
 }
@@ -135,31 +134,44 @@ FileHandle::~FileHandle()
 {
 }
 
-RC FileHandle::SetFile(FILE* file)
+RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 {
     int bytesRead;
     int result;
     _file = file;
 
-    // Read in the first directory entry
-    PageEntry* entry = (PageEntry*)malloc(sizeof(PageEntry));
-    bytesRead = fread((void*)entry, sizeof(PageEntry), 1, _file);
-    _directory.push_back(entry);
-
-    // Continue reading more entries, if indicated to do so by the directory entry
-    while (entry->nextEntryAbsoluteOffset != -1)
+    // If there are pages in the file, read in the directory information
+    if (header->numPages > 0)
     {
-        result = fseek(_file, entry->nextEntryAbsoluteOffset, 0);
-        if (result != 0)
-        {
-            return rc::FILE_SEEK_FAILED;
-        }
-        entry = (PageEntry*)malloc(sizeof(PageEntry));
-        bytesRead = fread((void*)entry, sizeof(PageEntry), 1, _file);
+        // Read in the first directory entry
+        PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
+        bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
         _directory.push_back(entry);
+
+        // Continue reading more entries, if indicated to do so by the directory entry
+        while (entry->nextEntryAbsoluteOffset != -1)
+        {
+            result = fseek(_file, entry->nextEntryAbsoluteOffset, sizeof(PFHeader));
+            if (result != 0)
+            {
+                return rc::FILE_SEEK_FAILED;
+            }
+            entry = (PFEntry*)malloc(sizeof(PFEntry));
+            bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
+            _directory.push_back(entry);
+        }
     }
 
-    return rc::OK;
+    // Integrity constraint - check to make sure that what's in the header
+    // is what we pulled from disk
+    if (header->numPages != _directory.size()) 
+    {
+        return rc::FILE_HEADER_CORRUPT;
+    }
+    else
+    {
+        return rc::OK;
+    }
 }
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
@@ -167,11 +179,11 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
     int result = 0;
     int bytesRead = 0;
 
-    for (vector<PageEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
+    for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
         if ((*itr)->pageNum == pageNum)
         {
-            PageEntry* entry = *itr;
+            PFEntry* entry = *itr;
 
             // If not in memory, seek to the offset for this page and load it into memory
             if (entry->loaded == false)
@@ -200,11 +212,11 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
     int result = 0;
     int bytesRead = 0;
 
-    for (vector<PageEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
+    for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
         if ((*itr)->pageNum == pageNum)
         {
-            PageEntry* entry = *itr;
+            PFEntry* entry = *itr;
 
             // If not in memory, seek to the offset for this page and load it into memory
             if (entry->loaded == false)
@@ -222,7 +234,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
             // caw: need to check that this was actually malloc'd to begin with
             free(entry->data);
             entry->data = (void*)malloc(PAGE_SIZE);
-
+            entry->dirty = true;
 
             memcpy(entry->data, data, PAGE_SIZE);
             return rc::OK;
@@ -232,22 +244,28 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
     return rc::FILE_PAGE_NOT_FOUND;
 }
 
-// file stream format: entry header, data, entry header, data, entry header, data, ...
+
 RC FileHandle::AppendPage(const void *data)
 {
-    // Add a new page to the directory
-    int offset = _directory.size() * (sizeof(PageEntry) + PAGE_SIZE);
-    _directory.at(_directory.size() - 1)->nextEntryAbsoluteOffset = offset;
+    // Determine the offset for this directory entry
+    int offset = _directory.size() * (sizeof(PFEntry) + PAGE_SIZE);
 
     // Create the new page entry, copy over the data, and add it to the directory
-    PageEntry* entry = (PageEntry*)malloc(sizeof(PageEntry));
+    PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
     entry->data = (void*)malloc(PAGE_SIZE);
     memcpy(entry->data, data, PAGE_SIZE);
     entry->pageNum = _directory.size() + 1;
     // free?
     entry->loaded = true;
     entry->nextEntryAbsoluteOffset = -1;
-    entry->offset = offset + sizeof(PageEntry);
+    entry->offset = offset + sizeof(PFEntry);
+    entry->dirty = true;
+
+    // Update the existing directory collection if necessary
+    if (_directory.size() > 0)
+    {
+        _directory.at(_directory.size() - 1)->nextEntryAbsoluteOffset = offset;
+    }
     _directory.push_back(entry);
 
     // OK

@@ -358,6 +358,7 @@ int RBFTest_5(PagedFileManager *pfm)
     // Read the first page
     void *buffer = malloc(PAGE_SIZE);
     rc = fileHandle.ReadPage(0, buffer);
+    cout << rc::rcToString(rc) << endl;
     assert(rc == success);
 
     // Check the integrity of the page

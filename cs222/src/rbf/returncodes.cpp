@@ -11,12 +11,17 @@ namespace rc
 
             case FEATURE_NOT_YET_IMPLEMENTED:        return "FEATURE_NOT_YET_IMPLEMENTED";
 
+            case FILE_PAGE_NOT_FOUND:                return "FILE_PAGE_NOT_FOUND";
+
+            case FILE_SEEK_FAILED:                   return "FILE_SEEK_FAILED";
+
             case FILE_NOT_FOUND:                     return "FILE_NOT_FOUND";
             case FILE_ALREADY_EXISTS:                return "FILE_ALREADY_EXISTS";
             case FILE_CORRUPT:                       return "FILE_CORRUPT";
+            case FILE_HEADER_CORRUPT:                return "FILE_HEADER_CORRUPT";
             case FILE_COULD_NOT_OPEN:                return "FILE_COULD_NOT_APPEND";
             case FILE_COULD_NOT_DELETE:              return "FILE_COULD_NOT_DELETE";
-            case FILE_OUT_OF_DATE:                      return "FILE_OUT_OF_DATE";
+            case FILE_OUT_OF_DATE:                   return "FILE_OUT_OF_DATE";
 
             case FILE_HANDLE_ALREADY_INITIALIZED:    return "FILE_HANDLE_ALREADY_INITIALIZED";
             case FILE_HANDLE_NOT_INITIALIZED:        return "FILE_HANDLE_NOT_INITIALIZED";

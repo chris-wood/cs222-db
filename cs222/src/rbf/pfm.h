@@ -47,10 +47,11 @@ typedef struct
     PageNum pageNum;
     unsigned int free;
     bool loaded;
+    bool dirty;
     void* data;
     int offset;
     int nextEntryAbsoluteOffset; // -1 if end of directory entry list, a real file offset otherwise
-} PageEntry;
+} PFEntry;
 
 class FileHandle
 {
@@ -63,15 +64,21 @@ public:
     RC AppendPage(const void *data);                                    // Append a specific page
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
-    RC SetFile(FILE* file); 
-    void SetNumberOfPages(unsigned pages) { _numPages = pages; }
+    RC LoadFile(FILE* file, PFHeader* header); 
+    void SetFile(FILE* file) { _file = file; };
     FILE* GetFile() { return _file; }
     bool HasFile() const { return _file != NULL; }
 
 private:
+    // DB file pointer
     FILE* _file;
-    vector<PageEntry*> _directory; // always non-empty list, initialized when openfile is called
+
+    // Collection of page headers - bookkepping
+    vector<PFEntry*> _directory; // always non-empty list, initialized when openfile is called
     unsigned _numPages;
+    unsigned _numLoadedPages;
+
+    void FlushPages();
 };
 
 #endif // _pfm_h_
