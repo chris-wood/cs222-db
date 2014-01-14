@@ -1,9 +1,9 @@
-#include "rbfm.h"
 #include "returncodes.h"
+#include "rbfm.h"
 
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
-RecordBasedFileManager* RecordBasedFileManager::Instance()
+RecordBasedFileManager* RecordBasedFileManager::instance()
 {
     if(!_rbf_manager)
         _rbf_manager = new RecordBasedFileManager();
@@ -19,14 +19,31 @@ RecordBasedFileManager::~RecordBasedFileManager()
 {
 }
 
-RC RecordBasedFileManager::insertTuple(const string &/*fileName*/, const vector<Attribute> &/*recordDescriptor*/, const void */*data*/, RID &/*rid*/) {
+RC RecordBasedFileManager::createFile(const string &fileName) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC RecordBasedFileManager::readTuple(const string &/*fileName*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, void */*data*/) {
+RC RecordBasedFileManager::destroyFile(const string &fileName) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC RecordBasedFileManager::printTuple(const vector<Attribute> &/*recordDescriptor*/, const void */*data*/) {
+RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
+
+RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RecordBasedFileManager::insertRecord(const FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RecordBasedFileManager::readRecord(const FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) {
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) {
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+

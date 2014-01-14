@@ -596,17 +596,17 @@ int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
     // Insert a tuple into a file
     prepareTuple(6, "Peters", 24, 170.1, 5000, tuple, &tupleSize);
     cout << "Insert Data:" << endl;
-    rbfm->printTuple(recordDescriptor, tuple);
+    rbfm->printRecord(recordDescriptor, tuple);
 
-    rc = rbfm->insertTuple(fileName, recordDescriptor, tuple, rid);
+    rc = rbfm->insertRecord(fileName, recordDescriptor, tuple, rid);
     assert(rc == success);
 
     // Given the rid, read the tuple from file
-    rc = rbfm->readTuple(fileName, recordDescriptor, rid, returnedData);
+    rc = rbfm->readRecord(fileName, recordDescriptor, rid, returnedData);
     assert(rc == success);
 
     cout << "Returned Data:" << endl;
-    rbfm->printTuple(recordDescriptor, returnedData);
+    rbfm->printRecord(recordDescriptor, returnedData);
 
     // Compare whether the two memory blocks are the same
     if(memcmp(tuple, returnedData, tupleSize) != 0)
@@ -686,7 +686,7 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
         memset(tuple, 0, 1000);
         prepareLargeTuple(i, tuple, &size);
 
-        rc = rbfm->insertTuple(fileName, recordDescriptor, tuple, rid);
+        rc = rbfm->insertRecord(fileName, recordDescriptor, tuple, rid);
         assert(rc == success);
 
         rids.push_back(rid);
@@ -729,11 +729,11 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
     {
         memset(tuple, 0, 1000);
         memset(returnedData, 0, 1000);
-        rc = rbfm->readTuple(fileName, recordDescriptor, rids[i], returnedData);
+        rc = rbfm->readRecord(fileName, recordDescriptor, rids[i], returnedData);
         assert(rc == success);
 
         cout << "Returned Data:" << endl;
-        rbfm->printTuple(recordDescriptor, returnedData);
+        rbfm->printRecord(recordDescriptor, returnedData);
 
         int size = 0;
         prepareLargeTuple(i, tuple, &size);
@@ -772,7 +772,7 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
 int main()
 {
     PagedFileManager *pfm = PagedFileManager::instance();
-    RecordBasedFileManager *rbfm = RecordBasedFileManager::Instance();
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
     pfmTest();
 
