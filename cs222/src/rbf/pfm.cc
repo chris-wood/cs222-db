@@ -119,7 +119,7 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
     // TODO: Write out any changes to the header
     // TODO: Write out data
-    int result = fseek(fileHandle.GetFile(), 0, 0);
+    int result = fseek(fileHandle.GetFile(), 0, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
@@ -147,15 +147,13 @@ FileHandle::~FileHandle()
 
 RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 {
-    int bytesRead;
-    int result;
     _file = file;
 
     // If there are pages in the file, read in the directory information
     _header = header;
     if (_header->numPages > 0)
     {
-        int result = fseek(_file, sizeof(PFHeader), 0);
+        int result = fseek(_file, sizeof(PFHeader), SEEK_SET);
         if (result != 0)
         {
             return rc::FILE_SEEK_FAILED;
@@ -163,7 +161,12 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 
         // Read in the first directory entry
         PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
-        bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
+        size_t bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
+        if (bytesRead != sizeof(PFEntry))
+        {
+            return rc::FILE_CORRUPT;
+        }
+
         _directory.push_back(entry);
 
         // Continue reading more entries, if indicated to do so by the directory entry
@@ -176,6 +179,11 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
             }
             entry = (PFEntry*)malloc(sizeof(PFEntry));
             bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
+            if (bytesRead != sizeof(PFEntry))
+            {
+                return rc::FILE_CORRUPT;
+            }
+
             _directory.push_back(entry);
         }
     }
@@ -194,8 +202,8 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
-    int result = 0;
-    int bytesRead = 0;
+    int result;
+    size_t bytesRead;
 
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
@@ -204,13 +212,17 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
             PFEntry* entry = *itr;
 
             // Read the data from disk into the user buffer
-            result = fseek(_file, entry->offset, 0);
+            result = fseek(_file, entry->offset, SEEK_SET);
             if (result != 0)
             {
                 printf("wut?\n");
                 return rc::FILE_SEEK_FAILED;
             }
             bytesRead = fread(data, PAGE_SIZE, 1, _file);
+            if (bytesRead != PAGE_SIZE)
+            {
+                return rc::FILE_CORRUPT;
+            }
 
             // OK
             return rc::OK;
@@ -232,7 +244,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
             PFEntry* entry = *itr;
 
             // Flush the content in the user buffer to disk and update the page entry
-            result = fseek(_file, entry->offset - sizeof(PFEntry), 0);
+            result = fseek(_file, entry->offset - sizeof(PFEntry), SEEK_SET);
             if (result != 0)
             {
                 return rc::FILE_SEEK_FAILED;
@@ -265,7 +277,7 @@ RC FileHandle::AppendPage(const void *data)
     _header->numPages++;
 
     // Push the contents to disk
-    int result = fseek(_file, offset, 0);
+    int result = fseek(_file, offset, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
