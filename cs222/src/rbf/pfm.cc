@@ -7,10 +7,12 @@
 PagedFileManager* PagedFileManager::_pf_manager = 0;
 
 
-PagedFileManager* PagedFileManager::Instance()
+PagedFileManager* PagedFileManager::instance()
 {
     if(!_pf_manager)
+    {
         _pf_manager = new PagedFileManager();
+    }
 
     return _pf_manager;
 }
@@ -26,7 +28,7 @@ PagedFileManager::~PagedFileManager()
 }
 
 
-RC PagedFileManager::CreateFile(const char *fileName)
+RC PagedFileManager::createFile(const char *fileName)
 {
     // Check if the file exists
     FILE* file = fopen(fileName, "r");
@@ -58,7 +60,7 @@ RC PagedFileManager::CreateFile(const char *fileName)
 }
 
 
-RC PagedFileManager::DestroyFile(const char *fileName)
+RC PagedFileManager::destroyFile(const char *fileName)
 {
     if (remove(fileName) != 0)
     {
@@ -71,7 +73,7 @@ RC PagedFileManager::DestroyFile(const char *fileName)
 }
 
 
-RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
+RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 {
     if (fileHandle.HasFile())
     {
@@ -107,13 +109,13 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Initialize the FileHandle
-    fileHandle.LoadFile(file, header);
+    fileHandle.loadFile(file, header);
 
     return rc::OK;
 }
 
 
-RC PagedFileManager::CloseFile(FileHandle &fileHandle)
+RC PagedFileManager::closeFile(FileHandle &fileHandle)
 {
     if (!fileHandle.HasFile())
     {
@@ -135,8 +137,8 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 
     // Write out any pages that are dirty in memory
     // (currently should be a NOP since we already did this in WritePage)
-    fileHandle.FlushPages();
-    fileHandle.Unload();
+    fileHandle.flushPages();
+    fileHandle.unload();
 
     return rc::OK;
 }
@@ -150,16 +152,16 @@ FileHandle::FileHandle()
 
 FileHandle::~FileHandle()
 {
-    Unload();
+    unload();
 }
 
-RC FileHandle::FlushPages()
+RC FileHandle::flushPages()
 {
     // Nothing right now because all pages are written out immediately
     return rc::OK;
 }
 
-RC FileHandle::Unload()
+RC FileHandle::unload()
 {
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
@@ -184,7 +186,7 @@ RC FileHandle::Unload()
     return rc::OK;
 }
 
-RC FileHandle::LoadFile(FILE* file, PFHeader* header)
+RC FileHandle::loadFile(FILE* file, PFHeader* header)
 {
     _file = file;
 
@@ -240,7 +242,7 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
     }
 }
 
-RC FileHandle::ReadPage(PageNum pageNum, void *data)
+RC FileHandle::readPage(PageNum pageNum, void *data)
 {
     int result;
     size_t read;
@@ -275,7 +277,7 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
 }
 
 
-RC FileHandle::WritePage(PageNum pageNum, const void *data)
+RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
     int result;
     size_t written;
@@ -314,7 +316,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 }
 
 
-RC FileHandle::AppendPage(const void *data)
+RC FileHandle::appendPage(const void *data)
 {
     // Determine the offset for this directory entry
     int offset = _directory.size() * (sizeof(PFEntry) + PAGE_SIZE) + sizeof(PFHeader);
@@ -361,7 +363,7 @@ RC FileHandle::AppendPage(const void *data)
 }
 
 
-unsigned FileHandle::GetNumberOfPages()
+unsigned FileHandle::getNumberOfPages()
 {
     return _directory.size();
 }

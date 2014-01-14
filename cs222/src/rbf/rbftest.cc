@@ -41,7 +41,7 @@ void pfmTest()
     RC rc;
 
     cout << "PagedFileManager tests" << endl;
-    PagedFileManager *pfm = PagedFileManager::Instance();
+    PagedFileManager *pfm = PagedFileManager::instance();
 
     // Clean up old files
     remove("testFile0.db");
@@ -50,25 +50,25 @@ void pfmTest()
 
     FileHandle handle0, handle1, handle1_copy, handle2;
 
-    TEST_FN_EQ( 0, pfm->CreateFile("testFile0.db"), "Create testFile0.db");
-    TEST_FN_EQ( 0, pfm->OpenFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
-    TEST_FN_EQ( 0, pfm->CloseFile(handle0), "Close handle0 (testFile0.db)");
-    TEST_FN_EQ( 0, pfm->DestroyFile("testFile0.db"), "Destroy testFile0.db");
-    TEST_FN_NEQ(0, pfm->DestroyFile("testFile1.db"), "Destroy testFile1.db (does not exist, should fail)");
-    TEST_FN_EQ( 0, pfm->CreateFile("testFile1.db"), "Create testFile0.db");
-    TEST_FN_NEQ(0, pfm->CreateFile("testFile1.db"), "Create testFile1.db (already exists, should fail)");
-    TEST_FN_NEQ(0, pfm->CloseFile(handle1), "Close handl1 (uninitialized, should fail)");
-    TEST_FN_NEQ(0, pfm->OpenFile("testFile2.db", handle2), "Open testFile2.db and store in handle2 (does not exist, should fail)");
-    TEST_FN_NEQ(0, pfm->CloseFile(handle2), "Close handle2 (should never have been initialized, should fail)");
-    TEST_FN_EQ( 0, pfm->OpenFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
-    TEST_FN_NEQ(0, pfm->OpenFile("testFile2.db", handle1), "Open testFile2.db and store in handle2 (initialized, should fail)");
-    TEST_FN_EQ( 0, pfm->OpenFile("testFile1.db", handle1_copy), "Open testFile1.db and store in handle1_copy");
-    TEST_FN_EQ( 0, pfm->CloseFile(handle1_copy), "Close handle1_copy");
-    TEST_FN_NEQ(0, pfm->CloseFile(handle1_copy), "Close handle1_copy (should fail, already closed)");
-    TEST_FN_EQ( 0, pfm->OpenFile("testFile1.db", handle1_copy), "Open testFile1.db and store in recycled handle1_copy");
-    TEST_FN_EQ( 0, pfm->CloseFile(handle1), "Close handle1");
-    TEST_FN_EQ( 0, pfm->CloseFile(handle1_copy), "Close handle1_copy");
-    TEST_FN_EQ( 0, pfm->DestroyFile("testFile1.db"), "Destroy testFile1.db");
+    TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+    TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0 (testFile0.db)");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
+    TEST_FN_NEQ(0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db (does not exist, should fail)");
+    TEST_FN_EQ( 0, pfm->createFile("testFile1.db"), "Create testFile0.db");
+    TEST_FN_NEQ(0, pfm->createFile("testFile1.db"), "Create testFile1.db (already exists, should fail)");
+    TEST_FN_NEQ(0, pfm->closeFile(handle1), "Close handl1 (uninitialized, should fail)");
+    TEST_FN_NEQ(0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2 (does not exist, should fail)");
+    TEST_FN_NEQ(0, pfm->closeFile(handle2), "Close handle2 (should never have been initialized, should fail)");
+    TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
+    TEST_FN_NEQ(0, pfm->openFile("testFile2.db", handle1), "Open testFile2.db and store in handle2 (initialized, should fail)");
+    TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1_copy), "Open testFile1.db and store in handle1_copy");
+    TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
+    TEST_FN_NEQ(0, pfm->closeFile(handle1_copy), "Close handle1_copy (should fail, already closed)");
+    TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1_copy), "Open testFile1.db and store in recycled handle1_copy");
+    TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
+    TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
     // TODO: Are we supposed to be able to destroy a file if there are open handles to it?
     // Right now we will fail to delete a file if a handle is left open
 
@@ -193,14 +193,14 @@ void createLargeRecordDescriptor(vector<Attribute> &recordDescriptor)
 int RBFTest_1(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. CreateFile
+    // 1. createFile
     cout << "****In RBF Test Case 1****" << endl;
 
     RC rc;
     string fileName = "test";
 
     // Create a file named "test"
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -215,7 +215,7 @@ int RBFTest_1(PagedFileManager *pfm)
     }
 
     // Create "test" again, should fail
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc != success);
 
     cout << "Test Case 1 Passed!" << endl << endl;
@@ -226,13 +226,13 @@ int RBFTest_1(PagedFileManager *pfm)
 int RBFTest_2(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. DestroyFile
+    // 1. destroyFile
     cout << "****In RBF Test Case 2****" << endl;
 
     RC rc;
     string fileName = "test";
 
-    rc = pfm->DestroyFile(fileName.c_str());
+    rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     if(!FileExists(fileName.c_str()))
@@ -253,17 +253,17 @@ int RBFTest_2(PagedFileManager *pfm)
 int RBFTest_3(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. CreateFile
-    // 2. OpenFile
-    // 3. GetNumberOfPages
-    // 4. CloseFile
+    // 1. createFile
+    // 2. openFile
+    // 3. getNumberOfPages
+    // 4. closeFile
     cout << "****In RBF Test Case 3****" << endl;
 
     RC rc;
     string fileName = "test_1";
 
     // Create a file named "test_1"
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -279,15 +279,15 @@ int RBFTest_3(PagedFileManager *pfm)
 
     // Open the file "test_1"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     // Get the number of pages in the test file
-    unsigned count = fileHandle.GetNumberOfPages();
+    unsigned count = fileHandle.getNumberOfPages();
     assert(count == (unsigned)0);
 
     // Close the file "test_1"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
     cout << "Test Case 3 Passed!" << endl << endl;
@@ -300,10 +300,10 @@ int RBFTest_3(PagedFileManager *pfm)
 int RBFTest_4(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. OpenFile
-    // 2. AppendPage
-    // 3. GetNumberOfPages
-    // 3. CloseFile
+    // 1. openFile
+    // 2. appendPage
+    // 3. getNumberOfPages
+    // 3. closeFile
     cout << "****In RBF Test Case 4****" << endl;
 
     RC rc;
@@ -311,7 +311,7 @@ int RBFTest_4(PagedFileManager *pfm)
 
     // Open the file "test_1"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     // Append the first page
@@ -320,15 +320,15 @@ int RBFTest_4(PagedFileManager *pfm)
     {
         *((char *)data+i) = i % 94 + 32;
     }
-    rc = fileHandle.AppendPage(data);
+    rc = fileHandle.appendPage(data);
     assert(rc == success);
 
     // Get the number of pages
-    unsigned count = fileHandle.GetNumberOfPages();
+    unsigned count = fileHandle.getNumberOfPages();
     assert(count == (unsigned)1);
 
     // Close the file "test_1"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
     free(data);
@@ -342,9 +342,9 @@ int RBFTest_4(PagedFileManager *pfm)
 int RBFTest_5(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. OpenFile
-    // 2. ReadPage
-    // 3. CloseFile
+    // 1. openFile
+    // 2. readPage
+    // 3. closeFile
     cout << "****In RBF Test Case 5****" << endl;
 
     RC rc;
@@ -352,12 +352,12 @@ int RBFTest_5(PagedFileManager *pfm)
 
     // Open the file "test_1"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     // Read the first page
     void *buffer = malloc(PAGE_SIZE);
-    rc = fileHandle.ReadPage(0, buffer);
+    rc = fileHandle.readPage(0, buffer);
     cout << rc::rcToString(rc) << endl;
     assert(rc == success);
 
@@ -371,7 +371,7 @@ int RBFTest_5(PagedFileManager *pfm)
     assert(rc == success);
 
     // Close the file "test_1"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
     free(data);
@@ -386,11 +386,11 @@ int RBFTest_5(PagedFileManager *pfm)
 int RBFTest_6(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. OpenFile
-    // 2. WritePage
-    // 3. ReadPage
-    // 4. CloseFile
-    // 5. DestroyFile
+    // 1. openFile
+    // 2. writePage
+    // 3. readPage
+    // 4. closeFile
+    // 5. destroyFile
     cout << "****In RBF Test Case 6****" << endl;
 
     RC rc;
@@ -398,7 +398,7 @@ int RBFTest_6(PagedFileManager *pfm)
 
     // Open the file "test_1"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     // Update the first page
@@ -407,12 +407,12 @@ int RBFTest_6(PagedFileManager *pfm)
     {
         *((char *)data+i) = i % 10 + 32;
     }
-    rc = fileHandle.WritePage(0, data);
+    rc = fileHandle.writePage(0, data);
     assert(rc == success);
 
     // Read the page
     void *buffer = malloc(PAGE_SIZE);
-    rc = fileHandle.ReadPage(0, buffer);
+    rc = fileHandle.readPage(0, buffer);
     assert(rc == success);
 
     // Check the integrity
@@ -420,14 +420,14 @@ int RBFTest_6(PagedFileManager *pfm)
     assert(rc == success);
 
     // Close the file "test_1"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
     free(data);
     free(buffer);
 
-    // DestroyFile
-    rc = pfm->DestroyFile(fileName.c_str());
+    // destroyFile
+    rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     if(!FileExists(fileName.c_str()))
@@ -448,21 +448,21 @@ int RBFTest_6(PagedFileManager *pfm)
 int RBFTest_7(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. CreateFile
-    // 2. OpenFile
-    // 3. AppendPage
-    // 4. GetNumberOfPages
-    // 5. ReadPage
-    // 6. WritePage
-    // 7. CloseFile
-    // 8. DestroyFile
+    // 1. createFile
+    // 2. openFile
+    // 3. appendPage
+    // 4. getNumberOfPages
+    // 5. readPage
+    // 6. writePage
+    // 7. closeFile
+    // 8. destroyFile
     cout << "****In RBF Test Case 7****" << endl;
 
     RC rc;
     string fileName = "test_2";
 
     // Create the file named "test_2"
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -478,7 +478,7 @@ int RBFTest_7(PagedFileManager *pfm)
 
     // Open the file "test_2"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     // Append 50 pages
@@ -489,18 +489,18 @@ int RBFTest_7(PagedFileManager *pfm)
         {
             *((char *)data+i) = i % (j+1) + 32;
         }
-        rc = fileHandle.AppendPage(data);
+        rc = fileHandle.appendPage(data);
         assert(rc == success);
     }
     cout << "50 Pages have been successfully appended!" << endl;
 
     // Get the number of pages
-    unsigned count = fileHandle.GetNumberOfPages();
+    unsigned count = fileHandle.getNumberOfPages();
     assert(count == (unsigned)50);
 
     // Read the 25th page and check integrity
     void *buffer = malloc(PAGE_SIZE);
-    rc = fileHandle.ReadPage(24, buffer);
+    rc = fileHandle.readPage(24, buffer);
     assert(rc == success);
 
     for(unsigned i = 0; i < PAGE_SIZE; i++)
@@ -516,22 +516,22 @@ int RBFTest_7(PagedFileManager *pfm)
     {
         *((char *)data+i) = i % 60 + 32;
     }
-    rc = fileHandle.WritePage(24, data);
+    rc = fileHandle.writePage(24, data);
     assert(rc == success);
 
     // Read the 25th page and check integrity
-    rc = fileHandle.ReadPage(24, buffer);
+    rc = fileHandle.readPage(24, buffer);
     assert(rc == success);
 
     rc = memcmp(buffer, data, PAGE_SIZE);
     assert(rc == success);
 
     // Close the file "test_2"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
-    // DestroyFile
-    rc = pfm->DestroyFile(fileName.c_str());
+    // destroyFile
+    rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     free(data);
@@ -565,7 +565,7 @@ int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
     string fileName = "test_3";
 
     // Create a file named "test_3"
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -581,7 +581,7 @@ int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
 
     // Open the file "test_3"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
 
@@ -618,11 +618,11 @@ int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
     }
 
     // Close the file "test_3"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
-    // DestroyFile
-    rc = pfm->DestroyFile(fileName.c_str());
+    // destroyFile
+    rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     free(tuple);
@@ -644,7 +644,7 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
     string fileName = "test_4";
 
     // Create a file named "test_4"
-    rc = pfm->CreateFile(fileName.c_str());
+    rc = pfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -660,7 +660,7 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
 
     // Open the file "test_4"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
 
@@ -693,7 +693,7 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
         sizes.push_back(size);
     }
     // Close the file "test_4"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
     free(tuple);
@@ -715,7 +715,7 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
 
     // Open the file "test_4"
     FileHandle fileHandle;
-    rc = pfm->OpenFile(fileName.c_str(), fileHandle);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
     int numRecords = 2000;
@@ -747,10 +747,10 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
     }
 
     // Close the file "test_4"
-    rc = pfm->CloseFile(fileHandle);
+    rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
-    rc = pfm->DestroyFile(fileName.c_str());
+    rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     if(!FileExists(fileName.c_str())) {
@@ -771,7 +771,7 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
 
 int main()
 {
-    PagedFileManager *pfm = PagedFileManager::Instance();
+    PagedFileManager *pfm = PagedFileManager::instance();
     RecordBasedFileManager *rbfm = RecordBasedFileManager::Instance();
 
     pfmTest();
