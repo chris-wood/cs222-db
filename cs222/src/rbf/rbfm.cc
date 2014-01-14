@@ -19,14 +19,14 @@ RecordBasedFileManager::~RecordBasedFileManager()
 {
 }
 
-RC RecordBasedFileManager::insertTuple(const string &fileName, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
+RC RecordBasedFileManager::insertTuple(const string &/*fileName*/, const vector<Attribute> &/*recordDescriptor*/, const void */*data*/, RID &/*rid*/) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC RecordBasedFileManager::readTuple(const string &fileName, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) {
+RC RecordBasedFileManager::readTuple(const string &/*fileName*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, void */*data*/) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC RecordBasedFileManager::printTuple(const vector<Attribute> &recordDescriptor, const void *data) {
+RC RecordBasedFileManager::printTuple(const vector<Attribute> &/*recordDescriptor*/, const void */*data*/) {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }

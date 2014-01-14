@@ -117,19 +117,19 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
-    // TODO: Write out any changes to the header
-    // TODO: Write out data
     int result = fseek(fileHandle.GetFile(), 0, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
     }
-    fwrite(fileHandle.GetHeader(), sizeof(PFHeader), 1, fileHandle.GetFile());
+    size_t written = fwrite(fileHandle.GetHeader(), sizeof(PFHeader), 1, fileHandle.GetFile());
+    if (written != 1)
+    {
+        return rc::FILE_CORRUPT;
+    }
 
-    // TODO: destroy the file handle, and deallocate the header information and directory
-
-    fclose(fileHandle.GetFile());
-    fileHandle.SetFile(NULL);
+    fileHandle.FlushPages();
+    fileHandle.Unload();
 
     return rc::OK;
 }
@@ -143,6 +143,37 @@ FileHandle::FileHandle()
 
 FileHandle::~FileHandle()
 {
+    Unload();
+}
+
+RC FileHandle::FlushPages()
+{
+    // Nothing right now because all pages are written out immediately
+    return rc::OK;
+}
+
+RC FileHandle::Unload()
+{
+    for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
+    {
+        if (*itr)
+        {
+            free(*itr);
+        }
+    }
+
+    if (_header)
+    {
+        free(_header);
+    }
+
+    fclose(_file);
+
+    _directory.clear();
+    _header = NULL;
+    _file = NULL;
+
+    return rc::OK;
 }
 
 RC FileHandle::LoadFile(FILE* file, PFHeader* header)
@@ -161,8 +192,8 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 
         // Read in the first directory entry
         PFEntry* entry = (PFEntry*)malloc(sizeof(PFEntry));
-        size_t bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
-        if (bytesRead != sizeof(PFEntry))
+        size_t read = fread((void*)entry, sizeof(PFEntry), 1, _file);
+        if (read != 1)
         {
             return rc::FILE_CORRUPT;
         }
@@ -177,9 +208,10 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
             {
                 return rc::FILE_SEEK_FAILED;
             }
+
             entry = (PFEntry*)malloc(sizeof(PFEntry));
-            bytesRead = fread((void*)entry, sizeof(PFEntry), 1, _file);
-            if (bytesRead != sizeof(PFEntry))
+            read = fread((void*)entry, sizeof(PFEntry), 1, _file);
+            if (read != 1)
             {
                 return rc::FILE_CORRUPT;
             }
@@ -203,7 +235,7 @@ RC FileHandle::LoadFile(FILE* file, PFHeader* header)
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
     int result;
-    size_t bytesRead;
+    size_t read;
 
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
@@ -218,8 +250,8 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
                 printf("wut?\n");
                 return rc::FILE_SEEK_FAILED;
             }
-            bytesRead = fread(data, PAGE_SIZE, 1, _file);
-            if (bytesRead != PAGE_SIZE)
+            read = fread(data, PAGE_SIZE, 1, _file);
+            if (read != 1)
             {
                 return rc::FILE_CORRUPT;
             }
@@ -235,7 +267,8 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
 
 RC FileHandle::WritePage(PageNum pageNum, const void *data)
 {
-    int result = 0;
+    int result;
+    size_t written;
 
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
@@ -249,10 +282,19 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
             {
                 return rc::FILE_SEEK_FAILED;
             }
-            fwrite((void*)entry, sizeof(PFEntry), 1, _file);
-            fwrite(data, PAGE_SIZE, 1, _file);
 
-            // OK
+            written = fwrite((void*)entry, sizeof(PFEntry), 1, _file);
+            if (written != 1)
+            {
+                return rc::FILE_CORRUPT;
+            }
+
+            written = fwrite(data, PAGE_SIZE, 1, _file);
+            if (written != 1)
+            {
+                return rc::FILE_CORRUPT;
+            }
+
             return rc::OK;
         }
     }
@@ -282,8 +324,18 @@ RC FileHandle::AppendPage(const void *data)
     {
         return rc::FILE_SEEK_FAILED;
     }
-    fwrite((void*)entry, sizeof(PFEntry), 1, _file); // write the header
-    fwrite(data, PAGE_SIZE, 1, _file);               // write the data
+
+    size_t written = fwrite((void*)entry, sizeof(PFEntry), 1, _file); // write the header
+    if (written != 1)
+    {
+        return rc::FILE_CORRUPT;
+    }
+
+    written = fwrite(data, PAGE_SIZE, 1, _file);               // write the data
+    if (written != 1)
+    {
+        return rc::FILE_CORRUPT;
+    }
 
     // Update the existing directory collection if necessary
     if (_directory.size() > 0)
@@ -292,7 +344,6 @@ RC FileHandle::AppendPage(const void *data)
     }
     _directory.push_back(entry);
 
-    // OK
     return rc::OK;
 }
 
@@ -301,5 +352,3 @@ unsigned FileHandle::GetNumberOfPages()
 {
     return _directory.size();
 }
-
-

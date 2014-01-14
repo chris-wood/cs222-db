@@ -64,7 +64,9 @@ public:
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
     RC LoadFile(FILE* file, PFHeader* header); 
-    void SetFile(FILE* file) { _file = file; }
+    RC Unload();
+    RC FlushPages();
+
     FILE* GetFile() { return _file; }
     PFHeader* GetHeader() { return _header; }
     bool HasFile() const { return _file != NULL; }
