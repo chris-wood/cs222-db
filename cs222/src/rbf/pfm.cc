@@ -65,6 +65,7 @@ RC PagedFileManager::DestroyFile(const char *fileName)
         return rc::FILE_COULD_NOT_DELETE;
     }
 
+    // TODO: Keep track of open file handles, so we can force close them
     // TODO: Keep track that we have deleted this file
     return rc::OK;
 }
@@ -77,12 +78,14 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
         return rc::FILE_HANDLE_ALREADY_INITIALIZED;
     }
 
+    // Open file read only (will not create) to see if it exists
     FILE* file = fopen(fileName, "r");
     if (!file)
     {
         return rc::FILE_NOT_FOUND;
     }
 
+    // Open file for reading/writing
     fclose(file);
     file = fopen(fileName, "r+");
     if (!file)
@@ -117,6 +120,8 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
+    // Write out new header data
+    // (currently should basically be a NOP since we already did this in AppendPage)
     int result = fseek(fileHandle.GetFile(), 0, SEEK_SET);
     if (result != 0)
     {
@@ -128,6 +133,8 @@ RC PagedFileManager::CloseFile(FileHandle &fileHandle)
         return rc::FILE_CORRUPT;
     }
 
+    // Write out any pages that are dirty in memory
+    // (currently should be a NOP since we already did this in WritePage)
     fileHandle.FlushPages();
     fileHandle.Unload();
 
@@ -169,6 +176,7 @@ RC FileHandle::Unload()
 
     fclose(_file);
 
+    // Prepare handle for reuse
     _directory.clear();
     _header = NULL;
     _file = NULL;
@@ -237,8 +245,10 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
     int result;
     size_t read;
 
+    // TODO: We can put these in a hashmap so it's not linear
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
+        // Search for the correct page
         if ((*itr)->pageNum == pageNum)
         {
             PFEntry* entry = *itr;
@@ -272,6 +282,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 
     for (vector<PFEntry*>::const_iterator itr = _directory.begin(); itr != _directory.end(); itr++)
     {
+        // Search for the correct page
         if ((*itr)->pageNum == pageNum)
         {
             PFEntry* entry = *itr;
@@ -325,13 +336,15 @@ RC FileHandle::AppendPage(const void *data)
         return rc::FILE_SEEK_FAILED;
     }
 
-    size_t written = fwrite((void*)entry, sizeof(PFEntry), 1, _file); // write the header
+    // write the header
+    size_t written = fwrite((void*)entry, sizeof(PFEntry), 1, _file);
     if (written != 1)
     {
         return rc::FILE_CORRUPT;
     }
 
-    written = fwrite(data, PAGE_SIZE, 1, _file);               // write the data
+    // write the data
+    written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {
         return rc::FILE_CORRUPT;
