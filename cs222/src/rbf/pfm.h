@@ -45,8 +45,6 @@ private:
 typedef struct 
 {
     PageNum pageNum;
-    unsigned int free;
-    bool loaded;
     void* data;
     int offset;
     int nextEntryAbsoluteOffset; // -1 if end of directory entry list, a real file offset otherwise
@@ -63,20 +61,17 @@ public:
     RC appendPage(const void *data);                                    // Append a specific page
     unsigned getNumberOfPages();                                        // Get the number of pages in the file
 
-    RC loadFile(FILE* file, PFHeader* header); 
     RC unload();
     RC flushPages();
 
-    FILE* GetFile() { return _file; }
-    PFHeader* GetHeader() { return _header; }
-    bool HasFile() const { return _file != NULL; }
+    void loadFile(FILE* file, PFHeader* header) { _file = file; _header = header; }
+    FILE* getFile() { return _file; }
+    PFHeader* getHeader() { return _header; }
+    bool hasFile() const { return _file != NULL; }
 
 private:
-    // DB file pointer
+    // DB file pointer and header information
     FILE* _file;
-
-    // Collection of page headers - bookkepping
-    vector<PFEntry*> _directory; 
     PFHeader* _header;
 };
 
