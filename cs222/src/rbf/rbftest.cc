@@ -15,7 +15,6 @@ using namespace std;
 
 const int success = 0;
 
-
 // TODO: Some actual testing framework
 #define TEST_FN_PREFIX ++numTests;
 #define TEST_FN_POSTFIX(msg) { ++numPassed; cout << ' ' << numTests << ") OK: " << msg << endl; } \
@@ -23,16 +22,6 @@ const int success = 0;
 
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
-
-
-// Check if a file exists
-bool FileExists(string fileName)
-{
-    struct stat stFileInfo;
-
-    if(stat(fileName.c_str(), &stFileInfo) == 0) return true;
-    else return false;
-}
 
 void pfmTest()
 {
@@ -76,32 +65,41 @@ void pfmTest()
 }
 
 
-// Function to prepare the data in the correct form to be inserted/read
-void prepareTuple(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *tupleSize)
+// Check if a file exists
+bool FileExists(string fileName)
 {
-    int offset = 0;
+    struct stat stFileInfo;
 
-    memcpy((char *)buffer + offset, &nameLength, sizeof(int));
-    offset += sizeof(int);
-    memcpy((char *)buffer + offset, name.c_str(), nameLength);
-    offset += nameLength;
-
-    memcpy((char *)buffer + offset, &age, sizeof(int));
-    offset += sizeof(int);
-
-    memcpy((char *)buffer + offset, &height, sizeof(float));
-    offset += sizeof(float);
-
-    memcpy((char *)buffer + offset, &salary, sizeof(int));
-    offset += sizeof(int);
-
-    *tupleSize = offset;
+    if(stat(fileName.c_str(), &stFileInfo) == 0) return true;
+    else return false;
 }
 
-void prepareLargeTuple(const int index, void *buffer, int *size)
+// Function to prepare the data in the correct form to be inserted/read
+void prepareRecord(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *recordSize)
 {
     int offset = 0;
+    
+    memcpy((char *)buffer + offset, &nameLength, sizeof(int));
+    offset += sizeof(int);    
+    memcpy((char *)buffer + offset, name.c_str(), nameLength);
+    offset += nameLength;
+    
+    memcpy((char *)buffer + offset, &age, sizeof(int));
+    offset += sizeof(int);
+    
+    memcpy((char *)buffer + offset, &height, sizeof(float));
+    offset += sizeof(float);
+    
+    memcpy((char *)buffer + offset, &salary, sizeof(int));
+    offset += sizeof(int);
+    
+    *recordSize = offset;
+}
 
+void prepareLargeRecord(const int index, void *buffer, int *size)
+{
+    int offset = 0;
+    
     // compute the count
     int count = index % 50 + 1;
 
@@ -118,17 +116,17 @@ void prepareLargeTuple(const int index, void *buffer, int *size)
             memcpy((char *)buffer + offset, &text, 1);
             offset += 1;
         }
-
-        // compute the integer
+   
+        // compute the integer 
         memcpy((char *)buffer + offset, &index, sizeof(int));
         offset += sizeof(int);
-
+   
         // compute the floating number
-        float real = (float)(index + 1);
+        float real = (float)(index + 1); 
         memcpy((char *)buffer + offset, &real, sizeof(float));
         offset += sizeof(float);
     }
-    *size = offset;
+    *size = offset; 
 }
 
 void createRecordDescriptor(vector<Attribute> &recordDescriptor) {
@@ -193,7 +191,7 @@ void createLargeRecordDescriptor(vector<Attribute> &recordDescriptor)
 int RBFTest_1(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. createFile
+    // 1. Create File
     cout << "****In RBF Test Case 1****" << endl;
 
     RC rc;
@@ -226,7 +224,7 @@ int RBFTest_1(PagedFileManager *pfm)
 int RBFTest_2(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. destroyFile
+    // 1. Destroy File
     cout << "****In RBF Test Case 2****" << endl;
 
     RC rc;
@@ -253,10 +251,10 @@ int RBFTest_2(PagedFileManager *pfm)
 int RBFTest_3(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. createFile
-    // 2. openFile
-    // 3. getNumberOfPages
-    // 4. closeFile
+    // 1. Create File
+    // 2. Open File
+    // 3. Get Number Of Pages
+    // 4. Close File
     cout << "****In RBF Test Case 3****" << endl;
 
     RC rc;
@@ -300,10 +298,10 @@ int RBFTest_3(PagedFileManager *pfm)
 int RBFTest_4(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. openFile
-    // 2. appendPage
-    // 3. getNumberOfPages
-    // 3. closeFile
+    // 1. Open File
+    // 2. Append Page
+    // 3. Get Number Of Pages
+    // 3. Close File
     cout << "****In RBF Test Case 4****" << endl;
 
     RC rc;
@@ -322,7 +320,7 @@ int RBFTest_4(PagedFileManager *pfm)
     }
     rc = fileHandle.appendPage(data);
     assert(rc == success);
-
+   
     // Get the number of pages
     unsigned count = fileHandle.getNumberOfPages();
     assert(count == (unsigned)1);
@@ -342,9 +340,9 @@ int RBFTest_4(PagedFileManager *pfm)
 int RBFTest_5(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. openFile
-    // 2. readPage
-    // 3. closeFile
+    // 1. Open File
+    // 2. Read Page
+    // 3. Close File
     cout << "****In RBF Test Case 5****" << endl;
 
     RC rc;
@@ -358,10 +356,9 @@ int RBFTest_5(PagedFileManager *pfm)
     // Read the first page
     void *buffer = malloc(PAGE_SIZE);
     rc = fileHandle.readPage(0, buffer);
-    cout << rc::rcToString(rc) << endl;
     assert(rc == success);
-
-    // Check the integrity of the page
+  
+    // Check the integrity of the page    
     void *data = malloc(PAGE_SIZE);
     for(unsigned i = 0; i < PAGE_SIZE; i++)
     {
@@ -369,7 +366,7 @@ int RBFTest_5(PagedFileManager *pfm)
     }
     rc = memcmp(data, buffer, PAGE_SIZE);
     assert(rc == success);
-
+ 
     // Close the file "test_1"
     rc = pfm->closeFile(fileHandle);
     assert(rc == success);
@@ -386,11 +383,11 @@ int RBFTest_5(PagedFileManager *pfm)
 int RBFTest_6(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. openFile
-    // 2. writePage
-    // 3. readPage
-    // 4. closeFile
-    // 5. destroyFile
+    // 1. Open File
+    // 2. Write Page
+    // 3. Read Page
+    // 4. Close File
+    // 5. Destroy File
     cout << "****In RBF Test Case 6****" << endl;
 
     RC rc;
@@ -418,7 +415,7 @@ int RBFTest_6(PagedFileManager *pfm)
     // Check the integrity
     rc = memcmp(data, buffer, PAGE_SIZE);
     assert(rc == success);
-
+ 
     // Close the file "test_1"
     rc = pfm->closeFile(fileHandle);
     assert(rc == success);
@@ -426,10 +423,10 @@ int RBFTest_6(PagedFileManager *pfm)
     free(data);
     free(buffer);
 
-    // destroyFile
+    // Destroy File
     rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
-
+    
     if(!FileExists(fileName.c_str()))
     {
         cout << "File " << fileName << " has been destroyed." << endl;
@@ -448,14 +445,14 @@ int RBFTest_6(PagedFileManager *pfm)
 int RBFTest_7(PagedFileManager *pfm)
 {
     // Functions Tested:
-    // 1. createFile
-    // 2. openFile
-    // 3. appendPage
-    // 4. getNumberOfPages
-    // 5. readPage
-    // 6. writePage
-    // 7. closeFile
-    // 8. destroyFile
+    // 1. Create File
+    // 2. Open File
+    // 3. Append Page
+    // 4. Get Number Of Pages
+    // 5. Read Page
+    // 6. Write Page
+    // 7. Close File
+    // 8. Destroy File
     cout << "****In RBF Test Case 7****" << endl;
 
     RC rc;
@@ -493,7 +490,7 @@ int RBFTest_7(PagedFileManager *pfm)
         assert(rc == success);
     }
     cout << "50 Pages have been successfully appended!" << endl;
-
+   
     // Get the number of pages
     unsigned count = fileHandle.getNumberOfPages();
     assert(count == (unsigned)50);
@@ -522,7 +519,7 @@ int RBFTest_7(PagedFileManager *pfm)
     // Read the 25th page and check integrity
     rc = fileHandle.readPage(24, buffer);
     assert(rc == success);
-
+    
     rc = memcmp(buffer, data, PAGE_SIZE);
     assert(rc == success);
 
@@ -530,7 +527,7 @@ int RBFTest_7(PagedFileManager *pfm)
     rc = pfm->closeFile(fileHandle);
     assert(rc == success);
 
-    // destroyFile
+    // Destroy File
     rc = pfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
@@ -551,21 +548,21 @@ int RBFTest_7(PagedFileManager *pfm)
     }
 }
 
-int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
+int RBFTest_8(RecordBasedFileManager *rbfm) {
     // Functions tested
-    // 1. Create File
-    // 2. Open File
-    // 3. Insert Tuple
-    // 4. Read Tuple
-    // 5. Close File
-    // 6. Destroy File
+    // 1. Create Record-Based File
+    // 2. Open Record-Based File
+    // 3. Insert Record
+    // 4. Read Record
+    // 5. Close Record-Based File
+    // 6. Destroy Record-Based File
     cout << "****In RBF Test Case 8****" << endl;
-
+   
     RC rc;
     string fileName = "test_3";
 
     // Create a file named "test_3"
-    rc = pfm->createFile(fileName.c_str());
+    rc = rbfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -581,70 +578,70 @@ int RBFTest_8(PagedFileManager *pfm, RecordBasedFileManager *rbfm) {
 
     // Open the file "test_3"
     FileHandle fileHandle;
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
-
-
-    RID rid;
-    int tupleSize = 0;
-    void *tuple = malloc(100);
+   
+      
+    RID rid; 
+    int recordSize = 0;
+    void *record = malloc(100);
     void *returnedData = malloc(100);
 
     vector<Attribute> recordDescriptor;
     createRecordDescriptor(recordDescriptor);
-
-    // Insert a tuple into a file
-    prepareTuple(6, "Peters", 24, 170.1, 5000, tuple, &tupleSize);
+    
+    // Insert a record into a file
+    prepareRecord(6, "Peters", 24, 170.1, 5000, record, &recordSize);
     cout << "Insert Data:" << endl;
-    rbfm->printRecord(recordDescriptor, tuple);
-
-    rc = rbfm->insertRecord(fileName, recordDescriptor, tuple, rid);
+    rbfm->printRecord(recordDescriptor, record);
+    
+    rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
     assert(rc == success);
-
-    // Given the rid, read the tuple from file
-    rc = rbfm->readRecord(fileName, recordDescriptor, rid, returnedData);
+    
+    // Given the rid, read the record from file
+    rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
     assert(rc == success);
 
     cout << "Returned Data:" << endl;
     rbfm->printRecord(recordDescriptor, returnedData);
 
     // Compare whether the two memory blocks are the same
-    if(memcmp(tuple, returnedData, tupleSize) != 0)
+    if(memcmp(record, returnedData, recordSize) != 0)
     {
        cout << "Test Case 8 Failed!" << endl << endl;
-        free(tuple);
+        free(record);
         free(returnedData);
         return -1;
     }
-
+    
     // Close the file "test_3"
-    rc = pfm->closeFile(fileHandle);
+    rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
 
-    // destroyFile
-    rc = pfm->destroyFile(fileName.c_str());
+    // Destroy File
+    rc = rbfm->destroyFile(fileName.c_str());
     assert(rc == success);
-
-    free(tuple);
+    
+    free(record);
     free(returnedData);
     cout << "Test Case 8 Passed!" << endl << endl;
-
+    
     return 0;
 }
 
-int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes) {
+int RBFTest_9(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes) {
     // Functions tested
-    // 1. Create File
-    // 2. Open File
-    // 3. Insert Multiple Tuples
-    // 4. Close File
+    // 1. Create Record-Based File
+    // 2. Open Record-Based File
+    // 3. Insert Multiple Records
+    // 4. Close Record-Based File
     cout << "****In RBF Test Case 9****" << endl;
-
+   
     RC rc;
     string fileName = "test_4";
 
     // Create a file named "test_4"
-    rc = pfm->createFile(fileName.c_str());
+    rc = rbfm->createFile(fileName.c_str());
     assert(rc == success);
 
     if(FileExists(fileName.c_str()))
@@ -660,12 +657,12 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
 
     // Open the file "test_4"
     FileHandle fileHandle;
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
 
-    RID rid;
-    void *tuple = malloc(1000);
+    RID rid; 
+    void *record = malloc(1000);
     int numRecords = 2000;
 
     vector<Attribute> recordDescriptor;
@@ -678,84 +675,84 @@ int RBFTest_9(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &
         cout << "Attribute Length: " << recordDescriptor[i].length << endl << endl;
     }
 
-    // Insert 2000 tuples into file
+    // Insert 2000 records into file
     for(int i = 0; i < numRecords; i++)
     {
-        // Test insert Tuple
+        // Test insert Record
         int size = 0;
-        memset(tuple, 0, 1000);
-        prepareLargeTuple(i, tuple, &size);
+        memset(record, 0, 1000);
+        prepareLargeRecord(i, record, &size);
 
-        rc = rbfm->insertRecord(fileName, recordDescriptor, tuple, rid);
+        rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
         assert(rc == success);
 
         rids.push_back(rid);
-        sizes.push_back(size);
+        sizes.push_back(size);        
     }
     // Close the file "test_4"
-    rc = pfm->closeFile(fileHandle);
+    rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
 
-    free(tuple);
-    cout << "Test Case 8 Passed!" << endl << endl;
+    free(record);    
+    cout << "Test Case 9 Passed!" << endl << endl;
 
     return 0;
 }
 
-int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes) {
+int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes) {
     // Functions tested
-    // 1. Open File
-    // 2. Read Multiple Tuples
-    // 3. Close File
-    // 4. Destroy File
+    // 1. Open Record-Based File
+    // 2. Read Multiple Records
+    // 3. Close Record-Based File
+    // 4. Destroy Record-Based File
     cout << "****In RBF Test Case 10****" << endl;
-
+   
     RC rc;
     string fileName = "test_4";
 
     // Open the file "test_4"
     FileHandle fileHandle;
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
-
+    
     int numRecords = 2000;
-    void *tuple = malloc(1000);
+    void *record = malloc(1000);
     void *returnedData = malloc(1000);
 
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
-
+    
     for(int i = 0; i < numRecords; i++)
     {
-        memset(tuple, 0, 1000);
+        memset(record, 0, 1000);
         memset(returnedData, 0, 1000);
-        rc = rbfm->readRecord(fileName, recordDescriptor, rids[i], returnedData);
+        rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], returnedData);
         assert(rc == success);
-
+        
         cout << "Returned Data:" << endl;
         rbfm->printRecord(recordDescriptor, returnedData);
 
         int size = 0;
-        prepareLargeTuple(i, tuple, &size);
-        if(memcmp(returnedData, tuple, sizes[i]) != 0)
+        prepareLargeRecord(i, record, &size);
+        if(memcmp(returnedData, record, sizes[i]) != 0)
         {
             cout << "Test Case 10 Failed!" << endl << endl;
-            free(tuple);
+            free(record);
             free(returnedData);
             return -1;
         }
     }
-
+    
     // Close the file "test_4"
-    rc = pfm->closeFile(fileHandle);
+    rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
-
-    rc = pfm->destroyFile(fileName.c_str());
+    
+    rc = rbfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
     if(!FileExists(fileName.c_str())) {
         cout << "File " << fileName << " has been destroyed." << endl << endl;
-        free(tuple);
+        free(record);
         free(returnedData);
         cout << "Test Case 10 Passed!" << endl << endl;
         return 0;
@@ -763,7 +760,7 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
     else {
         cout << "Failed to destroy file!" << endl;
         cout << "Test Case 10 Failed!" << endl << endl;
-        free(tuple);
+        free(record);
         free(returnedData);
         return -1;
     }
@@ -771,30 +768,28 @@ int RBFTest_10(PagedFileManager *pfm, RecordBasedFileManager *rbfm, vector<RID> 
 
 int main()
 {
-    PagedFileManager *pfm = PagedFileManager::instance();
-    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
-
-    pfmTest();
-
+    PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
+    
     remove("test");
     remove("test_1");
     remove("test_2");
     remove("test_3");
     remove("test_4");
-
-    vector<RID> rids;
-    vector<int> sizes;
-
+    
     RBFTest_1(pfm);
-    RBFTest_2(pfm);
+    RBFTest_2(pfm); 
     RBFTest_3(pfm);
     RBFTest_4(pfm);
-    RBFTest_5(pfm);
+    RBFTest_5(pfm); 
     RBFTest_6(pfm);
     RBFTest_7(pfm);
-    RBFTest_8(pfm, rbfm);
-    RBFTest_9(pfm, rbfm, rids, sizes);
-    RBFTest_10(pfm, rbfm, rids, sizes);
-
+    RBFTest_8(rbfm);
+    
+    vector<RID> rids;
+    vector<int> sizes;
+    RBFTest_9(rbfm, rids, sizes);
+    RBFTest_10(rbfm, rids, sizes);
+     
     return 0;
 }
