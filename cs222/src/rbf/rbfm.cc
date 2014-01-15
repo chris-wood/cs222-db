@@ -12,6 +12,7 @@ RecordBasedFileManager* RecordBasedFileManager::instance()
 }
 
 RecordBasedFileManager::RecordBasedFileManager()
+    : _pfm(*PagedFileManager::instance())
 {
 }
 
@@ -20,19 +21,19 @@ RecordBasedFileManager::~RecordBasedFileManager()
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName) {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _pfm.createFile(fileName.c_str());
 }
 
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _pfm.destroyFile(fileName.c_str());
 }
 
 RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle) {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _pfm.openFile(fileName.c_str(), fileHandle);
 }
 
 RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return _pfm.closeFile(fileHandle);
 }
 
 RC RecordBasedFileManager::insertRecord(const FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {

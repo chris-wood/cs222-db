@@ -131,6 +131,8 @@ protected:
 
 private:
   static RecordBasedFileManager *_rbf_manager;
+
+  PagedFileManager& _pfm;
 };
 
 #endif
