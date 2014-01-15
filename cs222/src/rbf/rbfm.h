@@ -13,7 +13,7 @@ using namespace std;
 // Record ID
 typedef struct
 {
-  unsigned pageNum;
+  PageNum pageNum;
   unsigned slotNum;
 } RID;
 
@@ -59,12 +59,12 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {};
-  ~RBFM_ScanIterator() {};
+  RBFM_ScanIterator() {}
+  ~RBFM_ScanIterator() {}
 
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
-  RC close() { return -1; };
+  RC getNextRecord(RID &/*rid*/, void */*data*/) { return RBFM_EOF; }
+  RC close() { return -1; }
 };
 
 
