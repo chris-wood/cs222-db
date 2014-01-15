@@ -194,6 +194,12 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
 RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
 {
+    if (destinationListIndex == pageHeader.freespaceList)
+    {
+        // Nothing to do, return
+        return rc::OK;
+    }
+
     RC ret;
     PFHeader* header = _headerData[&fileHandle];
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
