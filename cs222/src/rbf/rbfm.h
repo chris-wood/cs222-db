@@ -28,14 +28,20 @@ typedef struct
   void* fields;
 } Record;
 
+// Page index slot entry
+typedef struct
+{
+  unsigned size; // size is for the entire record, and includes the header information with the offsets and the length of each resp. field
+  unsigned pageOffset;
+} PageIndexSlot;
+
 // Page index (directory)
 typedef struct
 {
   unsigned pageNumber;
-  unsigned freeSpaceOffset; 
-  unsigned slots;
-  unsigned* slotOffsets; // size of this array == #slots, each is offset to a record
-} PageIndex;
+  unsigned freeSpaceOffset;
+  unsigned numSlots;
+} PageIndexHeader;
 
 
 // Attribute
@@ -61,20 +67,17 @@ typedef enum { EQ_OP = 0,  // =
 
 
 // PageFile Header (should fit in 1st page)
-struct PFHeader
+typedef struct 
 {
-    void init();
-    RC validate();
+  unsigned headerSize;
+  unsigned pageSize;
+  unsigned version;
+  unsigned numPages;
+  unsigned numFreespaceLists;
 
-    unsigned headerSize;
-    unsigned pageSize;
-    unsigned version;
-    unsigned numPages;
-    unsigned numFreespaceLists;
-
-    unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
-    PageNum freespaceLists[NUM_FREESPACE_LISTS];
-};
+  unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
+  PageNum freespaceLists[NUM_FREESPACE_LISTS];
+} PFHeader;
 
 
 /****************************************************************************
@@ -116,6 +119,10 @@ public:
   RC openFile(const string &fileName, FileHandle &fileHandle);
   
   RC closeFile(FileHandle &fileHandle);
+
+//// OUR ADDED METHODs
+  RC validate(PFHeader &header);
+  void init(PFHeader &header);
 
   //  Format of the data passed into the function is the following:
   //  1) data is a concatenation of values of the attributes

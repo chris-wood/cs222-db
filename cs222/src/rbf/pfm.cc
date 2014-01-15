@@ -1,6 +1,7 @@
 #include "pfm.h"
 #include "returncodes.h"
 
+#include <sys/stat.h>
 #include <assert.h>
 #include <cstring>
 #include <cstdlib>
@@ -80,7 +81,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Initialize the FileHandle
-    fileHandle.loadFile(file);
+    fileHandle.loadFile(fileName, file);
 
     return rc::OK;
 }
@@ -92,6 +93,8 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
     {
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
+
+    printf("on close: numPages = %d\n", fileHandle.getNumberOfPages());
 
     fileHandle.flushPages();
     fileHandle.unload();
@@ -117,7 +120,7 @@ RC FileHandle::flushPages()
     return rc::OK;
 }
 
-RC FileHandle::loadFile(FILE* file)
+RC FileHandle::loadFile(const char *fileName, FILE* file)
 {
     _file = file;
 
@@ -126,14 +129,22 @@ RC FileHandle::loadFile(FILE* file)
         return rc::FILE_SEEK_FAILED;
     }
 
+    printf("%d\n", ftell(_file));
     _numPages = ftell(_file) / PAGE_SIZE;
-    if (_numPages == 0)
-    {
-        return rc::FILE_CORRUPT;
-    }
 
-    // We ignore the reserved page for the header
-    --_numPages;
+    // struct stat buf; 
+    // stat(fileName, &buf);
+    // _numPages = buf.st_size / PAGE_SIZE;
+
+    printf("numPages = %d\n", _numPages);
+    
+    // if (_numPages == 0)
+    // {
+    //     return rc::FILE_CORRUPT;
+    // }
+
+    // // We ignore the reserved page for the header
+    // --_numPages;
 
     return rc::OK;
 }
@@ -154,14 +165,16 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
         // Read the data from disk into the user buffer
         // QUESTION: Can we assume fseek is considered constant access time and not linear?
         // ANSWER: Yes, fseek is assumed to be O(1)
-        int result = fseek(_file, PAGE_SIZE * (pageNum + 1), SEEK_SET);
+        int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
         if (result != 0)
         {
+            printf("seek failed\n");
             return rc::FILE_SEEK_FAILED;
         }
         size_t read = fread(data, PAGE_SIZE, 1, _file);
         if (read != 1)
         {
+            printf("read failed\n");
             return rc::FILE_CORRUPT;
         }
 
@@ -169,6 +182,7 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
     }
     else
     {
+        printf("not found: %d\n", pageNum);
         return rc::FILE_PAGE_NOT_FOUND;
     }
 }
@@ -179,7 +193,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
     if (pageNum <= _numPages)
     {
         // Flush the content in the user buffer to disk and update the page entry
-        int result = fseek(_file, PAGE_SIZE * (1 + pageNum), SEEK_SET);
+        int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
         if (result != 0)
         {
             return rc::FILE_SEEK_FAILED;
@@ -201,12 +215,8 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 
 RC FileHandle::appendPage(const void *data)
 {
-    // Determine the offset for this directory entry and
-    // update the number of pages in the process
-    int offset = ++_numPages;
-
     // Seek to the end of the file (last page) and write the new page data
-    int result = fseek(_file, offset * PAGE_SIZE, SEEK_SET);
+    int result = fseek(_file, _numPages * PAGE_SIZE, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
@@ -216,6 +226,9 @@ RC FileHandle::appendPage(const void *data)
     {
         return rc::FILE_CORRUPT;
     }
+
+    // Update our copy of the page count - after committing to disk
+    _numPages++;
 
     return rc::OK;
 }
