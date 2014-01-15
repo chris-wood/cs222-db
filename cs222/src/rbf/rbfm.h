@@ -41,6 +41,9 @@ typedef struct
   unsigned pageNumber;
   unsigned freeSpaceOffset;
   unsigned numSlots;
+
+  // Freespace list data
+  unsigned freespaceList;
   PageNum prevPage;
   PageNum nextPage;
 } PageIndexHeader;
@@ -175,6 +178,7 @@ protected:
 
   RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
   RC writeHeader(FileHandle &fileHandle, PFHeader* header);
+  RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

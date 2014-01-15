@@ -153,18 +153,18 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         index.pageNumber = fileHandle.getNumberOfPages();
         index.prevPage = 0;
         index.nextPage = 0;
+        index.freespaceList = header->numFreespaceLists - 1;
 
         // Append this page to the list of free pages (into the beginning of the largest freespace slot)
-        unsigned freespaceSlot = header->numFreespaceLists - 1;
-        if (header->freespaceLists[freespaceSlot] == 0)
+        if (header->freespaceLists[index.freespaceList] == 0)
         {
-            header->freespaceLists[freespaceSlot] = index.pageNumber;
+            header->freespaceLists[index.freespaceList] = index.pageNumber;
         }
         else
         {
-            index.nextPage = header->freespaceLists[freespaceSlot];
+            index.nextPage = header->freespaceLists[index.freespaceList];
             header->freespaceLists[index.nextPage] = index.pageNumber;
-            header->freespaceLists[freespaceSlot] = index.pageNumber;
+            header->freespaceLists[index.freespaceList] = index.pageNumber;
         }
 
         memcpy(page + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
@@ -189,6 +189,108 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         return ret;
     }
 
+    return rc::OK;
+}
+
+RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
+{
+    RC ret;
+    PFHeader* header = _headerData[&fileHandle];
+    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
+    memset(pageBuffer, 0, PAGE_SIZE);
+
+    // Update prevPage to point to our nextPage
+    if (pageHeader.prevPage > 0)
+    {
+        // Read in the previous page
+        PageIndexHeader prevPageHeader;
+        ret = fileHandle.readPage(pageHeader.prevPage, pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+
+        // Update the next pointer of the previous page to our next pointer
+        memcpy((void*)&prevPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+        prevPageHeader.nextPage = pageHeader.nextPage;
+        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&prevPageHeader, sizeof(PageIndexHeader));
+
+        ret = fileHandle.writePage(prevPageHeader.pageNumber, pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+    }
+    else
+    {
+        // We were the beginning of the list, update the head pointer in the file header
+        header->freespaceLists[pageHeader.freespaceList] = pageHeader.nextPage;
+    }
+
+    // Update nextPage to point to our prevPage
+    if (pageHeader.nextPage > 0)
+    {
+        // Read in the next page
+        PageIndexHeader nextPageHeader;
+        ret = fileHandle.readPage(pageHeader.nextPage, pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+
+        // Udpate the prev pointer of the next page to our prev pointer
+        memcpy((void*)&nextPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+        nextPageHeader.prevPage = pageHeader.prevPage;
+        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&nextPageHeader, sizeof(PageIndexHeader));
+
+        ret = fileHandle.writePage(nextPageHeader.pageNumber, pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+    }
+    // else { we were at the end of the list, we have nothing to do }
+
+    // Update the first page on the destination list to accomodate us at the head
+    if (header->freespaceLists[destinationListIndex] > 0)
+    {
+        // Read in the page
+        PageIndexHeader listFirstPageHeader;
+        ret = fileHandle.readPage(header->freespaceLists[destinationListIndex], pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+
+        // Udpate the prev pointer of the previous head to be our page number
+        memcpy((void*)&listFirstPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+        listFirstPageHeader.prevPage = pageHeader.pageNumber;
+        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&listFirstPageHeader, sizeof(PageIndexHeader));
+
+        ret = fileHandle.writePage(listFirstPageHeader.pageNumber, pageBuffer);
+        if (ret != rc::OK)
+        {
+            free(pageBuffer);
+            return ret;
+        }
+    }
+
+    // The next page for us is whatever was the previous 1st page
+    pageHeader.nextPage = header->freespaceLists[destinationListIndex];
+
+    // Update the header's 1st page to our page number
+    header->freespaceLists[destinationListIndex] = pageHeader.pageNumber;
+    pageHeader.prevPage = 0;
+
+    // Update our freespace index to the new list
+    pageHeader.freespaceList = destinationListIndex;
+
+    free(pageBuffer);
     return rc::OK;
 }
 
@@ -273,6 +375,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {
     // TODO: need to handle the case where n >= 1 pages are used to store the record
+    // @Chris: the prof said we don't have to handle that case (https://piazza.com/class/hp0w5rnebxg6kn?cid=40)
     // int requiredPages = ???
 
     // Pull the page into memory
