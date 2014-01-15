@@ -64,6 +64,42 @@ void pfmTest()
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 }
 
+void fhTest()
+{
+    unsigned numTests = 0;
+    unsigned numPassed = 0;
+    RC rc;
+
+    cout << "FileHandle tests" << endl;
+    PagedFileManager *pfm = PagedFileManager::instance();
+
+    ///// TEST 1
+    // Create, Open, NumberOfPages, Close, Open, NumberOfPages, Close
+
+    
+    // string fileName = "test_1"; 
+    // rc = pfm->createFile(fileName.c_str());
+    // assert(rc == success);
+    // assert(FileExists(fileName.c_str()));
+
+    // // Open the file "test_1"
+    // FileHandle fileHandle;
+    // rc = pfm->openFile(fileName.c_str(), fileHandle);
+    // assert(rc == success);
+
+    // // Get the number of pages in the test file
+    // unsigned count = fileHandle.getNumberOfPages();
+    // assert(count == (unsigned)0);
+
+    // // Close the file "test_1"
+    // rc = pfm->closeFile(fileHandle);
+    // assert(rc == success);
+
+    // cout << "Test Case 3 Passed!" << endl << endl;
+
+    return 0;
+}
+
 
 // Check if a file exists
 bool FileExists(string fileName)
