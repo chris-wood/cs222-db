@@ -94,8 +94,6 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
-    printf("on close: numPages = %d\n", fileHandle.getNumberOfPages());
-
     fileHandle.flushPages();
     fileHandle.unload();
 
@@ -128,23 +126,7 @@ RC FileHandle::loadFile(const char *fileName, FILE* file)
     {
         return rc::FILE_SEEK_FAILED;
     }
-
-    printf("%d\n", ftell(_file));
     _numPages = ftell(_file) / PAGE_SIZE;
-
-    // struct stat buf; 
-    // stat(fileName, &buf);
-    // _numPages = buf.st_size / PAGE_SIZE;
-
-    printf("numPages = %d\n", _numPages);
-    
-    // if (_numPages == 0)
-    // {
-    //     return rc::FILE_CORRUPT;
-    // }
-
-    // // We ignore the reserved page for the header
-    // --_numPages;
 
     return rc::OK;
 }
@@ -168,13 +150,11 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
         if (result != 0)
         {
-            printf("seek failed\n");
             return rc::FILE_SEEK_FAILED;
         }
         size_t read = fread(data, PAGE_SIZE, 1, _file);
         if (read != 1)
         {
-            printf("read failed\n");
             return rc::FILE_CORRUPT;
         }
 
@@ -182,7 +162,6 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
     }
     else
     {
-        printf("not found: %d\n", pageNum);
         return rc::FILE_PAGE_NOT_FOUND;
     }
 }

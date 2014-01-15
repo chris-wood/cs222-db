@@ -49,14 +49,12 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = validate(header);
     if (ret != rc::OK)
     {
-        printf("create: validation failed \n");
         return ret;
     }
 
     ret = writeHeader(handle, &header);
     if (ret != rc::OK)
     {
-        printf("create: write failed\n");
         _pfm.closeFile(handle);
         return ret;
     }
@@ -64,7 +62,6 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = _pfm.closeFile(handle);
     if (ret != rc::OK)
     {
-        printf("create: close failed\n");
         return ret;
     }
 
@@ -87,7 +84,6 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
     ret = fileHandle.readPage(0, headerBuffer);
     if (ret != rc::OK)
     {
-        printf("header read fail\n");
         return rc::HEADER_SIZE_CORRUPT;
     }
 
@@ -97,7 +93,6 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
     ret = validate(*header);
     if (ret != rc::OK)
     {
-        printf("didn't pass validation\n");
         return ret;
     }
 
@@ -171,35 +166,8 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     return rc::OK;
 }
 
-// RC RecordBasedFileManager::writePageIndex(FileHandle &fileHandle, PageIndexHeader* header, PageNum &pageNum)
-// {
-//     unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
-//     fileHandle.readPage(pageNum, buffer);
-//     memcpy(buffer + PAGE_SIZE - sizeof(PageIndexHeader), header, sizeof(PageIndexHeader));
-//     ret = fileHandle.writePage(pageNum, pageBuffer);
-//     if (ret != rc::OK)
-//     {
-//         return ret;
-//     }
-
-//     return rc::OK;
-// }
-
 RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 {
-    // FILE* file = fileHandle.getFile();
-    // int result = fseek(file, 0, SEEK_SET);
-    // if (result != 0)
-    // {
-    //     return rc::FILE_SEEK_FAILED;
-    // }
-
-    // size_t written = fwrite(header, sizeof(*header), 1, file);
-    // if (written != 1)
-    // {
-    //     return rc::FILE_CORRUPT;
-    // }
-
     unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
     memcpy(buffer, header, sizeof(PFHeader));
 
@@ -245,9 +213,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     PageIndexHeader* header = (PageIndexHeader*)malloc(sizeof(PageIndexHeader));
     memcpy(header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
 
-    // // @caw: needed?
-    // int freeSpace = PAGE_SIZE - header->freeSpaceOffset - sizeof(PageIndexHeader) - (header->numSlots * sizeof(PageIndexSlot));
-
     // Copy the record to the freespace offset indicated by the header
     memcpy(pageBuffer + header->freeSpaceOffset, data, recLength);
 
@@ -256,6 +221,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     slotIndex.size = recLength;
     slotIndex.pageOffset = header->freeSpaceOffset;
     memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)), &slotIndex, sizeof(PageIndexSlot));
+
+    // TODO: need to move this page around in the list structures to see where it actually goes...
 
     // Update the header information
     header->numSlots++;
@@ -279,9 +246,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 // NOTE: THIS METHOD MUST RUN IN O(1) TIME
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {
-    // int requiredPages = 
-
     // TODO: need to handle the case where n >= 1 pages are used to store the record
+    // int requiredPages = ???
 
     // Pull the page into memory
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
@@ -299,6 +265,32 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) 
 {
+    // unsigned index = 0;
+    // unsigned offset = 0;
+    // cout << "(";
+    // for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
+    // {
+    //     Attribute attr = *itr;
+    //     switch (attr.type)
+    //     {
+    //         case TypeInt:
+    //             int ival = 0;
+    //             memcpy(&ival, )
+    //             break;
+    //         case TypeReal:
+    //             int rval = 0.0;
+    //             break;
+    //         case TypeVarChar:
+    //             cout << "\"";
+    //             for (unsigned i=0; i < attr.length; i++)
+    //             {
+    //                 cout << data[offset++];
+    //             }
+    //             cout << "\"";
+    //     }
+
+    //     if (index != recordDescriptor.size()) cout << ","
+    // }
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
@@ -326,19 +318,17 @@ void RecordBasedFileManager::init(PFHeader &header)
 
 RC RecordBasedFileManager::validate(PFHeader &header)
 {
-    printf("v0\n");
-    printf("headerSize = %d, %d\n", header.headerSize, sizeof(PFHeader));
     if (header.headerSize != sizeof(PFHeader))
         return rc::HEADER_SIZE_CORRUPT;
-    printf("v1\n");
+ 
     if (header.pageSize != PAGE_SIZE)
         return rc::HEADER_PAGESIZE_MISMATCH;
-    printf("v2\n");
+ 
     if (header.version != CURRENT_PF_VERSION)
         return rc::HEADER_VERSION_MISMATCH;
-    printf("v3\n");
+ 
     if (header.numFreespaceLists != NUM_FREESPACE_LISTS)
         return rc::HEADER_FREESPACE_LISTS_MISMATCH;
-    printf("v4\n");
+ 
     return rc::OK;
 }
