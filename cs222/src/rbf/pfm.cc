@@ -32,28 +32,15 @@ PagedFileManager::~PagedFileManager()
 RC PagedFileManager::createFile(const char *fileName)
 {
     // Check if the file exists
-    FILE* file = fopen(fileName, "r");
+    FILE* file = fopen(fileName, "rb");
     if (file)
     {
         fclose(file);
         return rc::FILE_ALREADY_EXISTS;
     }
 
-    file = fopen(fileName, "w");
-
-    // Reserve the 1st page for bookkeeping data
-    void* page = malloc(PAGE_SIZE);
-    memset(page, 0, PAGE_SIZE);
-
-    size_t written = fwrite(page, PAGE_SIZE, 1, file);
-    fclose(file);
-
-    if (written != 1)
-    {
-        return rc::UNKNOWN_FAILURE;
-    }
-
-    // TODO: Keep track that we have created this file
+    // Open for binary write - to create the file
+    file = fopen(fileName, "wb");
 
     return rc::OK;
 }
@@ -66,8 +53,6 @@ RC PagedFileManager::destroyFile(const char *fileName)
         return rc::FILE_COULD_NOT_DELETE;
     }
 
-    // TODO: Keep track of open file handles, so we can force close them
-    // TODO: Keep track that we have deleted this file
     return rc::OK;
 }
 
@@ -80,7 +65,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Open file read only (will not create) to see if it exists
-    FILE* file = fopen(fileName, "r");
+    FILE* file = fopen(fileName, "rb");
     if (!file)
     {
         return rc::FILE_NOT_FOUND;
@@ -88,7 +73,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 
     // Open file for reading/writing
     fclose(file);
-    file = fopen(fileName, "r+");
+    file = fopen(fileName, "rb+");
     if (!file)
     {
         return rc::FILE_COULD_NOT_OPEN;
@@ -164,19 +149,17 @@ RC FileHandle::unload()
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
 {
-    int result;
-    size_t read;
-
     if (pageNum <= _numPages)
     {
         // Read the data from disk into the user buffer
         // QUESTION: Can we assume fseek is considered constant access time and not linear?
-        result = fseek(_file, PAGE_SIZE * (pageNum + 1), SEEK_SET);
+        // ANSWER: Yes, fseek is assumed to be O(1)
+        int result = fseek(_file, PAGE_SIZE * (pageNum + 1), SEEK_SET);
         if (result != 0)
         {
             return rc::FILE_SEEK_FAILED;
         }
-        read = fread(data, PAGE_SIZE, 1, _file);
+        size_t read = fread(data, PAGE_SIZE, 1, _file);
         if (read != 1)
         {
             return rc::FILE_CORRUPT;
@@ -193,18 +176,15 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
-    int result;
-    size_t written;
-
     if (pageNum <= _numPages)
     {
         // Flush the content in the user buffer to disk and update the page entry
-        result = fseek(_file, PAGE_SIZE * (1 + pageNum), SEEK_SET);
+        int result = fseek(_file, PAGE_SIZE * (1 + pageNum), SEEK_SET);
         if (result != 0)
         {
             return rc::FILE_SEEK_FAILED;
         }
-        written = fwrite(data, PAGE_SIZE, 1, _file);
+        size_t written = fwrite(data, PAGE_SIZE, 1, _file);
         if (written != 1)
         {
             return rc::FILE_CORRUPT;
@@ -225,27 +205,12 @@ RC FileHandle::appendPage(const void *data)
     // update the number of pages in the process
     int offset = ++_numPages;
 
-    // TODO: Update the header information for the file with the new count
-    /*
-    int result = fseek(_file, 0, SEEK_SET);
-    if (result != 0)
-    {
-        return rc::FILE_SEEK_FAILED;
-    }
-    int written = fwrite(_header, sizeof(PFHeader), 1, _file);
-    if (written != 1)
-    {
-        return rc::FILE_CORRUPT;
-    }
-    */
-
-    // Now write the new data
+    // Seek to the end of the file (last page) and write the new page data
     int result = fseek(_file, offset * PAGE_SIZE, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
     }
-
     size_t written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {

@@ -96,8 +96,6 @@ void fhTest()
     // assert(rc == success);
 
     // cout << "Test Case 3 Passed!" << endl << endl;
-
-    return 0;
 }
 
 

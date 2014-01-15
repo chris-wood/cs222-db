@@ -21,6 +21,22 @@ typedef struct
   unsigned slotNum;
 } RID;
 
+// Struct for a particular record
+typedef struct 
+{
+  unsigned numFields;
+  void* fields;
+} Record;
+
+// Page index (directory)
+typedef struct
+{
+  unsigned pageNumber;
+  unsigned freeSpaceOffset; 
+  unsigned slots;
+  unsigned* slotOffsets; // size of this array == #slots, each is offset to a record
+} PageIndex;
+
 
 // Attribute
 typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;
@@ -158,7 +174,7 @@ protected:
 private:
   static RecordBasedFileManager *_rbf_manager;
 
-  boost::unordered_map<unsigned int, PFHeader*> _headerData;
+  boost::unordered_map<FileHandle*, PFHeader*> _headerData;
   PagedFileManager& _pfm;
 };
 

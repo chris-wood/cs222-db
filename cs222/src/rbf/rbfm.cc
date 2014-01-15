@@ -87,15 +87,17 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
         return rc::HEADER_SIZE_CORRUPT;
     }
 
+    // Validate the header information
     ret = header->validate();
     if (ret != rc::OK)
     {
         return ret;
     }
 
-    fileHandle.setNumPages(header->numPages);
+    // Map the file handle to its header for maintenance
+    _headerData[&fileHandle] = header;
 
-    _headerData[(unsigned int)fileHandle.getFile()] = header;
+    return rc::OK;
 }
 
 RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
@@ -111,7 +113,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum)
 {
     RC ret;
-    PFHeader* header = _headerData[(unsigned int)fileHandle.getFile()];
+    PFHeader* header = _headerData[&fileHandle];
 
     // Search through the freespace lists, starting with the smallest size and incrementing upwards
     for (unsigned i=0; i<header->numFreespaceLists; ++i)
