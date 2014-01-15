@@ -296,6 +296,9 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // Update our freespace index to the new list
     pageHeader.freespaceList = destinationListIndex;
 
+    // Write out the header to disk with new data
+    writeHeader(fileHandle, header);
+
     free(pageBuffer);
     return rc::OK;
 }
