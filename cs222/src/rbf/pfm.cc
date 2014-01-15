@@ -132,6 +132,27 @@ RC FileHandle::flushPages()
     return rc::OK;
 }
 
+RC FileHandle::loadFile(FILE* file)
+{
+    _file = file;
+
+    if (fseek(_file, 0, SEEK_END) != 0)
+    {
+        return rc::FILE_SEEK_FAILED;
+    }
+
+    _numPages = ftell(_file) / PAGE_SIZE;
+    if (_numPages == 0)
+    {
+        return rc::FILE_CORRUPT;
+    }
+
+    // We ignore the reserved page for the header
+    --_numPages;
+
+    return rc::OK;
+}
+
 RC FileHandle::unload()
 {
     // Prepare handle for reuse

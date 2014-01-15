@@ -54,8 +54,8 @@ public:
 
     RC unload();
     RC flushPages();
+    RC loadFile(FILE* file);
 
-    void loadFile(FILE* file) { _file = file; }
     void setNumPages(unsigned pages) { _numPages = pages; }
 
     FILE* getFile() { return _file; }
