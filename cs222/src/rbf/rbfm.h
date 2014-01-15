@@ -7,8 +7,12 @@
 
 #include "../rbf/pfm.h"
 
+#include <boost/unordered_map.hpp>
+
 using namespace std;
 
+#define CURRENT_PF_VERSION 1
+#define NUM_FREESPACE_LISTS 8
 
 // Record ID
 typedef struct
@@ -39,6 +43,22 @@ typedef enum { EQ_OP = 0,  // =
            NO_OP       // no condition
 } CompOp;
 
+
+// PageFile Header (should fit in 1st page)
+struct PFHeader
+{
+    void init();
+    RC validate();
+
+    unsigned headerSize;
+    unsigned pageSize;
+    unsigned version;
+    unsigned numPages;
+    unsigned numFreespaceLists;
+
+    unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
+    PageNum freespaceLists[NUM_FREESPACE_LISTS];
+};
 
 
 /****************************************************************************
@@ -133,11 +153,15 @@ protected:
   ~RecordBasedFileManager();
 
   RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
+  RC writeHeader(FileHandle &fileHandle, PFHeader* header);
 
 private:
   static RecordBasedFileManager *_rbf_manager;
 
+  boost::unordered_map<unsigned int, PFHeader*> _headerData;
   PagedFileManager& _pfm;
 };
+
+std::size_t hash_value(const FileHandle &item);
 
 #endif

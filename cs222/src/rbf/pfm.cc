@@ -42,14 +42,9 @@ RC PagedFileManager::createFile(const char *fileName)
     file = fopen(fileName, "w");
 
     // Reserve the 1st page for bookkeeping data
-    PFHeader header;
     void* page = malloc(PAGE_SIZE);
     memset(page, 0, PAGE_SIZE);
 
-    assert(sizeof(PFHeader) <= PAGE_SIZE);
-    memcpy(page, &header, sizeof(PFHeader));
-
-    // Write out initial page with header to file
     size_t written = fwrite(page, PAGE_SIZE, 1, file);
     fclose(file);
 
@@ -99,22 +94,8 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
         return rc::FILE_COULD_NOT_OPEN;
     }
 
-    // Read in header data
-    PFHeader* header = (PFHeader*)malloc(sizeof(PFHeader));
-    size_t read = fread(header, sizeof(PFHeader), 1, file);
-    if (read != 1)
-    {
-        return rc::HEADER_SIZE_CORRUPT;
-    }
-
-    RC ret = header->validate();
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
-
     // Initialize the FileHandle
-    fileHandle.loadFile(file, header);
+    fileHandle.loadFile(file);
 
     return rc::OK;
 }
@@ -135,7 +116,7 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
 
 
 FileHandle::FileHandle()
-    : _file(NULL), _header(NULL)
+    : _file(NULL)
 {
 }
 
@@ -153,15 +134,8 @@ RC FileHandle::flushPages()
 
 RC FileHandle::unload()
 {
-    if (_header)
-    {
-        free(_header);
-    }
-
-    fclose(_file);
-
     // Prepare handle for reuse
-    _header = NULL;
+    fclose(_file);
     _file = NULL;
 
     return rc::OK;
@@ -172,7 +146,7 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
     int result;
     size_t read;
 
-    if (pageNum <= _header->numPages)
+    if (pageNum <= _numPages)
     {
         // Read the data from disk into the user buffer
         // QUESTION: Can we assume fseek is considered constant access time and not linear?
@@ -201,7 +175,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
     int result;
     size_t written;
 
-    if (pageNum <= _header->numPages)
+    if (pageNum <= _numPages)
     {
         // Flush the content in the user buffer to disk and update the page entry
         result = fseek(_file, PAGE_SIZE * (1 + pageNum), SEEK_SET);
@@ -228,9 +202,10 @@ RC FileHandle::appendPage(const void *data)
 {
     // Determine the offset for this directory entry and
     // update the number of pages in the process
-    int offset = ++(_header->numPages);
+    int offset = ++_numPages;
 
-    // Update the header information for the file with the new count
+    // TODO: Update the header information for the file with the new count
+    /*
     int result = fseek(_file, 0, SEEK_SET);
     if (result != 0)
     {
@@ -241,15 +216,16 @@ RC FileHandle::appendPage(const void *data)
     {
         return rc::FILE_CORRUPT;
     }
+    */
 
     // Now write the new data
-    result = fseek(_file, offset * PAGE_SIZE, SEEK_SET);
+    int result = fseek(_file, offset * PAGE_SIZE, SEEK_SET);
     if (result != 0)
     {
         return rc::FILE_SEEK_FAILED;
     }
 
-    written = fwrite(data, PAGE_SIZE, 1, _file);
+    size_t written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {
         return rc::FILE_CORRUPT;
@@ -261,44 +237,6 @@ RC FileHandle::appendPage(const void *data)
 
 unsigned FileHandle::getNumberOfPages()
 {
-    return _header->numPages;
+    return _numPages;
 }
 
-PFHeader::PFHeader()
-    : headerSize(sizeof(*this)),
-      pageSize(PAGE_SIZE),
-      version(CURRENT_PF_VERSION),
-      numPages(0),
-      numFreespaceLists(NUM_FREESPACE_LISTS)
-{
-    // Divide the freespace lists evenly, except for the first and last
-    unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 4);
-    unsigned short cutoff = cutoffDelta / 4;
-
-    // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
-    // So elements in the largest index will have the most amount of bytes free
-    for (int i=0; i<NUM_FREESPACE_LISTS; ++i)
-    {
-        freespaceLists[i] = 0;
-        freespaceCutoffs[i] = cutoff;
-
-        cutoff += cutoffDelta;
-    }
-}
-
-RC PFHeader::validate()
-{
-    if (headerSize != sizeof(*this))
-        return rc::HEADER_SIZE_CORRUPT;
-
-    if (pageSize != PAGE_SIZE)
-        return rc::HEADER_PAGESIZE_MISMATCH;
-
-    if (version != CURRENT_PF_VERSION)
-        return rc::HEADER_VERSION_MISMATCH;
-
-    if (numFreespaceLists != NUM_FREESPACE_LISTS)
-        return rc::HEADER_FREESPACE_LISTS_MISMATCH;
-
-    return rc::OK;
-}

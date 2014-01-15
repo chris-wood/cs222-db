@@ -28,7 +28,8 @@ namespace rc
         HEADER_SIZE_CORRUPT,
         HEADER_PAGESIZE_MISMATCH,
         HEADER_VERSION_MISMATCH,
-        HEADER_FREESPACE_LISTS_MISMATCH
+        HEADER_FREESPACE_LISTS_MISMATCH,
+        HEADER_SIZE_TOO_LARGE
     };
 
     const char* rcToString(int rc);

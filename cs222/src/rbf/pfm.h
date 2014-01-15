@@ -12,29 +12,9 @@ typedef int RC;
 typedef unsigned PageNum;
 
 #define PAGE_SIZE 4096
-#define CURRENT_PF_VERSION 1
-#define NUM_FREESPACE_LISTS 8
+
 
 class FileHandle;
-
-
-// PageFile Header (should fit in 1st page)
-struct PFHeader
-{
-    PFHeader();
-    ~PFHeader() {}
-
-    RC validate();
-
-    unsigned headerSize;
-    unsigned pageSize;
-    unsigned version;
-    unsigned numPages;
-    unsigned numFreespaceLists;
-
-    unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
-    PageNum freespaceLists[NUM_FREESPACE_LISTS];
-};
 
 class PagedFileManager
 {
@@ -75,18 +55,20 @@ public:
     RC unload();
     RC flushPages();
 
-    void loadFile(FILE* file, PFHeader* header) { _file = file; _header = header; }
-    FILE* getFile() { return _file; }
+    void loadFile(FILE* file) { _file = file; }
+    void setNumPages(unsigned pages) { _numPages = pages; }
 
-    PFHeader* getHeader() { return _header; }
-    const PFHeader* getHeader() const { return _header; }
+    FILE* getFile() { return _file; }
+    const FILE* getFile() const { return _file; }
 
     bool hasFile() const { return _file != NULL; }
 
+    bool operator == (const FileHandle& that) const { return this->_file == that._file; }
+
 private:
-    // DB file pointer and header information
+    // DB file pointer
     FILE* _file;
-    PFHeader* _header;
+    unsigned _numPages;
 };
 
 
