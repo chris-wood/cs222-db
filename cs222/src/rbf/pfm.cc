@@ -271,29 +271,18 @@ PFHeader::PFHeader()
       numPages(0),
       numFreespaceLists(NUM_FREESPACE_LISTS)
 {
-    assert(numFreespaceLists >= 4);
+    // Divide the freespace lists evenly, except for the first and last
+    unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 4);
+    unsigned short cutoff = cutoffDelta / 4;
 
-    // Divide the first 4 slots at 2/3, 1/2, 1/3, and 1/4
-    unsigned index = 0;
-    _freespaceCutoffs[index++] = 2 * PAGE_SIZE / 3;
-    _freespaceCutoffs[index++] =     PAGE_SIZE / 2;
-    _freespaceCutoffs[index++] =     PAGE_SIZE / 3;
-    _freespaceCutoffs[index++] =     PAGE_SIZE / 4;
-
-    // Divide the rest of the slots up evenly
-    unsigned cutoff = _freespaceCutoffs[index - 1];
-    unsigned cutoffDelta = cutoff / (1 + NUM_FREESPACE_LISTS - index);
-    cutoff -= cutoffDelta * (NUM_FREESPACE_LISTS - index);
-
-    for (unsigned i=0; i<NUM_FREESPACE_LISTS; ++i)
+    // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
+    // So elements in the largest index will have the most amount of bytes free
+    for (int i=0; i<NUM_FREESPACE_LISTS; ++i)
     {
+        freespaceLists[i] = 0;
+        freespaceCutoffs[i] = cutoff;
+
         cutoff += cutoffDelta;
-        _freespaceCutoffs[i] = cutoff;
-    }
-
-    for (unsigned i=0; i<NUM_FREESPACE_LISTS; ++i)
-    {
-        _freespaceLists[i] = 0;
     }
 }
 
@@ -312,9 +301,4 @@ RC PFHeader::validate()
         return rc::HEADER_FREESPACE_LISTS_MISMATCH;
 
     return rc::OK;
-}
-
-PageNum PFHeader::findFreeSpace(unsigned bytes)
-{
-    return 0;
 }

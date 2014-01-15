@@ -19,14 +19,12 @@ class FileHandle;
 
 
 // PageFile Header (should fit in 1st page)
-class PFHeader
+struct PFHeader
 {
-public:
     PFHeader();
     ~PFHeader() {}
 
     RC validate();
-    PageNum findFreeSpace(unsigned bytes);
 
     unsigned headerSize;
     unsigned pageSize;
@@ -34,8 +32,8 @@ public:
     unsigned numPages;
     unsigned numFreespaceLists;
 
-    short _freespaceCutoffs[NUM_FREESPACE_LISTS];
-    PageNum _freespaceLists[NUM_FREESPACE_LISTS];
+    unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
+    PageNum freespaceLists[NUM_FREESPACE_LISTS];
 };
 
 class PagedFileManager
@@ -79,7 +77,10 @@ public:
 
     void loadFile(FILE* file, PFHeader* header) { _file = file; _header = header; }
     FILE* getFile() { return _file; }
+
     PFHeader* getHeader() { return _header; }
+    const PFHeader* getHeader() const { return _header; }
+
     bool hasFile() const { return _file != NULL; }
 
 private:
