@@ -777,6 +777,7 @@ int main()
     remove("test_3");
     remove("test_4");
     
+    pfmTest();
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -790,6 +791,12 @@ int main()
     vector<int> sizes;
     RBFTest_9(rbfm, rids, sizes);
     RBFTest_10(rbfm, rids, sizes);
-     
+
+    remove("test");
+    remove("test_1");
+    remove("test_2");
+    remove("test_3");
+    remove("test_4");
+
     return 0;
 }
