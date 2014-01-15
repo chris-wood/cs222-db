@@ -41,6 +41,8 @@ typedef struct
   unsigned pageNumber;
   unsigned freeSpaceOffset;
   unsigned numSlots;
+  PageNum prevPage;
+  PageNum nextPage;
 } PageIndexHeader;
 
 

@@ -24,6 +24,7 @@ namespace rc
 
         RECORD_DOES_NOT_EXIST,
         RECORD_CORRUPT,
+        RECORD_SIZE_INVALID,
 
         HEADER_SIZE_CORRUPT,
         HEADER_PAGESIZE_MISMATCH,

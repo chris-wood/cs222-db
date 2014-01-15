@@ -117,6 +117,11 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     RC ret;
     PFHeader* header = _headerData[&fileHandle];
 
+    if (bytes < 1)
+    {
+        return rc::RECORD_SIZE_INVALID;
+    }
+
     // Search through the freespace lists, starting with the smallest size and incrementing upwards
     for (unsigned i=0; i<header->numFreespaceLists; ++i)
     {
@@ -131,9 +136,10 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     }
 
     // If we did not find a suitible location, append however many pages we need to store the data
-    int requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
+    unsigned requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
 
     // @Tamir: are you okay with this? i.e., specifying the data type and not just void. it's needed for pointer arithetic below
+    // @Chris: Yup, makes sense to me
     unsigned char* page = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
     memset(page, 0, PAGE_SIZE * requiredPages);
 
@@ -145,6 +151,22 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         index.freeSpaceOffset = 0;
         index.numSlots = 0;
         index.pageNumber = fileHandle.getNumberOfPages();
+        index.prevPage = 0;
+        index.nextPage = 0;
+
+        // Append this page to the list of free pages (into the beginning of the largest freespace slot)
+        unsigned freespaceSlot = header->numFreespaceLists - 1;
+        if (header->freespaceLists[freespaceSlot] == 0)
+        {
+            header->freespaceLists[freespaceSlot] = index.pageNumber;
+        }
+        else
+        {
+            index.nextPage = header->freespaceLists[freespaceSlot];
+            header->freespaceLists[index.nextPage] = index.pageNumber;
+            header->freespaceLists[freespaceSlot] = index.pageNumber;
+        }
+
         memcpy(page + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
 
         // Append this new page to the file
@@ -161,7 +183,11 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
     // Update the file header information immediately
     header->numPages = header->numPages + requiredPages;
-    writeHeader(fileHandle, header);
+    ret = writeHeader(fileHandle, header);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
