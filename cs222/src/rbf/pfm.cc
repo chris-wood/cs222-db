@@ -1,6 +1,7 @@
 #include "pfm.h"
 #include "returncodes.h"
 
+#include <assert.h>
 #include <cstring>
 #include <cstdlib>
 
@@ -40,13 +41,16 @@ RC PagedFileManager::createFile(const char *fileName)
 
     file = fopen(fileName, "w");
 
+    // Reserve the 1st page for bookkeeping data
     PFHeader header;
-    header.headerSize = sizeof(header);
-    header.version = CURRENT_PF_VERSION;
-    header.numPages = 0;
+    void* page = malloc(PAGE_SIZE);
+    memset(page, 0, PAGE_SIZE);
 
-    // Write out header to file
-    size_t written = fwrite(&header, header.headerSize, 1, file);
+    assert(sizeof(PFHeader) <= PAGE_SIZE);
+    memcpy(page, &header, sizeof(PFHeader));
+
+    // Write out initial page with header to file
+    size_t written = fwrite(page, PAGE_SIZE, 1, file);
     fclose(file);
 
     if (written != 1)
@@ -98,14 +102,15 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     // Read in header data
     PFHeader* header = (PFHeader*)malloc(sizeof(PFHeader));
     size_t read = fread(header, sizeof(PFHeader), 1, file);
-    if (read != 1 || header->headerSize != sizeof(PFHeader))
+    if (read != 1)
     {
-        return rc::FILE_CORRUPT;
+        return rc::HEADER_SIZE_CORRUPT;
     }
 
-    if (header->version != CURRENT_PF_VERSION)
+    RC ret = header->validate();
+    if (ret != rc::OK)
     {
-        return rc::FILE_OUT_OF_DATE;
+        return ret;
     }
 
     // Initialize the FileHandle
@@ -121,6 +126,9 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
     {
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
+
+    fileHandle.flushPages();
+    fileHandle.unload();
 
     return rc::OK;
 }
@@ -240,6 +248,7 @@ RC FileHandle::appendPage(const void *data)
     {
         return rc::FILE_SEEK_FAILED;
     }
+
     written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {
@@ -253,4 +262,59 @@ RC FileHandle::appendPage(const void *data)
 unsigned FileHandle::getNumberOfPages()
 {
     return _header->numPages;
+}
+
+PFHeader::PFHeader()
+    : headerSize(sizeof(*this)),
+      pageSize(PAGE_SIZE),
+      version(CURRENT_PF_VERSION),
+      numPages(0),
+      numFreespaceLists(NUM_FREESPACE_LISTS)
+{
+    assert(numFreespaceLists >= 4);
+
+    // Divide the first 4 slots at 2/3, 1/2, 1/3, and 1/4
+    unsigned index = 0;
+    _freespaceCutoffs[index++] = 2 * PAGE_SIZE / 3;
+    _freespaceCutoffs[index++] =     PAGE_SIZE / 2;
+    _freespaceCutoffs[index++] =     PAGE_SIZE / 3;
+    _freespaceCutoffs[index++] =     PAGE_SIZE / 4;
+
+    // Divide the rest of the slots up evenly
+    unsigned cutoff = _freespaceCutoffs[index - 1];
+    unsigned cutoffDelta = cutoff / (1 + NUM_FREESPACE_LISTS - index);
+    cutoff -= cutoffDelta * (NUM_FREESPACE_LISTS - index);
+
+    for (unsigned i=0; i<NUM_FREESPACE_LISTS; ++i)
+    {
+        cutoff += cutoffDelta;
+        _freespaceCutoffs[i] = cutoff;
+    }
+
+    for (unsigned i=0; i<NUM_FREESPACE_LISTS; ++i)
+    {
+        _freespaceLists[i] = 0;
+    }
+}
+
+RC PFHeader::validate()
+{
+    if (headerSize != sizeof(*this))
+        return rc::HEADER_SIZE_CORRUPT;
+
+    if (pageSize != PAGE_SIZE)
+        return rc::HEADER_PAGESIZE_MISMATCH;
+
+    if (version != CURRENT_PF_VERSION)
+        return rc::HEADER_VERSION_MISMATCH;
+
+    if (numFreespaceLists != NUM_FREESPACE_LISTS)
+        return rc::HEADER_FREESPACE_LISTS_MISMATCH;
+
+    return rc::OK;
+}
+
+PageNum PFHeader::findFreeSpace(unsigned bytes)
+{
+    return 0;
 }

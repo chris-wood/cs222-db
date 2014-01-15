@@ -13,16 +13,30 @@ typedef unsigned PageNum;
 
 #define PAGE_SIZE 4096
 #define CURRENT_PF_VERSION 1
+#define NUM_FREESPACE_LISTS 8
 
 class FileHandle;
 
-// PageFile Header
-typedef struct
+
+// PageFile Header (should fit in 1st page)
+class PFHeader
 {
-  unsigned headerSize;
-  unsigned version;
-  unsigned numPages;
-} PFHeader;
+public:
+    PFHeader();
+    ~PFHeader() {}
+
+    RC validate();
+    PageNum findFreeSpace(unsigned bytes);
+
+    unsigned headerSize;
+    unsigned pageSize;
+    unsigned version;
+    unsigned numPages;
+    unsigned numFreespaceLists;
+
+    short _freespaceCutoffs[NUM_FREESPACE_LISTS];
+    PageNum _freespaceLists[NUM_FREESPACE_LISTS];
+};
 
 class PagedFileManager
 {
@@ -45,9 +59,8 @@ private:
 typedef struct 
 {
     PageNum pageNum;
-    void* data;
-    int offset;
-    int nextEntryAbsoluteOffset; // -1 if end of directory entry list, a real file offset otherwise
+    PageNum nextPage;
+    PageNum prevPage;
 } PFEntry;
 
 class FileHandle
@@ -74,5 +87,7 @@ private:
     FILE* _file;
     PFHeader* _header;
 };
+
+
 
 #endif // _pfm_h_
