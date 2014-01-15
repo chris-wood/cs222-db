@@ -3,6 +3,8 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
+INCLUDEPATH += ../cs222/inc/boost_1_55_0/
+
 SOURCES += \
     ../cs222/src/rbf/rbftest.cc \
     ../cs222/src/rbf/rbfm.cc \
