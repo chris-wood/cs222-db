@@ -12,7 +12,7 @@
 using namespace std;
 
 #define CURRENT_PF_VERSION 1
-#define NUM_FREESPACE_LISTS 8
+#define NUM_FREESPACE_LISTS 11
 
 // Record ID
 typedef struct
@@ -179,6 +179,7 @@ protected:
   RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
   RC writeHeader(FileHandle &fileHandle, PFHeader* header);
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
+  RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

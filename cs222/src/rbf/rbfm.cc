@@ -192,6 +192,24 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     return rc::OK;
 }
 
+RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader)
+{
+    PFHeader* header = _headerData[&fileHandle];
+
+    // TODO: Verify correct
+    unsigned freespace = PAGE_SIZE - pageHeader.freeSpaceOffset - sizeof(PageIndexHeader);
+    for (unsigned i=header->numFreespaceLists; i>0; --i)
+    {
+        unsigned freespaceList = i-1;
+        if (freespace >= header->freespaceCutoffs[freespaceList])
+        {
+            return movePageToFreeSpaceList(fileHandle, pageHeader, freespaceList);
+        }
+    }
+
+    return rc::UNKNOWN_FAILURE;
+}
+
 RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
 {
     if (destinationListIndex == pageHeader.freespaceList)
@@ -297,7 +315,20 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     pageHeader.freespaceList = destinationListIndex;
 
     // Write out the header to disk with new data
-    writeHeader(fileHandle, header);
+    ret = writeHeader(fileHandle, header);
+    if (ret != rc::OK)
+    {
+        free(pageBuffer);
+        return ret;
+    }
+
+    memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&pageHeader, sizeof(PageIndexHeader));
+    ret = fileHandle.writePage(pageHeader.pageNumber, pageBuffer);
+    if (ret != rc::OK)
+    {
+        free(pageBuffer);
+        return ret;
+    }
 
     free(pageBuffer);
     return rc::OK;
@@ -441,8 +472,8 @@ void RecordBasedFileManager::init(PFHeader &header)
     header.numFreespaceLists = NUM_FREESPACE_LISTS;
 
     // Divide the freespace lists evenly, except for the first and last
-    unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 4);
-    unsigned short cutoff = cutoffDelta / 4;
+    unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
+    unsigned short cutoff = 0; // This makes the 0th index basically a dumping ground for full pages
 
     // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
     // So elements in the largest index will have the most amount of bytes free
