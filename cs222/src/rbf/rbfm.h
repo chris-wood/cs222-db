@@ -86,9 +86,12 @@ public:
   //  2) For int and real: use 4 bytes to store the value;
   //     For varchar: use 4 bytes to store the length of characters, then store the actual characters.
   //  !!!The same format is used for updateRecord(), the returned data of readRecord(), and readAttribute()
-  RC insertRecord(const FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
 
-  RC readRecord(const FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
+  // TODO: VERIFY REMOVING CONST HERE IS OK
+  RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
+
+  // TODO: VERIFY REMOVING CONST HERE IS OK
+  RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
   
   // This method will be mainly used for debugging/testing
   RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
@@ -128,6 +131,8 @@ public:
 protected:
   RecordBasedFileManager();
   ~RecordBasedFileManager();
+
+  RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
 
 private:
   static RecordBasedFileManager *_rbf_manager;
