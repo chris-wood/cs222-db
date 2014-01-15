@@ -16,3 +16,13 @@
 *.pro.user
 qt-project/build-debug/*
 qt-project/build-release/*
+
+# Generated Test files
+cs222/test
+cs222/test_1
+cs222/test_2
+cs222/test_3
+cs222/test_4
+cs222/testFile0.db
+cs222/testFile1.db
+cs222/testFile2.db
