@@ -482,32 +482,46 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) 
 {
-    // unsigned index = 0;
-    // unsigned offset = 0;
-    // cout << "(";
-    // for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
-    // {
-    //     Attribute attr = *itr;
-    //     switch (attr.type)
-    //     {
-    //         case TypeInt:
-    //             int ival = 0;
-    //             memcpy(&ival, )
-    //             break;
-    //         case TypeReal:
-    //             int rval = 0.0;
-    //             break;
-    //         case TypeVarChar:
-    //             cout << "\"";
-    //             for (unsigned i=0; i < attr.length; i++)
-    //             {
-    //                 cout << data[offset++];
-    //             }
-    //             cout << "\"";
-    //     }
-
-    //     if (index != recordDescriptor.size()) cout << ","
-    // }
+    unsigned index = 0;
+    int offset = 0;
+    cout << "(";
+    for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
+    {
+        Attribute attr = *itr;
+        switch (attr.type)
+        {
+            case TypeInt:
+            {
+                int ival = 0;
+                memcpy(&ival, (char*)data + offset, sizeof(int));
+                offset += sizeof(int);
+                cout << ival;
+                break;
+            }
+            case TypeReal:
+            {
+                float rval = 0.0;
+                memcpy(&rval, (char*)data + offset, sizeof(float));
+                offset += sizeof(float);
+                cout << rval;
+                break;
+            }
+            case TypeVarChar:
+            {
+                cout << "\"";
+                int count = 0;
+                memcpy(&count, (char*)data + offset, sizeof(int));
+                offset += 4;
+                for (unsigned i=0; i < count; i++)
+                {
+                    cout << ((char*)data)[offset++];
+                }
+                cout << "\"";
+            }
+        }
+        if (index != recordDescriptor.size()) cout << ",";
+    }
+    cout << ")" << endl;
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
