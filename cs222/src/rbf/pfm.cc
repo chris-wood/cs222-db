@@ -138,7 +138,7 @@ RC FileHandle::loadFile(const char *fileName, FILE* file)
 RC FileHandle::unload()
 {
     // Prepare handle for reuse
-    if (file)
+    if (_file)
     {
         fclose(_file);
     }
