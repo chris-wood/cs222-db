@@ -28,7 +28,6 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     RC ret = _pfm.createFile(fileName.c_str());
     if (ret != rc::OK)
     {
-        printf("wut?\n");
         return ret;
     }
 
@@ -51,14 +50,12 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = validate(header);
     if (ret != rc::OK)
     {
-        printf("validate?\n");
         return ret;
     }
 
     ret = writeHeader(handle, &header);
     if (ret != rc::OK)
     {
-        printf("write?\n");
         _pfm.closeFile(handle);
         return ret;
     }
@@ -66,7 +63,6 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = _pfm.closeFile(handle);
     if (ret != rc::OK)
     {
-        printf("close?\n");
         return ret;
     }
 
@@ -251,8 +247,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         return rc::OK;
     }
 
-    printf("shuffling: %d %d\n", destinationListIndex, pageHeader.freespaceList);
-
     RC ret;
     PFHeader* header = _headerData[&fileHandle];
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
@@ -261,7 +255,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // Update prevPage to point to our nextPage
     if (pageHeader.prevPage > 0)
     {
-        printf("updating previous page\n");
         // Read in the previous page
         PageIndexHeader prevPageHeader;
         ret = fileHandle.readPage(pageHeader.prevPage, pageBuffer);
@@ -285,7 +278,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     }
     else
     {
-        printf("updating head of the list\n");
         // We were the beginning of the list, update the head pointer in the file header
         header->freespaceLists[pageHeader.freespaceList] = pageHeader.nextPage;
     }
@@ -293,7 +285,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // Update nextPage to point to our prevPage
     if (pageHeader.nextPage > 0)
     {
-        printf("updating the next page\n");
         // Read in the next page
         PageIndexHeader nextPageHeader;
         ret = fileHandle.readPage(pageHeader.nextPage, pageBuffer);
