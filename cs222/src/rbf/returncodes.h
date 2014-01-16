@@ -30,7 +30,9 @@ namespace rc
         HEADER_PAGESIZE_MISMATCH,
         HEADER_VERSION_MISMATCH,
         HEADER_FREESPACE_LISTS_MISMATCH,
-        HEADER_SIZE_TOO_LARGE
+        HEADER_SIZE_TOO_LARGE,
+
+        ATTRIBUTE_INVALID_TYPE
     };
 
     const char* rcToString(int rc);
