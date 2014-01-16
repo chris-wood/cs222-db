@@ -511,7 +511,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 cout << "\"";
                 int count = 0;
                 memcpy(&count, (char*)data + offset, sizeof(int));
-                offset += 4;
+                offset += sizeof(int);
                 for (unsigned i=0; i < count; i++)
                 {
                     cout << ((char*)data)[offset++];
@@ -519,6 +519,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 cout << "\"";
             }
         }
+        index++;
         if (index != recordDescriptor.size()) cout << ",";
     }
     cout << ")" << endl;
