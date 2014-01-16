@@ -247,7 +247,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     if (destinationListIndex == pageHeader.freespaceList)
     {
         // Nothing to do, return
-        printf("phew, we're safe\n");
         return rc::OK;
     }
 
@@ -360,14 +359,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         return ret;
     }
 
-    memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&pageHeader, sizeof(PageIndexHeader));
-    ret = fileHandle.writePage(pageHeader.pageNumber, pageBuffer);
-    if (ret != rc::OK)
-    {
-        free(pageBuffer);
-        return ret;
-    }
-
+	// WARNING: The caller must write out the pageHeader to disk!
     free(pageBuffer);
     return rc::OK;
 }
@@ -473,6 +465,9 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
     // Update the position of this page in the freespace lists, if necessary
     movePageToCorrectFreeSpaceList(fileHandle, *header);
+
+	// Copy the updated header information into our page buffer
+	memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)header, sizeof(PageIndexHeader));
 
     // Write the new page information to disk
     ret = fileHandle.writePage(pageNum, pageBuffer);
