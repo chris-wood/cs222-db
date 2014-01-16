@@ -27,6 +27,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     RC ret = _pfm.createFile(fileName.c_str());
     if (ret != rc::OK)
     {
+        printf("wut?\n");
         return ret;
     }
 
@@ -49,12 +50,14 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = validate(header);
     if (ret != rc::OK)
     {
+        printf("validate?\n");
         return ret;
     }
 
     ret = writeHeader(handle, &header);
     if (ret != rc::OK)
     {
+        printf("write?\n");
         _pfm.closeFile(handle);
         return ret;
     }
@@ -62,6 +65,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     ret = _pfm.closeFile(handle);
     if (ret != rc::OK)
     {
+        printf("close?\n");
         return ret;
     }
 
@@ -339,14 +343,13 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
     unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
     memcpy(buffer, header, sizeof(PFHeader));
 
+    // Commit the header to disk
     if (fileHandle.getNumberOfPages() == 0)
     {
-        // printf("appending header...\n");
         fileHandle.appendPage(buffer);
     }
     else
-    {
-        // printf("writing existing header...\n"); 
+    { 
         fileHandle.writePage(0, buffer);
     }
 
@@ -372,6 +375,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     {
         return ret;
     }
+
+    // TODO: need to handle case where the record spans multiple pages
 
     // Read in the designated page
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
@@ -405,6 +410,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Once the write is committed, store the RID information and return
+    printf("rid.pageNum = %d\n", pageNum);
     rid.pageNum = pageNum;
     rid.slotNum = header->numSlots;
 
@@ -417,6 +423,8 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
     // TODO: need to handle the case where n >= 1 pages are used to store the record
     // @Chris: the prof said we don't have to handle that case (https://piazza.com/class/hp0w5rnebxg6kn?cid=40)
     // int requiredPages = ???
+
+    printf("(read) rid.pageNum = %d\n", rid.pageNum);
 
     // Pull the page into memory
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
@@ -460,6 +468,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 
     //     if (index != recordDescriptor.size()) cout << ","
     // }
+
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 

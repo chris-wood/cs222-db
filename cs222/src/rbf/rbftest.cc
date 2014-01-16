@@ -800,6 +800,82 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     }
 }
 
+int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes) {
+    // Functions tested
+    // 1. Create Record-Based File
+    // 2. Open Record-Based File
+    // 3. Insert Multiple Records
+    // 4. Close Record-Based File
+    cout << "****In RBF Test Case 11****" << endl;
+   
+    RC rc;
+    string fileName = "our_test_5";
+
+    // Create a file named "our_test_4"
+    rc = rbfm->createFile(fileName.c_str());
+    assert(rc == success);
+
+    if(FileExists(fileName.c_str()))
+    {
+        cout << "File " << fileName << " has been created." << endl;
+    }
+    else
+    {
+        cout << "Failed to create file!" << endl;
+        cout << "Test Case 9 Failed!" << endl << endl;
+        return -1;
+    }
+
+    // Open the file "our_test_4"
+    FileHandle fileHandle;
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
+    assert(rc == success);
+
+
+    RID rid; 
+    void *record = malloc(1000);
+    void *record_copy = malloc(1000);
+    int numRecords = 10;
+
+    vector<Attribute> recordDescriptor;
+    createLargeRecordDescriptor(recordDescriptor);
+
+    for(unsigned i = 0; i < recordDescriptor.size(); i++)
+    {
+        cout << "Attribute Name: " << recordDescriptor[i].name << endl;
+        cout << "Attribute Type: " << (AttrType)recordDescriptor[i].type << endl;
+        cout << "Attribute Length: " << recordDescriptor[i].length << endl << endl;
+    }
+
+    // Insert 2000 records into file
+    for(int i = 0; i < numRecords; i++)
+    {
+        // Test insert Record
+        int size = 0;
+        memset(record, 0, 1000);
+        memset(record_copy, 0, 1000);
+        prepareLargeRecord(i, record, &size);
+
+        // Write, read, and then immediately compare the two
+        rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+        assert(rc == success);
+        rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, record_copy);
+        assert(rc == success);
+        assert(memcmp(record, record_copy, 1000) == 0);
+
+        rids.push_back(rid);
+        sizes.push_back(size);        
+    }
+    // Close the file "test_4"
+    rc = rbfm->closeFile(fileHandle);
+    assert(rc == success);
+
+    free(record);    
+    cout << "Test Case 11 Passed!" << endl << endl;
+
+    return 0;
+}
+
 int main()
 {
     PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
@@ -823,8 +899,12 @@ int main()
     
     vector<RID> rids;
     vector<int> sizes;
-    RBFTest_9(rbfm, rids, sizes);
-    RBFTest_10(rbfm, rids, sizes);
+    // RBFTest_9(rbfm, rids, sizes);
+    // RBFTest_10(rbfm, rids, sizes);
+
+    // Our tests...
+    RBFTest_11(rbfm, rids, sizes);
+    remove("our_test_5");
 
     remove("test");
     remove("test_1");
