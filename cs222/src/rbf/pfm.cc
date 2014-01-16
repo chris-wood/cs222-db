@@ -39,11 +39,13 @@ RC PagedFileManager::createFile(const char *fileName)
         fclose(file);
         return rc::FILE_ALREADY_EXISTS;
     }
-    fclose(file);
 
     // Open for binary write - to create the file
     file = fopen(fileName, "wb");
-    fclose(file);
+    if (file)
+    {
+        fclose(file);
+    }
 
     return rc::OK;
 }
