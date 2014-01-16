@@ -107,7 +107,7 @@ public:
   ~RBFM_ScanIterator() {}
 
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID &/*rid*/, void */*data*/) { return RBFM_EOF; }
+  RC getNextRecord(RID & /*rid*/, void * /*data*/) { return RBFM_EOF; }
   RC close() { return -1; }
 };
 

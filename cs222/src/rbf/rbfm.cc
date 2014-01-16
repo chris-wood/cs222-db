@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <cstring>
+#include <iostream>
 
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
@@ -516,7 +517,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 {
     unsigned index = 0;
     int offset = 0;
-    cout << "(";
+    std::cout << "(";
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         Attribute attr = *itr;
@@ -527,7 +528,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 int ival = 0;
                 memcpy(&ival, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
-                cout << ival;
+                std::cout << ival;
                 break;
             }
             case TypeReal:
@@ -535,26 +536,26 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 float rval = 0.0;
                 memcpy(&rval, (char*)data + offset, sizeof(float));
                 offset += sizeof(float);
-                cout << rval;
+                std::cout << rval;
                 break;
             }
             case TypeVarChar:
             {
-                cout << "\"";
+                std::cout << "\"";
                 int count = 0;
                 memcpy(&count, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
                 for (int i=0; i < count; i++)
                 {
-                    cout << ((char*)data)[offset++];
+                    std::cout << ((char*)data)[offset++];
                 }
-                cout << "\"";
+                std::cout << "\"";
             }
         }
         index++;
-        if (index != recordDescriptor.size()) cout << ",";
+        if (index != recordDescriptor.size()) std::cout << ",";
     }
-    cout << ")" << endl;
+    std::cout << ")" << endl;
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
