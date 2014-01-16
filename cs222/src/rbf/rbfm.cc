@@ -377,22 +377,28 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
         offsets[offsetIndex++] = recLength;
 
         // Now bump the length as needed based on the type
-        // TODO: get rid of magic numbers and replace with standard sizes
+        int count = 0;
         Attribute attr = *itr;
-        if (attr.type == TypeInt || attr.type == TypeReal)
+        switch(attr.type)
         {
-            recLength += 4;
-            dataOffset += 4;
-        }
-        else if (attr.type == TypeVarChar)
-        {
-            int count = 0;
-            memcpy(&count, (char*)data + dataOffset, 4); // TODO: int32_t instead?
-            dataOffset += 4 + count;
-            recLength += 4 + count;
-        }
-        else 
-        {
+        case TypeInt:
+            recLength += sizeof(int);
+            dataOffset += sizeof(int);
+            break;
+
+        case TypeReal:
+            recLength += sizeof(float);
+            dataOffset += sizeof(float);
+            break;
+
+        case TypeVarChar:
+            memcpy(&count, (char*)data + dataOffset, sizeof(unsigned)); // TODO: int32_t instead?
+            dataOffset += 4 + count * sizeof(char);
+            recLength += 4 + count * sizeof(char);
+            break;
+
+        default:
+            free(offsets);
             return rc::ATTRIBUTE_INVALID_TYPE;
         }
     }
@@ -403,6 +409,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     RC ret = findFreeSpace(fileHandle, recLength, pageNum);
     if (ret != rc::OK)
     {
+        free(offsets);
         return ret;
     }
 
@@ -417,6 +424,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     // Write the offsets array and data to disk
     memcpy(pageBuffer + header->freeSpaceOffset, offsets, offsetFieldsSize);
     memcpy(pageBuffer + header->freeSpaceOffset + offsetFieldsSize, data, recLength - offsetFieldsSize);
+    free(offsets);
 
     // Create a new index slot entry and prepend it to the list
     PageIndexSlot slotIndex;
