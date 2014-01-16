@@ -393,8 +393,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
         case TypeVarChar:
             memcpy(&count, (char*)data + dataOffset, sizeof(unsigned)); // TODO: int32_t instead?
-            dataOffset += 4 + count * sizeof(char);
-            recLength += 4 + count * sizeof(char);
+            dataOffset += sizeof(unsigned) + count * sizeof(char);
+            recLength += sizeof(unsigned) + count * sizeof(char);
             break;
 
         default:
