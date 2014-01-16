@@ -697,7 +697,8 @@ int RBFTest_9(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &size
 
     RID rid; 
     void *record = malloc(1000);
-    int numRecords = 2000;
+    // int numRecords = 2000;
+    int numRecords = 500;
 
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
@@ -901,8 +902,8 @@ int main()
     
     vector<RID> rids;
     vector<int> sizes;
-    // RBFTest_9(rbfm, rids, sizes);
-    // RBFTest_10(rbfm, rids, sizes);
+    RBFTest_9(rbfm, rids, sizes);
+    RBFTest_10(rbfm, rids, sizes);
 
     // Our tests...
     RBFTest_11(rbfm, rids, sizes);

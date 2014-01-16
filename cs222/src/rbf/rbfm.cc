@@ -366,18 +366,39 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
 {
     // Compute the size of the record to be inserted
-    int offsetFieldsSize = sizeof(unsigned) * recordDescriptor.size();
+    unsigned offsetFieldsSize = sizeof(unsigned) * recordDescriptor.size();
     unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
-    int recLength = sizeof(unsigned) * recordDescriptor.size();
-    int offsetIndex = 0;
+    unsigned recLength = sizeof(unsigned) * recordDescriptor.size();
+    unsigned offsetIndex = 0;
+    unsigned dataOffset = 0;
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
+        // First, store the offset
         offsets[offsetIndex++] = recLength;
-        recLength += itr->length;
+
+        // Now bump the length as needed based on the type
+        // TODO: get rid of magic numbers and replace with standard sizes
+        Attribute attr = *itr;
+        if (attr.type == TypeInt || attr.type == TypeReal)
+        {
+            recLength += 4;
+            dataOffset += 4;
+        }
+        else if (attr.type == TypeVarChar)
+        {
+            int count = 0;
+            memcpy(&count, (char*)data + dataOffset, 4); // TODO: int32_t instead?
+            dataOffset += 4 + count;
+            recLength += 4 + count;
+        }
+        else 
+        {
+            return rc::ATTRIBUTE_INVALID_TYPE;
+        }
     }
 
     // Find the first page(s) with enough free space to hold this record
-    int requiredPages = 1 + ((recLength - 1) / PAGE_SIZE);
+    // int requiredPages = 1 + ((recLength - 1) / PAGE_SIZE);
     PageNum pageNum;
     RC ret = findFreeSpace(fileHandle, recLength, pageNum);
     if (ret != rc::OK)
