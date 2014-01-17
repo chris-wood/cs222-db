@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <inttypes.h>
 
 #include "../rbf/pfm.h"
 #include "dbgout.h"
@@ -17,32 +18,32 @@ using namespace std;
 typedef struct
 {
   PageNum pageNum;
-  unsigned slotNum;
+  uint32_t slotNum;
 } RID;
 
 // Struct for a particular record
 typedef struct 
 {
-  unsigned numFields;
+  uint32_t numFields;
   void* fields;
 } Record;
 
 // Page index slot entry
 typedef struct
 {
-  unsigned size; // size is for the entire record, and includes the header information with the offsets and the length of each resp. field
-  unsigned pageOffset;
+  uint32_t size; // size is for the entire record, and includes the header information with the offsets and the length of each resp. field
+  uint32_t pageOffset;
 } PageIndexSlot;
 
 // Page index (directory)
 typedef struct
 {
-  unsigned pageNumber;
-  unsigned freeSpaceOffset;
-  unsigned numSlots;
+  uint32_t pageNumber;
+  uint32_t freeSpaceOffset;
+  uint32_t numSlots;
 
   // Freespace list data
-  unsigned freespaceList;
+  uint32_t freespaceList;
   PageNum prevPage;
   PageNum nextPage;
 } PageIndexHeader;
@@ -72,18 +73,18 @@ typedef enum { EQ_OP = 0,  // =
 // Page FreeSpace list data
 struct FreeSpaceList
 {
-    unsigned short cutoff;
+    uint16_t cutoff;
     PageNum listHead;
 };
 
 // PageFile Header (should fit in 1st page)
 struct PFHeader
 {
-  unsigned headerSize;
-  unsigned pageSize;
-  unsigned version;
-  unsigned numPages;
-  unsigned numFreespaceLists;
+  uint32_t headerSize;
+  uint32_t pageSize;
+  uint32_t version;
+  uint32_t numPages;
+  uint32_t numFreespaceLists;
 
   FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
 };
@@ -180,10 +181,10 @@ protected:
   RecordBasedFileManager();
   ~RecordBasedFileManager();
 
-  RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
+  RC findFreeSpace(FileHandle &fileHandle, uint32_t bytes, PageNum& pageNum);
   RC writeHeader(FileHandle &fileHandle, PFHeader* header);
   RC readHeader(FileHandle &fileHandle, PFHeader* header);
-  RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
+  RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, uint32_t destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 
 private:

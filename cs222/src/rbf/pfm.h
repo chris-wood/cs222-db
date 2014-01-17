@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <inttypes.h>
 
 #include "dbgout.h"
 
@@ -48,7 +49,6 @@ public:
     unsigned getNumberOfPages();                                        // Get the number of pages in the file
 
     RC unload();
-    RC flushPages();
     RC loadFile(const char *fileName, FILE* file);
 
     void setNumPages(unsigned pages) { _numPages = pages; }
@@ -59,7 +59,7 @@ public:
 
     bool hasFile() const { return _file != NULL; }
 
-    bool operator == (const FileHandle& that) const { return this->_file == that._file; }
+    bool operator== (const FileHandle& that) const { return this->_file == that._file; }
 
 private:
     // DB file pointer

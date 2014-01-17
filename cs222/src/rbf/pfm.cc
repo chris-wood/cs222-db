@@ -98,7 +98,6 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
-    fileHandle.flushPages();
     fileHandle.unload();
 
     return rc::OK;
@@ -114,12 +113,6 @@ FileHandle::FileHandle()
 FileHandle::~FileHandle()
 {
     unload();
-}
-
-RC FileHandle::flushPages()
-{
-    // Nothing right now because all pages are written out immediately
-    return rc::OK;
 }
 
 RC FileHandle::loadFile(const char *fileName, FILE* file)

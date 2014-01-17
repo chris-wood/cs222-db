@@ -4,6 +4,7 @@
 #include <cstdarg>
 #include <iostream>
 
+#define DEBUG_ENABLED 1
 #define DEFAULT_VERBOSITY LOG_EXTREMEDEBUG
 
 namespace dbg
@@ -62,7 +63,7 @@ namespace dbg
             {
                 va_list args;
                 va_start(args, fmt);
-                vprintf(fmt, args);
+                vfprintf(stderr, fmt, args);
                 va_end(args);
             }
         }
