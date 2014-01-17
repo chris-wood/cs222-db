@@ -183,6 +183,7 @@ protected:
 
   RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
   RC writeHeader(FileHandle &fileHandle, PFHeader* header);
+  RC readHeader(FileHandle &fileHandle, PFHeader* header);
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 

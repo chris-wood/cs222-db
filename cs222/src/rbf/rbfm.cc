@@ -362,18 +362,44 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
     memcpy(buffer, header, sizeof(PFHeader));
 
     // Commit the header to disk
+    RC ret;
     if (fileHandle.getNumberOfPages() == 0)
     {
-        fileHandle.appendPage(buffer);
+        ret = fileHandle.appendPage(buffer);
     }
     else
     { 
-        fileHandle.writePage(0, buffer);
+        ret = fileHandle.writePage(0, buffer);
     }
 
     free(buffer);
 
-    return rc::OK;
+    return ret;
+}
+
+RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
+{
+    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+
+    // Read the reserved page from disk
+    RC ret = rc::OK;
+    if (fileHandle.getNumberOfPages() == 0)
+    {
+        PFHeader blankHeader;
+        init(blankHeader);
+
+        memcpy(buffer, &blankHeader, sizeof(PFHeader));
+        ret = fileHandle.appendPage(buffer);
+    }
+
+    if(ret == rc::OK)
+    {
+        ret = fileHandle.readPage(0, buffer);
+        memcpy(header, buffer, sizeof(PFHeader));
+    }
+
+    free(buffer);
+    return ret;
 }
 
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
