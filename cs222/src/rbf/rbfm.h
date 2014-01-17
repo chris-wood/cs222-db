@@ -190,7 +190,7 @@ protected:
 private:
   static RecordBasedFileManager *_rbf_manager;
 
-  boost::unordered_map<FileHandle*, PFHeader*> _headerData;
+  //boost::unordered_map<FileHandle*, PFHeader*> _headerData;
   PagedFileManager& _pfm;
 };
 

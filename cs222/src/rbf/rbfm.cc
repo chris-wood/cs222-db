@@ -81,26 +81,16 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
     }
 
     // Read in header data from the reserved page
-    void* headerBuffer = malloc(PAGE_SIZE);
-    ret = fileHandle.readPage(0, headerBuffer);
-    if (ret != rc::OK)
-    {
-        return rc::HEADER_SIZE_CORRUPT;
-    }
-
-    // Cast to header and then validate it
-    PFHeader* header = (PFHeader*)malloc(sizeof(PFHeader));
-    memcpy(header, headerBuffer, sizeof(PFHeader));
-    ret = validate(*header);
+    PFHeader header;
+    ret = readHeader(fileHandle, &header);
     if (ret != rc::OK)
     {
         return ret;
     }
 
-    // Map the file handle to its header for maintenance
-    _headerData[&fileHandle] = header;
-
-    return rc::OK;
+    // Validate header is in our correct format
+    ret = validate(header);
+    return ret;
 }
 
 RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
@@ -116,7 +106,8 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum)
 {
     RC ret;
-    PFHeader* header = _headerData[&fileHandle];
+    PFHeader header;
+    readHeader(fileHandle, &header);
 
     if (bytes < 1)
     {
@@ -124,9 +115,9 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     }
 
     // Search through the freespace lists, starting with the smallest size and incrementing upwards
-    for (unsigned i=0; i<header->numFreespaceLists; ++i)
+    for (unsigned i=0; i<header.numFreespaceLists; ++i)
     {
-        const FreeSpaceList& freespaceList = header->freespaceLists[i];
+        const FreeSpaceList& freespaceList = header.freespaceLists[i];
         if (freespaceList.cutoff >= bytes)
         {
             if (freespaceList.listHead != 0)
@@ -156,10 +147,10 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         index.pageNumber = fileHandle.getNumberOfPages();
         index.prevPage = 0;
         index.nextPage = 0;
-        index.freespaceList = header->numFreespaceLists - 1; // This is an empty page right now, put it in the largest slot
+        index.freespaceList = header.numFreespaceLists - 1; // This is an empty page right now, put it in the largest slot
 
         // Append this page to the list of free pages (into the beginning of the largest freespace slot)
-        FreeSpaceList& oldFreeSpaceList = header->freespaceLists[index.freespaceList];
+        FreeSpaceList& oldFreeSpaceList = header.freespaceLists[index.freespaceList];
         if (oldFreeSpaceList.listHead == 0)
         {
             oldFreeSpaceList.listHead = index.pageNumber;
@@ -211,8 +202,8 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     pageNum = fileHandle.getNumberOfPages() - requiredPages; 
 
     // Update the file header information immediately
-    header->numPages = header->numPages + requiredPages;
-    ret = writeHeader(fileHandle, header);
+    header.numPages = header.numPages + requiredPages;
+    ret = writeHeader(fileHandle, &header);
     if (ret != rc::OK)
     {
         return ret;
@@ -223,13 +214,14 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
 RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader)
 {
-    PFHeader* header = _headerData[&fileHandle];
+    PFHeader header;
+    readHeader(fileHandle, &header);
 
     unsigned freespace = PAGE_SIZE - pageHeader.freeSpaceOffset - sizeof(PageIndexHeader) - (pageHeader.numSlots * sizeof(PageIndexSlot));
-    for (unsigned i=header->numFreespaceLists; i>0; --i)
+    for (unsigned i=header.numFreespaceLists; i>0; --i)
     {
         unsigned listIndex = i - 1;
-        if (freespace >= header->freespaceLists[listIndex].cutoff)
+        if (freespace >= header.freespaceLists[listIndex].cutoff)
         {
             return movePageToFreeSpaceList(fileHandle, pageHeader, listIndex);
         }
@@ -247,7 +239,9 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     }
 
     RC ret;
-    PFHeader* header = _headerData[&fileHandle];
+    PFHeader header;
+    readHeader(fileHandle, &header);
+
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
     memset(pageBuffer, 0, PAGE_SIZE);
 
@@ -278,7 +272,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     else
     {
         // We were the beginning of the list, update the head pointer in the file header
-        header->freespaceLists[pageHeader.freespaceList].listHead = pageHeader.nextPage;
+        header.freespaceLists[pageHeader.freespaceList].listHead = pageHeader.nextPage;
     }
 
     // Update nextPage to point to our prevPage
@@ -308,7 +302,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // else { we were at the end of the list, we have nothing to do }
 
     // Update the first page on the destination list to accomodate us at the head
-    FreeSpaceList& destinationList = header->freespaceLists[destinationListIndex];
+    FreeSpaceList& destinationList = header.freespaceLists[destinationListIndex];
     if (destinationList.listHead > 0)
     {
         // Read in the page
@@ -344,7 +338,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     pageHeader.freespaceList = destinationListIndex;
 
     // Write out the header to disk with new data
-    ret = writeHeader(fileHandle, header);
+    ret = writeHeader(fileHandle, &header);
     if (ret != rc::OK)
     {
         free(pageBuffer);
