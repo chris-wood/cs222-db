@@ -461,6 +461,11 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	PageIndexHeader header;
     memcpy(&header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
 
+#if DEBUG_ENABLED
+    dbg::out.logDebug();
+    dbg::out.log("RecordBasedFileManager::insertRecord: header.freeSpaceOffset = %d\n", header.freeSpaceOffset);
+#endif
+
     // Write the offsets array and data to disk
     memcpy(pageBuffer + header.freeSpaceOffset, offsets, offsetFieldsSize);
     memcpy(pageBuffer + header.freeSpaceOffset + offsetFieldsSize, data, recLength - offsetFieldsSize);
