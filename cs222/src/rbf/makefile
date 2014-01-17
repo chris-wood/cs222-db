@@ -10,10 +10,10 @@ librbf.a: librbf.a(dbgout.o)
 librbf.a: librbf.a(returncodes.o)
 
 # c file dependencies
-pfm.o: pfm.h returncodes.hdbgout.h
+pfm.o: pfm.h returncodes.h dbgout.h
 rbfm.o: rbfm.h returncodes.h dbgout.h
 returncodes.o: returncodes.h
-dbgout.c: dbgout.h
+dbgout.cpp: dbgout.h
 
 rbftest.o: pfm.h rbfm.h returncodes.h dbgout.h
 
