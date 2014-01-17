@@ -14,29 +14,3 @@
 
 # Ignore QTCreator build files
 *.pro.user
-qt-project/build-debug/*
-qt-project/build-release/*
-
-# Generated Test files
-cs222/test
-cs222/test_1
-cs222/test_2
-cs222/test_3
-cs222/test_4
-cs222/testFile0.db
-cs222/testFile1.db
-cs222/testFile2.db
-cs222/out.txt
-cs222/err.txt
-
-cs222/src/rbf/rbftest
-cs222/src/rbf/out.txt
-cs222/src/rbf/err.txt
-cs222/src/rbf/test
-cs222/src/rbf/test_1
-cs222/src/rbf/test_2
-cs222/src/rbf/test_3
-cs222/src/rbf/test_4
-cs222/src/rbf/testFile0.db
-cs222/src/rbf/testFile1.db
-cs222/src/rbf/testFile2.db
