@@ -484,7 +484,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)) << "\n" << dbg::LOG_DEBUG;
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Offset: " << slotIndex.pageOffset << "\n" << dbg::LOG_DEBUG;
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Size of data: " << recLength << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Header free after record: " << (header.freeSpaceOffset += recLength) << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Header free after record: " << (header.freeSpaceOffset + recLength) << "\n" << dbg::LOG_DEBUG;
 #endif
 
     // Update the header information
@@ -527,8 +527,8 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 #if DEBUG_ENABLED
 	assert((int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)) < PAGE_SIZE);
-    dbg::out << dbg::LOG_INFO << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n";
-	dbg::out << dbg::LOG_INFO << "Copying slot index, offset from the page buffer by: " << (sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot))) << "\n";
+    // dbg::out << dbg::LOG_INFO << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n";
+	dbg::out << dbg::LOG_INFO << "Copying slot index, offset from the page buffer by: " << (int)(sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot))) << "\n";
 #endif
 
     // Copy the contents of the record into the data block
