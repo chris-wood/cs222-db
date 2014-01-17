@@ -862,7 +862,6 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
         assert(rc == success);
         rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, record_copy);
         assert(rc == success);
-        printf("size = %d\n", size);
         assert(memcmp(record, record_copy, size) == 0);
         rbfm->printRecord(recordDescriptor, record_copy);
 
