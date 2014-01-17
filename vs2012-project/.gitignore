@@ -1,0 +1,13 @@
+# Build Directories
+Debug/*
+cs222db-p1/Debug/*
+
+Release/*
+cs222db-p1/Release/*
+
+# Visual studio user/temp files
+*.sdf
+*.suo
+*.obj
+*.pdb
+*.opensdf
