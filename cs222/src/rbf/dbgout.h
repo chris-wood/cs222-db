@@ -50,16 +50,19 @@ namespace dbg
         template<typename T>
         inline Dbgout& operator<< (const T& t)
         {
+#if DEBUG_ENABLED
             if (_logLevel <= _verbosity)
             {
                 _out << t;
             }
-
+#endif
             return *this;
+
         }
 
         inline void log(const char* fmt, ...)
         {
+#if DEBUG_ENABLED
             if (_logLevel <= _verbosity)
             {
                 va_list args;
@@ -67,6 +70,7 @@ namespace dbg
                 vfprintf(stderr, fmt, args);
                 va_end(args);
             }
+#endif
         }
 
     private:
