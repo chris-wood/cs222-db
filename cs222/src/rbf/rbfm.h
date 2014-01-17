@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "../rbf/pfm.h"
 #include "dbgout.h"

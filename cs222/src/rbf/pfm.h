@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "dbgout.h"
 
