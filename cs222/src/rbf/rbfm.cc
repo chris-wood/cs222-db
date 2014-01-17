@@ -463,7 +463,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 #if DEBUG_ENABLED
     dbg::out.logDebug();
-    dbg::out.log("RecordBasedFileManager::insertRecord: header.freeSpaceOffset = %d\n", header.freeSpaceOffset);
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header.freeSpaceOffset << "\n" << dbg::LOG_DEBUG;
 #endif
 
     // Write the offsets array and data to disk
@@ -475,15 +475,16 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     PageIndexSlot slotIndex;
     slotIndex.size = recLength;
     slotIndex.pageOffset = header.freeSpaceOffset;
-    memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((header.numSlots + 1) * sizeof(PageIndexSlot)), &slotIndex, sizeof(PageIndexSlot));
+    memcpy(pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)), &slotIndex, sizeof(PageIndexSlot));
 
 #if DEBUG_ENABLED
     dbg::out.logDebug();
-    dbg::out.log("RecordBasedFileManager::insertRecord: RID = (%d, %d)\n", pageNum, header.numSlots);
-    dbg::out.log("RecordBasedFileManager::insertRecord: Writing to: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((header.numSlots + 1) * sizeof(PageIndexSlot)));
-    dbg::out.log("RecordBasedFileManager::insertRecord: Offset: %d\n", slotIndex.pageOffset);
-    dbg::out.log("RecordBasedFileManager::insertRecord: Size of data: %d\n", recLength);
-    dbg::out.log("RecordBasedFileManager::insertRecord: Header free after record: %d\n", (header.freeSpaceOffset += recLength));
+    assert(PAGE_SIZE - sizeof(PageIndexHeader) - ((header.numSlots + 1) * sizeof(PageIndexSlot)) >= 0);
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: RID = (" << pageNum << ", " << header.numSlots << ")\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)) << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Offset: " << slotIndex.pageOffset << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Size of data: " << recLength << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Header free after record: " << (header.freeSpaceOffset += recLength) << "\n" << dbg::LOG_DEBUG;
 #endif
 
     // Update the header information
@@ -522,10 +523,11 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
     // Find the slot where the record is stored
 	PageIndexSlot slotIndex;
-    memcpy(&slotIndex, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
+    memcpy(&slotIndex, pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
 
 #if DEBUG_ENABLED
-	assert(sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) < PAGE_SIZE);
+	assert((int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)) < PAGE_SIZE);
+    dbg::out << dbg::LOG_INFO << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n";
 	dbg::out << dbg::LOG_INFO << "Copying slot index, offset from the page buffer by: " << (sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot))) << "\n";
 #endif
 
@@ -535,10 +537,10 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 #if DEBUG_ENABLED
     dbg::out.logDebug();
-    dbg::out.log("RecordBasedFileManager::readRecord: RID = (%d, %d)\n", rid.pageNum, rid.slotNum);
-    dbg::out.log("RecordBasedFileManager::readRecord: Reading from: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
-    dbg::out.log("RecordBasedFileManager::readRecord: Offset: %d\n", slotIndex.pageOffset);
-    dbg::out.log("RecordBasedFileManager::readRecord: Size: %d\n", slotIndex.size);
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Reading from: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Offset: " << slotIndex.pageOffset << "\n" << dbg::LOG_DEBUG;
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Size: " << slotIndex.size << "\n" << dbg::LOG_DEBUG;
 #endif
 
 	free(pageBuffer);

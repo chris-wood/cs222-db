@@ -197,11 +197,13 @@ RC FileHandle::appendPage(const void *data)
     int result = fseek(_file, _numPages * PAGE_SIZE, SEEK_SET);
     if (result != 0)
     {
+        printf("failed seek\n");
         return rc::FILE_SEEK_FAILED;
     }
     size_t written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {
+        printf("failed write\n");
         return rc::FILE_CORRUPT;
     }
 
