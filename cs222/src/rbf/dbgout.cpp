@@ -5,7 +5,7 @@ namespace dbg
     Dbgout out;
 
     Dbgout::Dbgout()
-        : _out(std::cout),
+        : _out(std::cerr),
           _logLevel(DEFAULT_VERBOSITY),
           _verbosity(DEFAULT_VERBOSITY)
     {
