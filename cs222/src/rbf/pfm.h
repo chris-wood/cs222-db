@@ -34,13 +34,6 @@ private:
     static PagedFileManager *_pf_manager;
 };
 
-typedef struct 
-{
-    PageNum pageNum;
-    PageNum nextPage;
-    PageNum prevPage;
-} PFEntry;
-
 class FileHandle
 {
 public:

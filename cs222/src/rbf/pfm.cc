@@ -152,8 +152,6 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
     if (pageNum <= _numPages)
     {
         // Read the data from disk into the user buffer
-        // QUESTION: Can we assume fseek is considered constant access time and not linear?
-        // ANSWER: Yes, fseek is assumed to be O(1)
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
         if (result != 0)
         {
