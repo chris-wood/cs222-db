@@ -103,7 +103,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
     return rc::OK;
 }
 
-RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, uint32_t bytes, PageNum& pageNum)
+RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum)
 {
     RC ret;
     PFHeader header;
@@ -115,7 +115,7 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, uint32_t bytes,
     }
 
     // Search through the freespace lists, starting with the smallest size and incrementing upwards
-    for (uint32_t i=0; i<header.numFreespaceLists; ++i)
+    for (unsigned i=0; i<header.numFreespaceLists; ++i)
     {
         const FreeSpaceList& freespaceList = header.freespaceLists[i];
         if (freespaceList.cutoff >= bytes)
@@ -129,12 +129,12 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, uint32_t bytes,
     }
 
     // If we did not find a suitible location, append however many pages we need to store the data
-    uint32_t requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
-    uint8_t* page = (uint8_t*)malloc(requiredPages * PAGE_SIZE);
-    uint8_t* pageBuffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
+    unsigned char* page = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
+    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
     memset(page, 0, PAGE_SIZE * requiredPages);
 
-    for (uint32_t i=0; i<requiredPages; ++i)
+    for (unsigned i=0; i<requiredPages; ++i)
     {
         // Create the blank index structure on each page (at the end)
         // Note: there are no slots yet, so there are no slotOffsets prepended to this struct on disk
@@ -214,10 +214,10 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
     PFHeader header;
     readHeader(fileHandle, &header);
 
-    uint32_t freespace = PAGE_SIZE - pageHeader.freeSpaceOffset - sizeof(PageIndexHeader) - (pageHeader.numSlots * sizeof(PageIndexSlot));
-    for (uint32_t i=header.numFreespaceLists; i>0; --i)
+    unsigned freespace = PAGE_SIZE - pageHeader.freeSpaceOffset - sizeof(PageIndexHeader) - (pageHeader.numSlots * sizeof(PageIndexSlot));
+    for (unsigned i=header.numFreespaceLists; i>0; --i)
     {
-        uint32_t listIndex = i - 1;
+        unsigned listIndex = i - 1;
         if (freespace >= header.freespaceLists[listIndex].cutoff)
         {
             return movePageToFreeSpaceList(fileHandle, pageHeader, listIndex);
@@ -227,7 +227,7 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
     return rc::UNKNOWN_FAILURE;
 }
 
-RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, uint32_t destinationListIndex)
+RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
 {
     if (destinationListIndex == pageHeader.freespaceList)
     {
@@ -239,7 +239,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     PFHeader header;
     readHeader(fileHandle, &header);
 
-    uint8_t* pageBuffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
     memset(pageBuffer, 0, PAGE_SIZE);
 
     // Update prevPage to point to our nextPage
@@ -354,7 +354,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 #endif
 
     // Copy the header data into a newly allocated buffer
-    uint8_t* buffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
     memcpy(buffer, header, sizeof(PFHeader));
 
     // Commit the header to disk
@@ -381,7 +381,7 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 #endif
 
     // Allocate the page header buffer and read it in from the disk.
-    uint8_t* buffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
     RC ret = rc::OK;
     if (fileHandle.getNumberOfPages() == 0)
     {
@@ -406,11 +406,11 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
 {
     // Compute the size of the record to be inserted
-    uint32_t offsetFieldsSize = sizeof(uint32_t) * recordDescriptor.size();
-    uint32_t* offsets = (uint32_t*)malloc(offsetFieldsSize);
-    uint32_t recLength = sizeof(uint32_t) * recordDescriptor.size();
-    uint32_t offsetIndex = 0;
-    uint32_t dataOffset = 0;
+    unsigned offsetFieldsSize = sizeof(unsigned) * recordDescriptor.size();
+    unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
+    unsigned recLength = sizeof(unsigned) * recordDescriptor.size();
+    unsigned offsetIndex = 0;
+    unsigned dataOffset = 0;
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         // First, store the offset
@@ -432,9 +432,9 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
             break;
 
         case TypeVarChar:
-            memcpy(&count, (char*)data + dataOffset, sizeof(int)); // TODO: int32_t instead?
-            dataOffset += sizeof(uint32_t) + count * sizeof(char);
-            recLength += sizeof(uint32_t) + count * sizeof(char);
+            memcpy(&count, (char*)data + dataOffset, sizeof(int)); 
+            dataOffset += sizeof(int) + count * sizeof(char);
+            recLength += sizeof(int) + count * sizeof(char);
             break;
 
         default:
@@ -454,7 +454,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Read in the designated page
-    uint8_t* pageBuffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
     fileHandle.readPage(pageNum, pageBuffer);
 
     // Recover the index header structure
@@ -510,7 +510,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {    
     // Pull the page into memory
-    uint8_t* pageBuffer = (uint8_t*)malloc(PAGE_SIZE);
+    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
     fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
 
     // Find the slot where the record is stored
@@ -518,7 +518,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
     memcpy(slotIndex, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
 
     // Copy the contents of the record into the data block
-    int fieldOffset = recordDescriptor.size() * sizeof(uint32_t);
+    int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
     memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size);
 
 #if DEBUG_ENABLED
@@ -534,7 +534,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) 
 {
-    uint32_t index = 0;
+    unsigned index = 0;
     int offset = 0;
     std::cout << "(" << std::flush;
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
@@ -588,8 +588,8 @@ void RecordBasedFileManager::init(PFHeader &header)
     header.numFreespaceLists = NUM_FREESPACE_LISTS;
 
     // Divide the freespace lists evenly, except for the first and last
-    uint16_t cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
-    uint16_t cutoff = 0; // This makes the 0th index basically a dumping ground for full pages
+    unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
+    unsigned short cutoff = 0; // This makes the 0th index basically a dumping ground for full pages
 
     // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
     // So elements in the largest index will have the most amount of bytes free

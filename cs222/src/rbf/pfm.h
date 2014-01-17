@@ -65,7 +65,6 @@ private:
     // DB file pointer
     std::string _filename;
     FILE* _file;
-
     unsigned _numPages;
 };
 
