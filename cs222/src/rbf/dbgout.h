@@ -2,6 +2,7 @@
 #define DEBUGOUTPUT_H
 
 #include <cstdarg>
+#include <cstdio>
 #include <iostream>
 
 #define DEBUG_ENABLED 1
