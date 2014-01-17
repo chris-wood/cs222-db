@@ -70,9 +70,15 @@ typedef enum { EQ_OP = 0,  // =
            NO_OP       // no condition
 } CompOp;
 
+// Page FreeSpace list data
+struct FreeSpaceList
+{
+    unsigned short cutoff;
+    PageNum listHead;
+};
 
 // PageFile Header (should fit in 1st page)
-typedef struct 
+struct PFHeader
 {
   unsigned headerSize;
   unsigned pageSize;
@@ -80,9 +86,8 @@ typedef struct
   unsigned numPages;
   unsigned numFreespaceLists;
 
-  unsigned short freespaceCutoffs[NUM_FREESPACE_LISTS];
-  PageNum freespaceLists[NUM_FREESPACE_LISTS];
-} PFHeader;
+  FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
+};
 
 
 /****************************************************************************
