@@ -7,8 +7,6 @@
 
 #include "../rbf/pfm.h"
 
-#include <boost/unordered_map.hpp>
-
 using namespace std;
 
 #define CURRENT_PF_VERSION 1
@@ -189,8 +187,6 @@ protected:
 
 private:
   static RecordBasedFileManager *_rbf_manager;
-
-  //boost::unordered_map<FileHandle*, PFHeader*> _headerData;
   PagedFileManager& _pfm;
 };
 
