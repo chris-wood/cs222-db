@@ -5,6 +5,10 @@
 #include <cstring>
 #include <iostream>
 
+#ifdef REDIRECT_PRINT_RECORD
+#include <fstream>
+#endif
+
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
 RecordBasedFileManager* RecordBasedFileManager::instance()
@@ -551,7 +555,14 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 {
     unsigned index = 0;
     int offset = 0;
-    std::cout << "(" << std::flush;
+#ifdef REDIRECT_PRINT_RECORD
+    // QTCreator has a limitation where you can't redirect to a file from the commandline and still debug
+    std::fstream out("out.txt");
+#else
+    std::ostream& out = std::cout;
+#endif
+
+    out << "(" << std::flush;
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         Attribute attr = *itr;
@@ -562,7 +573,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 int ival = 0;
                 memcpy(&ival, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
-                std::cout << ival << std::flush;
+                out << ival << std::flush;
                 break;
             }
             case TypeReal:
@@ -570,26 +581,26 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 float rval = 0.0;
                 memcpy(&rval, (char*)data + offset, sizeof(float));
                 offset += sizeof(float);
-                std::cout << rval << std::flush;
+                out << rval << std::flush;
                 break;
             }
             case TypeVarChar:
             {
-                std::cout << "\"";
+                out << "\"";
                 int count = 0;
                 memcpy(&count, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
                 for (int i=0; i < count; i++)
                 {
-                    std::cout << ((char*)data)[offset++] << std::flush;
+                    out << ((char*)data)[offset++] << std::flush;
                 }
-                std::cout << "\"" << std::flush;
+                out << "\"" << std::flush;
             }
         }
         index++;
-        if (index != recordDescriptor.size()) std::cout << "," << std::flush;
+        if (index != recordDescriptor.size()) out << "," << std::flush;
     }
-    std::cout << ")" << endl;
+    out << ")" << endl;
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }

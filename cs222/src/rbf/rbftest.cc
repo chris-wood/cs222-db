@@ -58,8 +58,6 @@ void pfmTest()
     TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
-    // TODO: Are we supposed to be able to destroy a file if there are open handles to it?
-    // Right now we will fail to delete a file if a handle is left open
 
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 }
@@ -636,7 +634,10 @@ int RBFTest_8(RecordBasedFileManager *rbfm) {
     rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
     assert(rc == success);
 
+#ifndef REDIRECT_PRINT_RECORD
+    // Ignore this spammy message when we're redirecting directly to file
     cout << "Returned Data:" << endl;
+#endif
     rbfm->printRecord(recordDescriptor, returnedData);
 
     // Compare whether the two memory blocks are the same
@@ -764,7 +765,10 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
         rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], returnedData);
         assert(rc == success);
         
+#ifndef REDIRECT_PRINT_RECORD
+        // Ignore this spammy message when we're redirecting directly to file
         cout << "Returned Data:" << endl;
+#endif
         rbfm->printRecord(recordDescriptor, returnedData);
 
         int size = 0;
@@ -891,6 +895,7 @@ int main()
     remove("our_test_5");
     
     pfmTest();
+
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -907,13 +912,13 @@ int main()
 
     // Our tests...
     RBFTest_11(rbfm, rids, sizes);
-    remove("our_test_5");
 
     remove("test");
     remove("test_1");
     remove("test_2");
     remove("test_3");
     remove("test_4");
+    remove("our_test_5");
 
     return 0;
 }

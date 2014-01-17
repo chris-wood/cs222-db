@@ -3,6 +3,8 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
+DEFINES += REDIRECT_PRINT_RECORD
+
 SOURCES += \
     ../cs222/src/rbf/rbftest.cc \
     ../cs222/src/rbf/rbfm.cc \
