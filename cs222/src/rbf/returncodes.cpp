@@ -27,6 +27,7 @@ namespace rc
         case HEADER_FREESPACE_LISTS_MISMATCH:       return "HEADER_FREESPACE_LISTS_MISMATCH";
         case HEADER_SIZE_TOO_LARGE:                 return "HEADER_SIZE_TOO_LARGE";
         case RECORD_SIZE_INVALID:                   return "RECORD_SIZE_INVALID";
+        case ATTRIBUTE_INVALID_TYPE:                return "ATTRIBUTE_INVALID_TYPE";
         }
 
         return "UNKNOWN_ERROR_CODE";

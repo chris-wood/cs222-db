@@ -124,6 +124,7 @@ RC FileHandle::flushPages()
 
 RC FileHandle::loadFile(const char *fileName, FILE* file)
 {
+    _filename = std::string(fileName);
     _file = file;
 
     if (fseek(_file, 0, SEEK_END) != 0)

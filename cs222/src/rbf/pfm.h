@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "dbgout.h"
+
 // For convenience
 using namespace std;
 
@@ -53,6 +55,7 @@ public:
 
     FILE* getFile() { return _file; }
     const FILE* getFile() const { return _file; }
+    const std::string& getFilename() const { return _filename; }
 
     bool hasFile() const { return _file != NULL; }
 
@@ -60,7 +63,9 @@ public:
 
 private:
     // DB file pointer
+    std::string _filename;
     FILE* _file;
+
     unsigned _numPages;
 };
 

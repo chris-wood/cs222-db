@@ -352,6 +352,8 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
 
 RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 {
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::writeHeader(" << fileHandle.getFilename() << ")\n" << dbg::LOG_DEBUG;
+
     unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
     memcpy(buffer, header, sizeof(PFHeader));
 
@@ -373,6 +375,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 
 RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 {
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n" << dbg::LOG_DEBUG;
     unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
 
     // Read the reserved page from disk
@@ -463,16 +466,17 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     PageIndexSlot slotIndex;
     slotIndex.size = recLength;
     slotIndex.pageOffset = header->freeSpaceOffset;
-    printf("\n\nrid = %d %d\n", pageNum, header->numSlots);
-    printf("writing to: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)));
-    printf("offset: %d\n", slotIndex.pageOffset);
-    printf("size of data: %d\n", recLength);
+    dbg::out.logDebug();
+    dbg::out.log("\n\nrid = %d %d\n", pageNum, header->numSlots);
+    dbg::out.log("writing to: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)));
+    dbg::out.log("offset: %d\n", slotIndex.pageOffset);
+    dbg::out.log("size of data: %d\n", recLength);
     memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)), &slotIndex, sizeof(PageIndexSlot));
 
     // Update the header information
     header->numSlots++;
     header->freeSpaceOffset += recLength;
-    printf("header free after record: %d\n", header->freeSpaceOffset);
+    dbg::out.log("header free after record: %d\n", header->freeSpaceOffset);
     memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), header, sizeof(PageIndexHeader));
 
     // Update the position of this page in the freespace lists, if necessary
@@ -489,10 +493,10 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Once the write is committed, store the RID information and return
-    printf("(write) rid.pageNum = %d\n", pageNum);
+    dbg::out.log("(write) rid.pageNum = %d\n", pageNum);
     rid.pageNum = pageNum;
     rid.slotNum = header->numSlots - 1;
-    printf("(post)rid = %d %d\n", rid.pageNum, rid.slotNum);
+    dbg::out.log("(post)rid = %d %d\n", rid.pageNum, rid.slotNum);
 
     return rc::OK;
 }
@@ -504,7 +508,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
     // @Chris: the prof said we don't have to handle that case (https://piazza.com/class/hp0w5rnebxg6kn?cid=40)
     // @Tamir: THANK GOD
 
-    printf("(read) rid.pageNum = %d\n", rid.pageNum);
+    dbg::out.log("(read) rid.pageNum = %d\n", rid.pageNum);
 
     // Pull the page into memory
     unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
@@ -512,10 +516,11 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
     // Find the slot where the record is stored
     PageIndexSlot* slotIndex = (PageIndexSlot*)malloc(sizeof(PageIndexSlot));
-    printf("reading from: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
+    dbg::out.logDebug();
+    dbg::out.log("reading from: %d\n", PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
     memcpy(slotIndex, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
-    printf("offset: %d\n", slotIndex->pageOffset);
-    printf("size: %d\n", slotIndex->size);
+    dbg::out.log("offset: %d\n", slotIndex->pageOffset);
+    dbg::out.log("size: %d\n", slotIndex->size);
 
     // Copy the contents of the record into the data block
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned);

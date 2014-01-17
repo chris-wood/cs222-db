@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../rbf/pfm.h"
+#include "dbgout.h"
 
 using namespace std;
 
