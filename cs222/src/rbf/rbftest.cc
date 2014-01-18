@@ -23,6 +23,41 @@ const int success = 0;
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
 
+void rbfmTest()
+{
+	unsigned numTests = 0;
+    unsigned numPassed = 0;
+    RC rc;
+
+	cout << "RecordBasedFileManager tests" << endl;
+	PagedFileManager *pfm = PagedFileManager::instance();
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+    FileHandle handle0, handle1, handle2;
+
+	// Test creating many very small records
+	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+
+	// Test creating records with odd sizes
+	TEST_FN_EQ( 0, pfm->createFile("testFile1.db"), "Create testFile1.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle0), "Open testFile1.db and store in handle1");
+
+	// Test closing/opening the file inbetween every operation
+	TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle0), "Open testFile2.db and store in handle2");
+
+	// Clean up
+	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
+	TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+
+	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
+	assert(numPassed == numTests);
+}
+
 void pfmTest()
 {
     unsigned numTests = 0;
@@ -915,6 +950,7 @@ int main()
     RBFTest_11(rbfm, rids, sizes);
 
 	pfmTest();
+	rbfmTest();
 
     cleanup();
 
