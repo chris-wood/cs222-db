@@ -259,7 +259,7 @@ RC FileHandle::appendPage(const void *data)
     }
 
     // Update our copy of the page count - after committing to disk
-    _numPages++;
+    updatePageCount();
 
     return rc::OK;
 }
