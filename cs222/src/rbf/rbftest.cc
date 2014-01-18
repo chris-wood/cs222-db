@@ -207,7 +207,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
 	std::vector<RID> rids;
 	std::vector<int> sizes;
 
-	const int numRecords = 1000;
+	const int numRecords = 12345;
 
 	for (int i=0; i<numRecords; ++i)
 	{

@@ -448,9 +448,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Find the first page(s) with enough free space to hold this record
-    // int requiredPages = 1 + ((recLength - 1) / PAGE_SIZE);
     PageNum pageNum;
-    RC ret = findFreeSpace(fileHandle, recLength, pageNum);
+    RC ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
     if (ret != rc::OK)
     {
         free(offsets);
