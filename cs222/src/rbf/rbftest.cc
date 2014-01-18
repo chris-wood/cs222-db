@@ -350,9 +350,6 @@ void rbfmTest()
     unsigned numPassed = 0;
     RC rc;
 
-	killPFM();
-	killRBFM();
-
 	cout << "RecordBasedFileManager tests" << endl;
 	PagedFileManager *pfm = PagedFileManager::instance();
     FileHandle handle0, handle1, handle2;
@@ -515,6 +512,12 @@ RC pfmKillProcTest4()
 	}
 
 	ret = handle1.readPage(0, bufferOut);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->closeFile(handle1);
 	if (ret != rc::OK)
 	{
 		return ret;
