@@ -19,6 +19,7 @@ namespace rc
         case FILE_HANDLE_ALREADY_INITIALIZED:       return "FILE_HANDLE_ALREADY_INITIALIZED";
         case FILE_HANDLE_NOT_INITIALIZED:           return "FILE_HANDLE_NOT_INITIALIZED";
         case FILE_HANDLE_UNKNOWN:                   return "FILE_HANDLE_UNKNOWN";
+        case FILE_NOT_OPENED:                       return "FILE_NOT_OPENED";
         case RECORD_DOES_NOT_EXIST:                 return "RECORD_DOES_NOT_EXIST";
         case RECORD_CORRUPT:                        return "RECORD_CORRUPT";
         case HEADER_SIZE_CORRUPT:                   return "HEADER_SIZE_CORRUPT";

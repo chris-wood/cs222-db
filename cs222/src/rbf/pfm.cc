@@ -54,17 +54,27 @@ RC PagedFileManager::createFile(const char *fileName)
 
 RC PagedFileManager::destroyFile(const char *fileName)
 {    
-    if (remove(fileName) != 0)
+    // Refuse to destroy the file if it's open
+    string fname = std::string(fileName);
+    map<std::string, int>::iterator itr = _openFileCount.find(fname);
+    if (itr == _openFileCount.end() || _openFileCount[fname] == 0)
+    {
+        if (remove(fileName) != 0)
+        {
+            return rc::FILE_COULD_NOT_DELETE;
+        }
+        return rc::OK;
+    }
+    else
     {
         return rc::FILE_COULD_NOT_DELETE;
     }
-    return rc::OK;
 }
 
 
 RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 {
-    // Check for existing initialization
+    // Check for existing initialization (filehandle is already a handle for an open file)
     if (fileHandle.hasFile())
     {
         return rc::FILE_HANDLE_ALREADY_INITIALIZED;
@@ -74,6 +84,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     FILE* file = fopen(fileName, "rb");
     if (!file)
     {
+        // @Tamir: now sure how to reach this case, if it's even possible
         return rc::FILE_NOT_FOUND;
     }
 
@@ -126,6 +137,9 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
         fileHandle.unloadFile();
     }
 
+    //// NOTE: we do not explicitly flush to disk since all calls to write/append
+    ////       immediately flush data to disk - doing so here would be redundant.
+
     // Null out the file handle and drop the reference count
     fileHandle.closeFile();
     _openFileCount[fileHandle.getFilename()]--;
@@ -144,17 +158,21 @@ FileHandle::~FileHandle()
     unloadFile();
 }
 
-RC FileHandle::loadFile(const char *fileName, FILE* file)
+RC FileHandle::updatePageCount()
 {
-    _filename = std::string(fileName);
-    _file = file;
-
     if (fseek(_file, 0, SEEK_END) != 0)
     {
         return rc::FILE_SEEK_FAILED;
     }
-
     _numPages = ftell(_file) / PAGE_SIZE;
+    return rc::OK;
+}
+
+RC FileHandle::loadFile(const char *fileName, FILE* file)
+{
+    _filename = std::string(fileName);
+    _file = file;
+    updatePageCount();
 
     return rc::OK;
 }
@@ -172,7 +190,12 @@ RC FileHandle::unloadFile()
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
 {
-    if (pageNum <= _numPages)
+    RC ret = updatePageCount();
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+    else if (pageNum < _numPages)
     {
         // Read the data from disk into the user buffer
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
@@ -197,7 +220,12 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
-    if (pageNum <= _numPages)
+    RC ret = updatePageCount();
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+    else if (pageNum < _numPages)
     {
         // Flush the content in the user buffer to disk and update the page entry
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
@@ -226,13 +254,11 @@ RC FileHandle::appendPage(const void *data)
     int result = fseek(_file, _numPages * PAGE_SIZE, SEEK_SET);
     if (result != 0)
     {
-        printf("failed seek\n");
         return rc::FILE_SEEK_FAILED;
     }
     size_t written = fwrite(data, PAGE_SIZE, 1, _file);
     if (written != 1)
     {
-        printf("failed write\n");
         return rc::FILE_CORRUPT;
     }
 
@@ -245,6 +271,8 @@ RC FileHandle::appendPage(const void *data)
 
 unsigned FileHandle::getNumberOfPages()
 {
+    // Force update in case someone else modified the file through a different handle
+    updatePageCount();
     return _numPages;
 }
 
