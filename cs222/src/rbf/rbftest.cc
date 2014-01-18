@@ -216,6 +216,37 @@ void rbfmTest()
 	assert(numPassed == numTests);
 }
 
+// Super duper hacky way to access protected destructors !!
+class DeletablePFM : public PagedFileManager { public: ~DeletablePFM() { } };
+class DeletableRBFM : public RecordBasedFileManager { public: ~DeletableRBFM() { } };
+
+void killPFM()
+{
+	DeletablePFM* pfm = reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
+
+	// NOTE: Make sure ~PagedFileManager() has _pf_manager = NULL; in it!!!
+	delete pfm;
+
+	PagedFileManager::instance();
+}
+
+void killRBFM()
+{
+	DeletableRBFM* rbfm = reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
+
+	// NOTE: Make sure ~RecordBasedFileManager() has _rbf_manager = NULL; in it!!!
+	delete rbfm;
+
+	RecordBasedFileManager::instance();
+}
+
+bool pfmKillProcTest1()
+{
+	killPFM();
+
+	return true;
+}
+
 void pfmTest()
 {
     unsigned numTests = 0;
@@ -245,6 +276,7 @@ void pfmTest()
     TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
+	TEST_FN_EQ( true, pfmKillProcTest1(), "Test some cases where the process 'exits' between some calls");
 
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);

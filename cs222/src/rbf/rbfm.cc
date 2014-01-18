@@ -26,6 +26,7 @@ RecordBasedFileManager::RecordBasedFileManager()
 
 RecordBasedFileManager::~RecordBasedFileManager()
 {
+	_rbf_manager = NULL;
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName) {

@@ -27,6 +27,7 @@ PagedFileManager::PagedFileManager()
 
 PagedFileManager::~PagedFileManager()
 {
+	_pf_manager = NULL;
 }
 
 
