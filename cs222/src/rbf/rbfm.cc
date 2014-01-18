@@ -536,7 +536,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
     // Copy the contents of the record into the data block
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
-    memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size);
+    memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size - fieldOffset);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
     dbg::out << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n";;
