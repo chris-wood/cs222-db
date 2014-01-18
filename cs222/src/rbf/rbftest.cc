@@ -103,12 +103,25 @@ bool testSmallRecords1(FileHandle& fileHandle)
 		memcpy(smallRecords[i] + sizeof(int), &smallChars, smallCount*sizeof(char));
 	}
 
-	// Insert records into the file
+	// Insert records into the file, in a somewhat odd order (get it, odd, because it does i%2)
 	for( int i=0; i<numRecords; ++i )
 	{
-		rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
-		rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		if (i%2 != 0)
+		{
+			rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
+			rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		}
+
 		rbfm->insertRecord(fileHandle, smallRecordAttributes, smallRecords[i], smallRids[i]);
+	}
+
+	for( int i=0; i<numRecords; ++i )
+	{
+		if (i%2 == 0)
+		{
+			rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
+			rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		}
 	}
 
 	// Read the records back in
@@ -145,6 +158,7 @@ bool testSmallRecords1(FileHandle& fileHandle)
 		}
 	}
 
+	// Free up all the memory we allocated
 	for( int i=0; i<numRecords; ++i )
 	{
 		free(nanoRecords[i]);
