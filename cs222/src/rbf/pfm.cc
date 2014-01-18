@@ -84,8 +84,6 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     FILE* file = fopen(fileName, "rb");
     if (!file)
     {
-        // @Tamir: now sure how to reach this case, if it's even possible
-		// @Chris: It would have to be something like user calls createFile(), user deletes file on filesystem, then openFile() gets called. or something equally as out of the ordinary
         return rc::FILE_NOT_FOUND;
     }
 
