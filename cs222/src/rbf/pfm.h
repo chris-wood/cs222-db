@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <map>
 #include <stdint.h>
 
 #include "dbgout.h"
@@ -35,6 +36,7 @@ protected:
 
 private:
     static PagedFileManager *_pf_manager;
+    map<std::string, int> _openFileCount;
 };
 
 class FileHandle
@@ -48,18 +50,15 @@ public:
     RC appendPage(const void *data);                                    // Append a specific page
     unsigned getNumberOfPages();                                        // Get the number of pages in the file
 
-    RC unload();
-    RC loadFile(const char *fileName, FILE* file);
-
-    void setNumPages(unsigned pages) { _numPages = pages; }
-
     FILE* getFile() { return _file; }
     const FILE* getFile() const { return _file; }
     const std::string& getFilename() const { return _filename; }
-
     bool hasFile() const { return _file != NULL; }
-
     bool operator== (const FileHandle& that) const { return this->_file == that._file; }
+
+    RC unloadFile();
+    RC loadFile(const char*, FILE* file);
+    void closeFile() { _file = NULL; }
 
 private:
     // DB file pointer

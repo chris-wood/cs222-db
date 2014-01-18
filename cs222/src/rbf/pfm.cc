@@ -32,7 +32,7 @@ PagedFileManager::~PagedFileManager()
 
 RC PagedFileManager::createFile(const char *fileName)
 {
-    // Check if the file exists
+    // Check if the file exists - error if it already exists
     FILE* file = fopen(fileName, "rb");
     if (file)
     {
@@ -52,18 +52,18 @@ RC PagedFileManager::createFile(const char *fileName)
 
 
 RC PagedFileManager::destroyFile(const char *fileName)
-{
+{    
     if (remove(fileName) != 0)
     {
         return rc::FILE_COULD_NOT_DELETE;
     }
-
     return rc::OK;
 }
 
 
 RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 {
+    // Check for existing initialization
     if (fileHandle.hasFile())
     {
         return rc::FILE_HANDLE_ALREADY_INITIALIZED;
@@ -87,6 +87,18 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     // Initialize the FileHandle
     fileHandle.loadFile(fileName, file);
 
+    // Mark the file as open, or increment the count if already open
+    string fname = std::string(fileName);
+    map<std::string, int>::iterator itr = _openFileCount.find(fname);
+    if (itr == _openFileCount.end())
+    {
+        _openFileCount[fname] = 1;
+    }
+    else
+    {
+        _openFileCount[fname]++;
+    }
+
     return rc::OK;
 }
 
@@ -98,8 +110,20 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
-    fileHandle.unload();
+    map<std::string, int>::iterator itr = _openFileCount.find(fileHandle.getFilename());
+    if (itr == _openFileCount.end()) // not even an open file - error
+    {
+        return rc::FILE_COULD_NOT_DELETE;
+    }
+    else if (_openFileCount[fileHandle.getFilename()] == 1) // only (try to) close if there are no other references to this file
+    {
+        // Unload before decrementing and returning
+        fileHandle.unloadFile();
+    }
 
+    // Null out the file handle and drop the reference count
+    fileHandle.closeFile();
+    _openFileCount[fileHandle.getFilename()]--;
     return rc::OK;
 }
 
@@ -112,7 +136,7 @@ FileHandle::FileHandle()
 
 FileHandle::~FileHandle()
 {
-    unload();
+    unloadFile();
 }
 
 RC FileHandle::loadFile(const char *fileName, FILE* file)
@@ -129,14 +153,13 @@ RC FileHandle::loadFile(const char *fileName, FILE* file)
     return rc::OK;
 }
 
-RC FileHandle::unload()
+RC FileHandle::unloadFile()
 {
     // Prepare handle for reuse
     if (_file)
     {
         fclose(_file);
     }
-    _file = NULL;
 
     return rc::OK;
 }

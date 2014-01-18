@@ -1,4 +1,4 @@
-    #include <iostream>
+#include <iostream>
 #include <string>
 #include <cassert>
 #include <sys/stat.h>
@@ -14,6 +14,15 @@
 using namespace std;
 
 const int success = 0;
+
+// Check if a file exists
+bool FileExists(string fileName)
+{
+    struct stat stFileInfo;
+
+    if(stat(fileName.c_str(), &stFileInfo) == 0) return true;
+    else return false;
+}
 
 // TODO: Some actual testing framework
 #define TEST_FN_PREFIX ++numTests;
@@ -73,40 +82,28 @@ void fhTest()
     cout << "FileHandle tests" << endl;
     PagedFileManager *pfm = PagedFileManager::instance();
 
-    ///// TEST 1
-    // Create, Open, NumberOfPages, Close, Open, NumberOfPages, Close
+    ///// Do a bunch of persistent and non-persistent calls
+    string fileName = "fh_test"; 
+    rc = pfm->createFile(fileName.c_str());
+    assert(rc == success);
+    assert(FileExists(fileName.c_str()));
+    FileHandle fileHandle;
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    assert(rc == success);
+    unsigned count = fileHandle.getNumberOfPages();
+    assert(count == (unsigned)0);
+    rc = pfm->closeFile(fileHandle);
+    assert(rc == success);
 
-    
-    // string fileName = "test_1"; 
-    // rc = pfm->createFile(fileName.c_str());
-    // assert(rc == success);
-    // assert(FileExists(fileName.c_str()));
-
-    // // Open the file "test_1"
-    // FileHandle fileHandle;
-    // rc = pfm->openFile(fileName.c_str(), fileHandle);
-    // assert(rc == success);
-
-    // // Get the number of pages in the test file
-    // unsigned count = fileHandle.getNumberOfPages();
-    // assert(count == (unsigned)0);
-
-    // // Close the file "test_1"
-    // rc = pfm->closeFile(fileHandle);
-    // assert(rc == success);
-
-    // cout << "Test Case 3 Passed!" << endl << endl;
+    // Re-open, check pages, write to 1, write to 0, close
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    assert(rc == success);
+    count = fileHandle.getNumberOfPages();
+    assert(count == (unsigned)0);
+    rc = pfm->closeFile(fileHandle);
+    assert(rc == success);    
 }
 
-
-// Check if a file exists
-bool FileExists(string fileName)
-{
-    struct stat stFileInfo;
-
-    if(stat(fileName.c_str(), &stFileInfo) == 0) return true;
-    else return false;
-}
 
 // Function to prepare the data in the correct form to be inserted/read
 void prepareRecord(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *recordSize)
