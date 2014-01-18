@@ -200,13 +200,14 @@ RC testSmallRecords2(FileHandle& fileHandle)
 	Attribute aFlt4;	aFlt4.name = "aFlt1";	aFlt4.type = TypeReal;		aFlt4.length = (AttrLength)4;
 	Attribute aChr4;	aChr4.name = "aChr4";	aChr4.type = TypeVarChar;	aChr4.length = (AttrLength)4;
 
-	std::vector<std::vector<Attribute>> attributeLists;
+	std::vector< std::vector< Attribute > > attributeLists;
 	std::vector<void*> buffersIn;
 	std::vector<void*> buffersOut;
 	std::vector<int> shuffledOrdering;
 	std::vector<RID> rids;
 	std::vector<int> sizes;
 
+	RC ret;
 	const int numRecords = 12345;
 
 	for (int i=0; i<numRecords; ++i)
@@ -309,28 +310,31 @@ RC testSmallRecords2(FileHandle& fileHandle)
 	{
 		int i = *itr;
 
-		RC ret = rbfm->insertRecord(fileHandle, attributeLists[i], buffersIn[i], rids[i]);
+		ret = rbfm->insertRecord(fileHandle, attributeLists[i], buffersIn[i], rids[i]);
 		if (ret != rc::OK)
 		{
 			std::cout << "Failed to insert shuffled record[" << i << "]" << std::endl;
-			return ret; // yes this will leak a bunch of memory, but who cares, it's a test
+			break;
 		}
 	}
 	
 	// Go through all records and verify memory is correctly read, backwards for some reason
-	for (int i=numRecords-1; i>=0; --i)
+	if (ret == rc::OK)
 	{
-		RC ret = rbfm->readRecord(fileHandle, attributeLists[i], rids[i], buffersOut[i]);
-		if (ret != rc::OK)
+		for (int i=numRecords-1; i>=0; --i)
 		{
-			std::cout << "Failed to read shuffled record[" << i << "]" << std::endl;
-			return ret;
-		}
+			ret = rbfm->readRecord(fileHandle, attributeLists[i], rids[i], buffersOut[i]);
+			if (ret != rc::OK)
+			{
+				std::cout << "Failed to read shuffled record[" << i << "]" << std::endl;
+				break;
+			}
 
-		if (memcmp(buffersIn[i], buffersOut[i], sizes[i]))
-		{
-			std::cout << "Failed to read correct data of shuffled record[" << i << "]" << std::endl;
-			return -1;
+			if (memcmp(buffersIn[i], buffersOut[i], sizes[i]))
+			{
+				std::cout << "Failed to read correct data of shuffled record[" << i << "]" << std::endl;
+				break;
+			}
 		}
 	}
 
@@ -583,24 +587,22 @@ void fhTest()
 
     ///// Do a bunch of persistent and non-persistent calls
     string fileName = "fh_test"; 
-    rc = pfm->createFile(fileName.c_str());
-    TEST_FN_EQ(success, rc, "Create file");
-    rc = pfm->createFile(fileName.c_str());
-    TEST_FN_EQ(rc::FILE_ALREADY_EXISTS, rc, "Create file that already exists");
-    TEST_FN_EQ(1, FileExists(fileName.c_str()), "File exists");
+    TEST_FN_EQ(success, pfm->createFile(fileName.c_str()), "Create file");
+    TEST_FN_EQ(rc::FILE_ALREADY_EXISTS, pfm->createFile(fileName.c_str()), "Create file that already exists");
+    TEST_FN_EQ(true, FileExists(fileName.c_str()), "File exists");
+
     FileHandle fileHandle;
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
-    TEST_FN_EQ(success, rc, "Open file");
+    TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
+
     unsigned count = fileHandle.getNumberOfPages();
     TEST_FN_EQ(0, count, "Number of pages correct");
-    rc = pfm->closeFile(fileHandle);
-    TEST_FN_EQ(success, rc, "Close file");
+
+    TEST_FN_EQ(success, pfm->closeFile(fileHandle), "Close file");
 
     // Re-open, check open again, check pages
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
-    TEST_FN_EQ(success, rc, "Open file");
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
-    TEST_FN_EQ(rc::FILE_HANDLE_ALREADY_INITIALIZED, rc, "Open file fails when same filehandle already pointing to an open file");
+    TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
+    TEST_FN_EQ(rc::FILE_HANDLE_ALREADY_INITIALIZED, pfm->openFile(fileName.c_str(), fileHandle), "Open file fails when same filehandle already pointing to an open file");
+
     count = fileHandle.getNumberOfPages();
     TEST_FN_EQ(0, count, "Number of pages correct");
 
@@ -610,24 +612,17 @@ void fhTest()
     {
         buffer[i] = i % 256;
     }
-    rc = fileHandle.writePage(1, buffer);
-    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Writing to non-existent page");
-    rc = fileHandle.writePage(0, buffer);
-    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Writing to non-existent page");
-    rc = fileHandle.appendPage(buffer);
-    TEST_FN_EQ(success, rc, "Appending a new page");
-    rc = pfm->closeFile(fileHandle);
-    TEST_FN_EQ(success, rc, "Close file");
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, fileHandle.writePage(1, buffer), "Writing to non-existent page");
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, fileHandle.writePage(0, buffer), "Writing to non-existent page");
+    TEST_FN_EQ(success, fileHandle.appendPage(buffer), "Appending a new page");
+    TEST_FN_EQ(success, pfm->closeFile(fileHandle), "Close file");
 
     // Open, read page 1 (fail), read page 0, check contents
     unsigned char* buffer_copy = (unsigned char*)malloc(PAGE_SIZE);
     memset(buffer_copy, 0, PAGE_SIZE);
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
-    TEST_FN_EQ(success, rc, "Open file");
-    rc = fileHandle.readPage(1, buffer_copy);
-    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Reading from non-existent page");
-    rc = fileHandle.readPage(0, buffer_copy);
-    TEST_FN_EQ(success, rc, "Reading previously written data");
+    TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, fileHandle.readPage(1, buffer_copy), "Reading from non-existent page");
+    TEST_FN_EQ(success, fileHandle.readPage(0, buffer_copy), "Reading previously written data");
     TEST_FN_EQ(0, memcmp(buffer, buffer_copy, PAGE_SIZE), "Comparing data read and written");
 
     // Test appending PAGE_SIZE pages and reading them all (overkill, perhaps)
@@ -651,15 +646,14 @@ void fhTest()
             else assert(buffer_copy[j] == (j % 256)); // flip for kicks
         }
     }
-    rc = pfm->closeFile(fileHandle);
-    TEST_FN_EQ(success, rc, "Close file");
+
+    TEST_FN_EQ(success, pfm->closeFile(fileHandle), "Close file");
 
     // Test multiple file handles to open/close/delete correctness
-    rc = pfm->openFile(fileName.c_str(), fileHandle);
-    TEST_FN_EQ(success, rc, "Open file");
+    TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
+
     FileHandle fileHandle2;
-    rc = pfm->openFile(fileName.c_str(), fileHandle2);
-    TEST_FN_EQ(success, rc, "Open second handle to same file");
+    TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle2), "Open second handle to same file");
 
     memset(buffer, 0, PAGE_SIZE);
     memset(buffer_copy, 0, PAGE_SIZE);
@@ -670,23 +664,18 @@ void fhTest()
     TEST_FN_EQ(0, memcmp(buffer, buffer_copy, PAGE_SIZE), "Reading same file through two different handles");
 
     // Test close/delete correctness
-    rc = pfm->destroyFile(fileName.c_str());
-    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy attempt #1 when file is still open (two pins)");
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, pfm->destroyFile(fileName.c_str()), "Destroy attempt #1 when file is still open (two pins)");
     rc = pfm->closeFile(fileHandle2);
     assert(rc == success);
-    rc = pfm->destroyFile(fileName.c_str());
-    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy attempt #2 when file is still open (one pin)");    
-    rc = pfm->closeFile(fileHandle2);
-    TEST_FN_EQ(rc::FILE_HANDLE_NOT_INITIALIZED, rc, "Multiple close through the same handle");
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, pfm->destroyFile(fileName.c_str()), "Destroy attempt #2 when file is still open (one pin)");    
+    TEST_FN_EQ(rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(fileHandle2), "Multiple close through the same handle");
     rc = pfm->closeFile(fileHandle);
     assert(rc == success);
-    rc = pfm->destroyFile(fileName.c_str());
-    TEST_FN_EQ(success, rc, "Destroy attempt with no pins");    
+    TEST_FN_EQ(success, pfm->destroyFile(fileName.c_str()), "Destroy attempt with no pins");    
 
     // Test deletion of non-existent file
     string dummy = "dummy"; 
-    rc = pfm->destroyFile(dummy.c_str());
-    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy non-existent file");
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, pfm->destroyFile(dummy.c_str()), "Destroy non-existent file");
 
     cout << "\nFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
     assert(numPassed == numTests);
