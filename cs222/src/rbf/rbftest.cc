@@ -36,7 +36,6 @@ bool FileExists(string fileName)
 bool testSmallRecords1(FileHandle& fileHandle)
 {
 	int numRecords = 10000;
-	PagedFileManager *pfm = PagedFileManager::instance();
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
 	Attribute nanoRecordDescriptor;
@@ -101,7 +100,7 @@ bool testSmallRecords1(FileHandle& fileHandle)
 		char smallChars[3] = {tinyChar, tinyChar, tinyChar};
 
 		int tinyCount = 1;
-		int smallCount = 1;
+		int smallCount = 3;
 
 		memcpy(nanoRecords[i], &nanoInt, sizeof(int));
 		
