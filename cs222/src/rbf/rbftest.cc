@@ -31,12 +31,6 @@ void pfmTest()
 
     cout << "PagedFileManager tests" << endl;
     PagedFileManager *pfm = PagedFileManager::instance();
-
-    // Clean up old files
-    remove("testFile0.db");
-    remove("testFile1.db");
-    remove("testFile2.db");
-
     FileHandle handle0, handle1, handle1_copy, handle2;
 
     TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
@@ -60,13 +54,14 @@ void pfmTest()
     TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
 
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
+	assert(numPassed == numTests);
 }
 
 void fhTest()
 {
     unsigned numTests = 0;
     unsigned numPassed = 0;
-    RC rc;
+    //RC rc;
 
     cout << "FileHandle tests" << endl;
     PagedFileManager *pfm = PagedFileManager::instance();
@@ -882,20 +877,26 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     return 0;
 }
 
-int main()
+void cleanup()
 {
-    PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
-    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
-    
-    remove("test");
+	remove("test");
     remove("test_1");
     remove("test_2");
     remove("test_3");
     remove("test_4");
     remove("our_test_5");
-    
-    pfmTest();
+    remove("testFile0.db");
+    remove("testFile1.db");
+    remove("testFile2.db");
+}
 
+int main()
+{
+    PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
+    
+    cleanup();
+    
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -913,12 +914,9 @@ int main()
     // Our tests...
     RBFTest_11(rbfm, rids, sizes);
 
-    remove("test");
-    remove("test_1");
-    remove("test_2");
-    remove("test_3");
-    remove("test_4");
-    remove("our_test_5");
+	pfmTest();
+
+    cleanup();
 
     return 0;
 }
