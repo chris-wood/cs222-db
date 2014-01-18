@@ -36,7 +36,7 @@ typedef struct
 } PageIndexSlot;
 
 // Page index (directory)
-typedef struct
+struct PageIndexHeader
 {
   unsigned pageNumber;
   unsigned freeSpaceOffset;
@@ -46,7 +46,7 @@ typedef struct
   unsigned freespaceList;
   PageNum prevPage;
   PageNum nextPage;
-} PageIndexHeader;
+};
 
 
 // Attribute

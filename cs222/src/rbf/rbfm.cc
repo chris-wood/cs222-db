@@ -133,10 +133,18 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     }
 
     // If we did not find a suitible location, append however many pages we need to store the data
+	unsigned char listSwapBuffer[PAGE_SIZE];
+
     unsigned requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
-    unsigned char* page = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
-    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
-    memset(page, 0, PAGE_SIZE * requiredPages);
+    unsigned char* newPages = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
+	if (!newPages)
+	{
+		return rc::OUT_OF_MEMORY;
+	}
+	
+	// Zero out memory for cleanliness
+    memset(newPages, 0, PAGE_SIZE * requiredPages);
+	memset(listSwapBuffer, 0, PAGE_SIZE);
 
     for (unsigned i=0; i<requiredPages; ++i)
     {
@@ -160,25 +168,23 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         {
             // Read in the previous list head
             PageIndexHeader previousListHead;
-            ret = fileHandle.readPage(oldFreeSpaceList.listHead, pageBuffer);
+            ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
             if (ret != rc::OK)
             {
-                free(page);
-                free(pageBuffer);
+                free(newPages);
                 return ret;
             }
 
             // Udpate the prev pointer of the previous head to be our page number
-            memcpy((void*)&previousListHead, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+            memcpy((void*)&previousListHead, listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
             previousListHead.prevPage = pageNum;
-            memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
+            memcpy(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
 
-            ret = fileHandle.writePage(previousListHead.pageNumber, pageBuffer);
+            ret = fileHandle.writePage(previousListHead.pageNumber, listSwapBuffer);
 
             if (ret != rc::OK)
             {
-                free(page);
-                free(pageBuffer);
+                free(newPages);
                 return ret;
             }
 
@@ -187,12 +193,12 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             index.nextPage = previousListHead.pageNumber;
         }
 
-        memcpy(page + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
+        memcpy(newPages + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
 
         // Append this new page to the file
-        ret = fileHandle.appendPage(page);
-        free(page);
-        free(pageBuffer);
+        ret = fileHandle.appendPage(newPages);
+        free(newPages);
+
         if (ret != rc::OK)
         {
             return ret;
@@ -597,11 +603,15 @@ void RecordBasedFileManager::init(PFHeader &header)
 
     // Divide the freespace lists evenly, except for the first and last
     unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
-    unsigned short cutoff = 0; // This makes the 0th index basically a dumping ground for full pages
+    unsigned short cutoff = cutoffDelta / 8; // Anything under this value is considered a 'full' page
+
+	// the 0th index will have pages that are esentially considered compeltely full
+	header.freespaceLists[0].listHead = 0;
+    header.freespaceLists[0].cutoff = 0;
 
     // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
     // So elements in the largest index will have the most amount of bytes free
-    for (int i=0; i<NUM_FREESPACE_LISTS; ++i)
+    for (int i=1; i<NUM_FREESPACE_LISTS; ++i)
     {
         header.freespaceLists[i].listHead = 0;
         header.freespaceLists[i].cutoff = cutoff;

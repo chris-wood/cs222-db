@@ -85,9 +85,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Initialize the FileHandle
-    fileHandle.loadFile(fileName, file);
-
-    return rc::OK;
+    return fileHandle.loadFile(fileName, file);
 }
 
 
@@ -98,9 +96,7 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
         return rc::FILE_HANDLE_NOT_INITIALIZED;
     }
 
-    fileHandle.unload();
-
-    return rc::OK;
+    return fileHandle.unload();
 }
 
 
@@ -124,6 +120,7 @@ RC FileHandle::loadFile(const char *fileName, FILE* file)
     {
         return rc::FILE_SEEK_FAILED;
     }
+
     _numPages = ftell(_file) / PAGE_SIZE;
 
     return rc::OK;
@@ -136,6 +133,7 @@ RC FileHandle::unload()
     {
         fclose(_file);
     }
+
     _file = NULL;
 
     return rc::OK;

@@ -623,7 +623,7 @@ int RBFTest_8(RecordBasedFileManager *rbfm) {
     createRecordDescriptor(recordDescriptor);
     
     // Insert a record into a file
-    prepareRecord(6, "Peters", 24, 170.1, 5000, record, &recordSize);
+    prepareRecord(6, "Peters", 24, 170.1f, 5000, record, &recordSize);
     cout << "Insert Data:" << endl;
     rbfm->printRecord(recordDescriptor, record);
     
