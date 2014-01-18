@@ -85,6 +85,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     if (!file)
     {
         // @Tamir: now sure how to reach this case, if it's even possible
+		// @Chris: It would have to be something like user calls createFile(), user deletes file on filesystem, then openFile() gets called. or something equally as out of the ordinary
         return rc::FILE_NOT_FOUND;
     }
 
@@ -131,15 +132,12 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
     {
         return rc::FILE_COULD_NOT_DELETE;
     }
-    else if (_openFileCount[fileHandle.getFilename()] == 1) // only (try to) close if there are no other references to this file
-    {
-        // Unload before decrementing and returning
-        fileHandle.unloadFile();
-    }
+
+	// Unload before decrementing and returning
+    fileHandle.unloadFile();
 
     //// NOTE: we do not explicitly flush to disk since all calls to write/append
     ////       immediately flush data to disk - doing so here would be redundant.
-
     // Null out the file handle and drop the reference count
     fileHandle.closeFile();
     _openFileCount[fileHandle.getFilename()]--;
