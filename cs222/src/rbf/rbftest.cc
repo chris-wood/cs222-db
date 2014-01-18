@@ -37,7 +37,7 @@ bool testSmallRecords1(FileHandle& fileHandle)
 {
 	int numRecords = 10000;
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
-
+	
 	Attribute nanoRecordDescriptor;
 	nanoRecordDescriptor.name = "Nano";
     nanoRecordDescriptor.type = TypeInt;
@@ -56,21 +56,27 @@ bool testSmallRecords1(FileHandle& fileHandle)
 	std::vector<RID> nanoRids;
 	std::vector<char*> nanoRecords;
 	std::vector<char*> nanoReturnedRecords;
-	std::vector<Attribute> nanoRecordAttributes;
 
 	std::vector<RID> tinyRids;
 	std::vector<char*> tinyRecords;
 	std::vector<char*> tinyReturnedRecords;
-	std::vector<Attribute> tinyRecordAttributes;
 
 	std::vector<RID> smallRids;
 	std::vector<char*> smallRecords;
 	std::vector<char*> smallReturnedRecords;
-	std::vector<Attribute> smallRecordAttributes;
 
 	size_t nanoSize = nanoRecordDescriptor.length;
 	size_t tinySize = tinyRecordDescriptor.length + sizeof(int);
 	size_t smallSize = smallRecordDescriptor.length + sizeof(int);
+
+	// We're just going to repeat these 3 simple records over and over
+	std::vector<Attribute> nanoRecordAttributes;
+	std::vector<Attribute> tinyRecordAttributes;
+	std::vector<Attribute> smallRecordAttributes;
+
+	nanoRecordAttributes.push_back(nanoRecordDescriptor);
+	tinyRecordAttributes.push_back(tinyRecordDescriptor);
+	smallRecordAttributes.push_back(smallRecordDescriptor);
 
 	// Allocate memory for the data and for the return data
 	for( int i=0; i<numRecords; ++i )
@@ -87,10 +93,6 @@ bool testSmallRecords1(FileHandle& fileHandle)
 		smallRecords.push_back ( (char*)malloc(smallSize) );
 		smallReturnedRecords.push_back ( (char*)malloc(smallSize) );
 	}
-
-	nanoRecordAttributes.push_back(nanoRecordDescriptor);
-	tinyRecordAttributes.push_back(tinyRecordDescriptor);
-	smallRecordAttributes.push_back(smallRecordDescriptor);
 
 	// Fill out the values of all the data
 	for ( int i=0; i<numRecords; ++i )
@@ -123,7 +125,7 @@ bool testSmallRecords1(FileHandle& fileHandle)
 		rbfm->insertRecord(fileHandle, smallRecordAttributes, smallRecords[i], smallRids[i]);
 	}
 
-	for( int i=0; i<numRecords; ++i )
+	for( int i=numRecords-1; i>=0; --i )
 	{
 		if (i%2 == 0)
 		{
@@ -184,6 +186,10 @@ bool testSmallRecords1(FileHandle& fileHandle)
 
 bool testSmallRecords2(FileHandle& fileHandle)
 {
+	std::vector<Attribute> nanoRecordAttributes;
+	std::vector<Attribute> tinyRecordAttributes;
+	std::vector<Attribute> smallRecordAttributes;
+
 	return true;
 }
 
@@ -230,21 +236,15 @@ class DeletableRBFM : public RecordBasedFileManager { public: ~DeletableRBFM() {
 
 void killPFM()
 {
-	DeletablePFM* pfm = reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
-
 	// NOTE: Make sure ~PagedFileManager() has _pf_manager = NULL; in it!!!
-	delete pfm;
-
+	delete reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
 	PagedFileManager::instance();
 }
 
 void killRBFM()
 {
-	DeletableRBFM* rbfm = reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
-
 	// NOTE: Make sure ~RecordBasedFileManager() has _rbf_manager = NULL; in it!!!
-	delete rbfm;
-
+	delete reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
 	RecordBasedFileManager::instance();
 }
 
