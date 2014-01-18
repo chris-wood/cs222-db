@@ -5,6 +5,10 @@
 #include <cstring>
 #include <iostream>
 
+#ifdef REDIRECT_PRINT_RECORD
+#include <fstream>
+#endif
+
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
 RecordBasedFileManager* RecordBasedFileManager::instance()
@@ -22,6 +26,7 @@ RecordBasedFileManager::RecordBasedFileManager()
 
 RecordBasedFileManager::~RecordBasedFileManager()
 {
+	_rbf_manager = NULL;
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName) {
@@ -129,10 +134,18 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     }
 
     // If we did not find a suitible location, append however many pages we need to store the data
+	unsigned char listSwapBuffer[PAGE_SIZE];
+
     unsigned requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
-    unsigned char* page = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
-    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
-    memset(page, 0, PAGE_SIZE * requiredPages);
+    unsigned char* newPages = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
+	if (!newPages)
+	{
+		return rc::OUT_OF_MEMORY;
+	}
+	
+	// Zero out memory for cleanliness
+    memset(newPages, 0, PAGE_SIZE * requiredPages);
+	memset(listSwapBuffer, 0, PAGE_SIZE);
 
     for (unsigned i=0; i<requiredPages; ++i)
     {
@@ -156,25 +169,23 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         {
             // Read in the previous list head
             PageIndexHeader previousListHead;
-            ret = fileHandle.readPage(oldFreeSpaceList.listHead, pageBuffer);
+            ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
             if (ret != rc::OK)
             {
-                free(page);
-                free(pageBuffer);
+                free(newPages);
                 return ret;
             }
 
             // Udpate the prev pointer of the previous head to be our page number
-            memcpy((void*)&previousListHead, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+            memcpy((void*)&previousListHead, listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
             previousListHead.prevPage = pageNum;
-            memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
+            memcpy(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
 
-            ret = fileHandle.writePage(previousListHead.pageNumber, pageBuffer);
+            ret = fileHandle.writePage(previousListHead.pageNumber, listSwapBuffer);
 
             if (ret != rc::OK)
             {
-                free(page);
-                free(pageBuffer);
+                free(newPages);
                 return ret;
             }
 
@@ -183,12 +194,12 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             index.nextPage = previousListHead.pageNumber;
         }
 
-        memcpy(page + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
+        memcpy(newPages + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
 
         // Append this new page to the file
-        ret = fileHandle.appendPage(page);
-        free(page);
-        free(pageBuffer);
+        ret = fileHandle.appendPage(newPages);
+        free(newPages);
+
         if (ret != rc::OK)
         {
             return ret;
@@ -237,10 +248,13 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
 
     RC ret;
     PFHeader header;
-    readHeader(fileHandle, &header);
+	unsigned char pageBuffer[PAGE_SIZE];
 
-    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
-    memset(pageBuffer, 0, PAGE_SIZE);
+	ret = readHeader(fileHandle, &header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
     // Update prevPage to point to our nextPage
     if (pageHeader.prevPage > 0)
@@ -250,7 +264,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.readPage(pageHeader.prevPage, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
 
@@ -262,7 +275,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.writePage(prevPageHeader.pageNumber, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
     }
@@ -280,7 +292,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.readPage(pageHeader.nextPage, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
 
@@ -292,7 +303,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.writePage(nextPageHeader.pageNumber, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
     }
@@ -307,7 +317,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.readPage(destinationList.listHead, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
 
@@ -319,7 +328,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         ret = fileHandle.writePage(listFirstPageHeader.pageNumber, pageBuffer);
         if (ret != rc::OK)
         {
-            free(pageBuffer);
             return ret;
         }
     }
@@ -338,23 +346,19 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     ret = writeHeader(fileHandle, &header);
     if (ret != rc::OK)
     {
-        free(pageBuffer);
         return ret;
     }
 
 	// WARNING: The caller must write out the pageHeader to disk!
-    free(pageBuffer);
     return rc::OK;
 }
 
 RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 {
-#if DEBUG_ENABLED    
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::writeHeader(" << fileHandle.getFilename() << ")\n" << dbg::LOG_DEBUG;
-#endif
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::writeHeader(" << fileHandle.getFilename() << ")\n";
 
     // Copy the header data into a newly allocated buffer
-    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer[PAGE_SIZE];
     memcpy(buffer, header, sizeof(PFHeader));
 
     // Commit the header to disk
@@ -368,20 +372,15 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
         ret = fileHandle.writePage(0, buffer);
     }
 
-    // Free up our buffer
-    free(buffer);
-
     return ret;
 }
 
 RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 {
-#if DEBUG_ENABLED
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n" << dbg::LOG_DEBUG;
-#endif
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n";
 
     // Allocate the page header buffer and read it in from the disk.
-    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer[PAGE_SIZE];
     RC ret = rc::OK;
     if (fileHandle.getNumberOfPages() == 0)
     {
@@ -399,7 +398,6 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
         memcpy(header, buffer, sizeof(PFHeader));
     }
 
-    free(buffer);
     return ret;
 }
 
@@ -407,10 +405,16 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 {
     // Compute the size of the record to be inserted
     unsigned offsetFieldsSize = sizeof(unsigned) * recordDescriptor.size();
-    unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
     unsigned recLength = sizeof(unsigned) * recordDescriptor.size();
     unsigned offsetIndex = 0;
     unsigned dataOffset = 0;
+
+	unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
+	if (!offsets)
+	{
+		return rc::OUT_OF_MEMORY;
+	}
+
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         // First, store the offset
@@ -454,21 +458,24 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Read in the designated page
-    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
-    fileHandle.readPage(pageNum, pageBuffer);
+    unsigned char pageBuffer[PAGE_SIZE];
+    ret = fileHandle.readPage(pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		free(offsets);
+		return ret;
+	}
 
     // Recover the index header structure
 	PageIndexHeader header;
     memcpy(&header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
 
-#if DEBUG_ENABLED
-    dbg::out.logDebug();
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header.freeSpaceOffset << "\n" << dbg::LOG_DEBUG;
-#endif
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header.freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
     memcpy(pageBuffer + header.freeSpaceOffset, offsets, offsetFieldsSize);
     memcpy(pageBuffer + header.freeSpaceOffset + offsetFieldsSize, data, recLength - offsetFieldsSize);
+
     free(offsets);
 
     // Create a new index slot entry and prepend it to the list
@@ -477,15 +484,12 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     slotIndex.pageOffset = header.freeSpaceOffset;
     memcpy(pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)), &slotIndex, sizeof(PageIndexSlot));
 
-#if DEBUG_ENABLED
-    dbg::out.logDebug();
-    assert(PAGE_SIZE - sizeof(PageIndexHeader) - ((header.numSlots + 1) * sizeof(PageIndexSlot)) >= 0);
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: RID = (" << pageNum << ", " << header.numSlots << ")\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)) << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Offset: " << slotIndex.pageOffset << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Size of data: " << recLength << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: Header free after record: " << (header.freeSpaceOffset + recLength) << "\n" << dbg::LOG_DEBUG;
-#endif
+    dbg::out << dbg::LOG_EXTREMEDEBUG;
+    dbg::out << "RecordBasedFileManager::insertRecord: RID = (" << pageNum << ", " << header.numSlots << ")\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((header.numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Offset: " << slotIndex.pageOffset << "\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Size of data: " << recLength << "\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Header free after record: " << (header.freeSpaceOffset + recLength) << "\n";
 
     // Update the header information
     header.numSlots++;
@@ -493,7 +497,11 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), &header, sizeof(PageIndexHeader));
 
     // Update the position of this page in the freespace lists, if necessary
-    movePageToCorrectFreeSpaceList(fileHandle, header);
+    ret = movePageToCorrectFreeSpaceList(fileHandle, header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// Copy the updated header information into our page buffer
 	memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), &header, sizeof(PageIndexHeader));
@@ -502,7 +510,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     ret = fileHandle.writePage(pageNum, pageBuffer);
     if (ret != rc::OK)
     {
-		free(pageBuffer);
         return ret;
     }
 
@@ -510,7 +517,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     rid.pageNum = pageNum;
     rid.slotNum = header.numSlots - 1;
 
-	free(pageBuffer);
     return rc::OK;
 }
 
@@ -518,32 +524,27 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {    
     // Pull the page into memory
-    unsigned char* pageBuffer = (unsigned char*)malloc(PAGE_SIZE);
-    fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
+    unsigned char pageBuffer[PAGE_SIZE];
+    RC ret = fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
     // Find the slot where the record is stored
 	PageIndexSlot slotIndex;
     memcpy(&slotIndex, pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
 
-#if DEBUG_ENABLED
-	assert((int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)) < PAGE_SIZE);
-    // dbg::out << dbg::LOG_INFO << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n";
-	dbg::out << dbg::LOG_INFO << "Copying slot index, offset from the page buffer by: " << (int)(sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot))) << "\n";
-#endif
-
     // Copy the contents of the record into the data block
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
-    memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size);
+    memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size - fieldOffset);
 
-#if DEBUG_ENABLED
-    dbg::out.logDebug();
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Reading from: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Offset: " << slotIndex.pageOffset << "\n" << dbg::LOG_DEBUG;
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readRecord: Size: " << slotIndex.size << "\n" << dbg::LOG_DEBUG;
-#endif
+    dbg::out << dbg::LOG_EXTREMEDEBUG;
+    dbg::out << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << ")\n";;
+    dbg::out << "RecordBasedFileManager::readRecord: Reading from: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n";;
+    dbg::out << "RecordBasedFileManager::readRecord: Offset: " << slotIndex.pageOffset << "\n";
+    dbg::out << "RecordBasedFileManager::readRecord: Size: " << slotIndex.size << "\n";
 
-	free(pageBuffer);
     return rc::OK;
 }
 
@@ -551,7 +552,14 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 {
     unsigned index = 0;
     int offset = 0;
-    std::cout << "(" << std::flush;
+#ifdef REDIRECT_PRINT_RECORD
+    // QTCreator has a limitation where you can't redirect to a file from the commandline and still debug
+    std::fstream out("out.txt");
+#else
+    std::ostream& out = std::cout;
+#endif
+
+    out << "(";
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         Attribute attr = *itr;
@@ -562,7 +570,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 int ival = 0;
                 memcpy(&ival, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
-                std::cout << ival << std::flush;
+                out << ival;
                 break;
             }
             case TypeReal:
@@ -570,28 +578,29 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 float rval = 0.0;
                 memcpy(&rval, (char*)data + offset, sizeof(float));
                 offset += sizeof(float);
-                std::cout << rval << std::flush;
+                out << rval;
                 break;
             }
             case TypeVarChar:
             {
-                std::cout << "\"";
+                out << "\"";
                 int count = 0;
                 memcpy(&count, (char*)data + offset, sizeof(int));
                 offset += sizeof(int);
                 for (int i=0; i < count; i++)
                 {
-                    std::cout << ((char*)data)[offset++] << std::flush;
+                    out << ((char*)data)[offset++];
                 }
-                std::cout << "\"" << std::flush;
+                out << "\"";
             }
         }
         index++;
-        if (index != recordDescriptor.size()) std::cout << "," << std::flush;
+        if (index != recordDescriptor.size()) out << ",";
     }
-    std::cout << ")" << endl;
 
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    out << ")" << endl;
+
+    return rc::OK;
 }
 
 void RecordBasedFileManager::init(PFHeader &header)
@@ -604,11 +613,15 @@ void RecordBasedFileManager::init(PFHeader &header)
 
     // Divide the freespace lists evenly, except for the first and last
     unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
-    unsigned short cutoff = 0; // This makes the 0th index basically a dumping ground for full pages
+    unsigned short cutoff = cutoffDelta / 8; // Anything under this value is considered a 'full' page
+
+	// the 0th index will have pages that are esentially considered compeltely full
+	header.freespaceLists[0].listHead = 0;
+    header.freespaceLists[0].cutoff = 0;
 
     // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
     // So elements in the largest index will have the most amount of bytes free
-    for (int i=0; i<NUM_FREESPACE_LISTS; ++i)
+    for (int i=1; i<NUM_FREESPACE_LISTS; ++i)
     {
         header.freespaceLists[i].listHead = 0;
         header.freespaceLists[i].cutoff = cutoff;

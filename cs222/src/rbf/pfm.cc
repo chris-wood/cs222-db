@@ -27,6 +27,7 @@ PagedFileManager::PagedFileManager()
 
 PagedFileManager::~PagedFileManager()
 {
+	_pf_manager = NULL;
 }
 
 
@@ -85,7 +86,11 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
     }
 
     // Initialize the FileHandle
-    fileHandle.loadFile(fileName, file);
+    RC ret = fileHandle.loadFile(fileName, file);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Mark the file as open, or increment the count if already open
     string fname = std::string(fileName);
@@ -148,6 +153,7 @@ RC FileHandle::loadFile(const char *fileName, FILE* file)
     {
         return rc::FILE_SEEK_FAILED;
     }
+
     _numPages = ftell(_file) / PAGE_SIZE;
 
     return rc::OK;

@@ -25,13 +25,15 @@ namespace dbg
     class Dbgout;
     extern Dbgout out;
 
+    // if DEBUG_ENABLED == 0, pretty much everything in this class should be a NOP
     class Dbgout
     {
     public:
         Dbgout();
         ~Dbgout();
 
-        inline void logNone() { setLogLevel(LOG_NONE); }
+        // Sets the log level for all upcoming calls to the logger
+        inline void logNone(){ setLogLevel(LOG_NONE); }
         inline void logSevere() { setLogLevel(LOG_SEVERE); }
         inline void logError() { setLogLevel(LOG_ERROR); }
         inline void logWarning() { setLogLevel(LOG_WARNING); }
@@ -39,30 +41,40 @@ namespace dbg
         inline void logDebug() { setLogLevel(LOG_DEBUG); }
         inline void logExtremeDebug() { setLogLevel(LOG_EXTREMEDEBUG); }
 
-        inline void setLogLevel(LogLevel logLevel) { _logLevel = logLevel; }
-        inline void setVerbosity(LogLevel verbosity) { _verbosity = verbosity; }
+#if DEBUG_ENABLED
+        inline void setLogLevel(LogLevel logLevel)
+        {
+            _logLevel = logLevel;
+        }
+
+        // Sets the level of log calls we will care about (verbosity of LOG_ERROR means only LOG_ERROR and LOG_SEVERE will display)
+        inline void setVerbosity(LogLevel verbosity)
+        {
+            _verbosity = verbosity;
+        }
 
         inline LogLevel getLogLevel() const { return _logLevel; }
         inline LogLevel getVerbosity() const { return _verbosity; }
 
-        inline Dbgout& operator<< (LogLevel logLevel) { setLogLevel(logLevel); return *this; }
+        inline Dbgout& operator<< (LogLevel logLevel)
+        {
+            setLogLevel(logLevel);
+            return *this;
+        }
 
         template<typename T>
         inline Dbgout& operator<< (const T& t)
         {
-#if DEBUG_ENABLED
             if (_logLevel <= _verbosity)
             {
                 _out << t;
             }
-#endif
             return *this;
 
         }
 
         inline void log(const char* fmt, ...)
         {
-#if DEBUG_ENABLED
             if (_logLevel <= _verbosity)
             {
                 va_list args;
@@ -70,13 +82,22 @@ namespace dbg
                 vfprintf(stderr, fmt, args);
                 va_end(args);
             }
-#endif
+
         }
+#else
+        inline void setLogLevel(LogLevel) {}
+        inline void setVerbosity(LogLevel) {}
+        inline Dbgout& operator<< (LogLevel) { return *this; }
+        template<typename T> inline Dbgout& operator<< (const T&) { return *this; }
+        inline void log(const char*, ...) { }
+#endif
 
     private:
+#if DEBUG_ENABLED
         std::ostream& _out;
         LogLevel _logLevel;
         LogLevel _verbosity;
+#endif
     };
 }
 

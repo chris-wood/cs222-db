@@ -33,7 +33,8 @@ namespace rc
         HEADER_FREESPACE_LISTS_MISMATCH,
         HEADER_SIZE_TOO_LARGE,
 
-        ATTRIBUTE_INVALID_TYPE
+        ATTRIBUTE_INVALID_TYPE,
+		OUT_OF_MEMORY
     };
 
     const char* rcToString(int rc);

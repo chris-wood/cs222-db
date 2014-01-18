@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdexcept>
 #include <stdio.h>
+#include <vector>
 
 #include "pfm.h"
 #include "rbfm.h"
@@ -32,6 +33,229 @@ bool FileExists(string fileName)
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
 
+bool testSmallRecords1(FileHandle& fileHandle)
+{
+	int numRecords = 10000;
+	PagedFileManager *pfm = PagedFileManager::instance();
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	Attribute nanoRecordDescriptor;
+	nanoRecordDescriptor.name = "Nano";
+    nanoRecordDescriptor.type = TypeInt;
+    nanoRecordDescriptor.length = (AttrLength)4;
+
+	Attribute tinyRecordDescriptor;
+	tinyRecordDescriptor.name = "Tiny";
+	tinyRecordDescriptor.type = TypeVarChar;
+    tinyRecordDescriptor.length = (AttrLength)1;
+
+	Attribute smallRecordDescriptor;
+	smallRecordDescriptor.name = "Small";
+	smallRecordDescriptor.type = TypeVarChar;
+    smallRecordDescriptor.length = (AttrLength)3;
+
+	std::vector<RID> nanoRids;
+	std::vector<char*> nanoRecords;
+	std::vector<char*> nanoReturnedRecords;
+	std::vector<Attribute> nanoRecordAttributes;
+
+	std::vector<RID> tinyRids;
+	std::vector<char*> tinyRecords;
+	std::vector<char*> tinyReturnedRecords;
+	std::vector<Attribute> tinyRecordAttributes;
+
+	std::vector<RID> smallRids;
+	std::vector<char*> smallRecords;
+	std::vector<char*> smallReturnedRecords;
+	std::vector<Attribute> smallRecordAttributes;
+
+	size_t nanoSize = nanoRecordDescriptor.length;
+	size_t tinySize = tinyRecordDescriptor.length + sizeof(int);
+	size_t smallSize = smallRecordDescriptor.length + sizeof(int);
+
+	// Allocate memory for the data and for the return data
+	for( int i=0; i<numRecords; ++i )
+	{
+		nanoRids.push_back(RID());
+		nanoRecords.push_back( (char*)malloc(nanoSize) );
+		nanoReturnedRecords.push_back( (char*)malloc(nanoSize) );
+
+		tinyRids.push_back(RID());
+		tinyRecords.push_back ( (char*)malloc(tinySize) );
+		tinyReturnedRecords.push_back ( (char*)malloc(tinySize) );
+
+		smallRids.push_back(RID());
+		smallRecords.push_back ( (char*)malloc(smallSize) );
+		smallReturnedRecords.push_back ( (char*)malloc(smallSize) );
+	}
+
+	nanoRecordAttributes.push_back(nanoRecordDescriptor);
+	tinyRecordAttributes.push_back(tinyRecordDescriptor);
+	smallRecordAttributes.push_back(smallRecordDescriptor);
+
+	// Fill out the values of all the data
+	for ( int i=0; i<numRecords; ++i )
+	{
+		int nanoInt = i;
+		char tinyChar = (i % 93) + ' ';
+		char smallChars[3] = {tinyChar, tinyChar, tinyChar};
+
+		int tinyCount = 1;
+		int smallCount = 1;
+
+		memcpy(nanoRecords[i], &nanoInt, sizeof(int));
+		
+		memcpy(tinyRecords[i], &tinyCount, sizeof(int));
+		memcpy(tinyRecords[i] + sizeof(int), &tinyChar, tinyCount*sizeof(char));
+
+		memcpy(smallRecords[i], &smallCount, sizeof(int));
+		memcpy(smallRecords[i] + sizeof(int), &smallChars, smallCount*sizeof(char));
+	}
+
+	// Insert records into the file, in a somewhat odd order (get it, odd, because it does i%2)
+	for( int i=0; i<numRecords; ++i )
+	{
+		if (i%2 != 0)
+		{
+			rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
+			rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		}
+
+		rbfm->insertRecord(fileHandle, smallRecordAttributes, smallRecords[i], smallRids[i]);
+	}
+
+	for( int i=0; i<numRecords; ++i )
+	{
+		if (i%2 == 0)
+		{
+			rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
+			rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		}
+	}
+
+	// Read the records back in
+	for ( int i=numRecords - 1; i>=0; --i )
+	{
+		rbfm->readRecord(fileHandle, nanoRecordAttributes, nanoRids[i], nanoReturnedRecords[i]);
+		rbfm->readRecord(fileHandle, tinyRecordAttributes, tinyRids[i], tinyReturnedRecords[i]);
+		rbfm->readRecord(fileHandle, smallRecordAttributes, smallRids[i], smallReturnedRecords[i]);
+	}
+
+	// Verify the data is correct
+	bool success = true;
+	for( int i=0; i<numRecords; ++i )
+	{
+		if (memcmp(nanoRecords[i], nanoReturnedRecords[i], nanoSize))
+		{
+			std::cout << "testSmallRecords1() failed on nano[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+
+		if (memcmp(tinyRecords[i], tinyReturnedRecords[i], tinySize))
+		{
+			std::cout << "testSmallRecords1() failed on tiny[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+
+		if (memcmp(smallRecords[i], smallReturnedRecords[i], smallSize))
+		{
+			std::cout << "testSmallRecords1() failed on small[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+	}
+
+	// Free up all the memory we allocated
+	for( int i=0; i<numRecords; ++i )
+	{
+		free(nanoRecords[i]);
+		free(nanoReturnedRecords[i]);
+
+		free(tinyRecords[i]);
+		free(tinyReturnedRecords[i]);
+
+		free(smallRecords[i]);
+		free(smallReturnedRecords[i]);
+	}
+
+	return success;
+}
+
+bool testSmallRecords2(FileHandle& fileHandle)
+{
+	return true;
+}
+
+void rbfmTest()
+{
+	unsigned numTests = 0;
+    unsigned numPassed = 0;
+    RC rc;
+
+	cout << "RecordBasedFileManager tests" << endl;
+	PagedFileManager *pfm = PagedFileManager::instance();
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+    FileHandle handle0, handle1, handle2;
+
+	// Test creating many very small records
+	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+	TEST_FN_EQ( true, testSmallRecords1(handle0), "Testing inserting many tiny records individually");
+	TEST_FN_EQ( true, testSmallRecords2(handle0), "Testing inserting many tiny records in batches");
+
+	// Test creating records with odd sizes
+	TEST_FN_EQ( 0, pfm->createFile("testFile1.db"), "Create testFile1.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
+
+	// Test closing/opening the file inbetween every operation
+	TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+
+	// Clean up
+	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
+	TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+
+	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
+	assert(numPassed == numTests);
+}
+
+// Super duper hacky way to access protected destructors !!
+class DeletablePFM : public PagedFileManager { public: ~DeletablePFM() { } };
+class DeletableRBFM : public RecordBasedFileManager { public: ~DeletableRBFM() { } };
+
+void killPFM()
+{
+	DeletablePFM* pfm = reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
+
+	// NOTE: Make sure ~PagedFileManager() has _pf_manager = NULL; in it!!!
+	delete pfm;
+
+	PagedFileManager::instance();
+}
+
+void killRBFM()
+{
+	DeletableRBFM* rbfm = reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
+
+	// NOTE: Make sure ~RecordBasedFileManager() has _rbf_manager = NULL; in it!!!
+	delete rbfm;
+
+	RecordBasedFileManager::instance();
+}
+
+bool pfmKillProcTest1()
+{
+	killPFM();
+
+	return true;
+}
+
 void pfmTest()
 {
     unsigned numTests = 0;
@@ -40,12 +264,6 @@ void pfmTest()
 
     cout << "PagedFileManager tests" << endl;
     PagedFileManager *pfm = PagedFileManager::instance();
-
-    // Clean up old files
-    remove("testFile0.db");
-    remove("testFile1.db");
-    remove("testFile2.db");
-
     FileHandle handle0, handle1, handle1_copy, handle2;
 
     TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
@@ -67,10 +285,10 @@ void pfmTest()
     TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
-    // TODO: Are we supposed to be able to destroy a file if there are open handles to it?
-    // Right now we will fail to delete a file if a handle is left open
+	TEST_FN_EQ( true, pfmKillProcTest1(), "Test some cases where the process 'exits' between some calls");
 
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
+	assert(numPassed == numTests);
 }
 
 void fhTest()
@@ -622,7 +840,7 @@ int RBFTest_8(RecordBasedFileManager *rbfm) {
     createRecordDescriptor(recordDescriptor);
     
     // Insert a record into a file
-    prepareRecord(6, "Peters", 24, 170.1, 5000, record, &recordSize);
+    prepareRecord(6, "Peters", 24, 170.1f, 5000, record, &recordSize);
     cout << "Insert Data:" << endl;
     rbfm->printRecord(recordDescriptor, record);
     
@@ -633,7 +851,10 @@ int RBFTest_8(RecordBasedFileManager *rbfm) {
     rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
     assert(rc == success);
 
+#ifndef REDIRECT_PRINT_RECORD
+    // Ignore this spammy message when we're redirecting directly to file
     cout << "Returned Data:" << endl;
+#endif
     rbfm->printRecord(recordDescriptor, returnedData);
 
     // Compare whether the two memory blocks are the same
@@ -761,7 +982,10 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
         rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], returnedData);
         assert(rc == success);
         
+#ifndef REDIRECT_PRINT_RECORD
+        // Ignore this spammy message when we're redirecting directly to file
         cout << "Returned Data:" << endl;
+#endif
         rbfm->printRecord(recordDescriptor, returnedData);
 
         int size = 0;
@@ -875,19 +1099,26 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     return 0;
 }
 
-int main()
+void cleanup()
 {
-    PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
-    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
-    
-    remove("test");
+	remove("test");
     remove("test_1");
     remove("test_2");
     remove("test_3");
     remove("test_4");
     remove("our_test_5");
+    remove("testFile0.db");
+    remove("testFile1.db");
+    remove("testFile2.db");
+}
+
+int main()
+{
+    PagedFileManager *pfm = PagedFileManager::instance(); // To test the functionality of the paged file manager
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
     
-    pfmTest();
+    cleanup();
+    
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -904,13 +1135,11 @@ int main()
 
     // Our tests...
     RBFTest_11(rbfm, rids, sizes);
-    remove("our_test_5");
 
-    remove("test");
-    remove("test_1");
-    remove("test_2");
-    remove("test_3");
-    remove("test_4");
+	pfmTest();
+	rbfmTest();
+
+    cleanup();
 
     return 0;
 }
