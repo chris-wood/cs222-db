@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <vector>
 #include <map>
+#include <string>
 #include <stdint.h>
 
 #include "dbgout.h"
