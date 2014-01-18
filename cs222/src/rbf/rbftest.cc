@@ -25,7 +25,6 @@ bool FileExists(string fileName)
     else return false;
 }
 
-// TODO: Some actual testing framework
 #define TEST_FN_PREFIX ++numTests;
 #define TEST_FN_POSTFIX(msg) { ++numPassed; cout << ' ' << numTests << ") OK: " << msg << endl; } \
                         else { cout << ' ' << numTests << ") FAIL: " << msg << "<" << rc::rcToString(rc) << ">" << endl; }
@@ -195,7 +194,6 @@ void rbfmTest()
 
 	cout << "RecordBasedFileManager tests" << endl;
 	PagedFileManager *pfm = PagedFileManager::instance();
-	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
     FileHandle handle0, handle1, handle2;
 
 	// Test creating many very small records
@@ -302,23 +300,112 @@ void fhTest()
     ///// Do a bunch of persistent and non-persistent calls
     string fileName = "fh_test"; 
     rc = pfm->createFile(fileName.c_str());
-    assert(rc == success);
-    assert(FileExists(fileName.c_str()));
+    TEST_FN_EQ(success, rc, "Create file");
+    rc = pfm->createFile(fileName.c_str());
+    TEST_FN_EQ(rc::FILE_ALREADY_EXISTS, rc, "Create file that already exists");
+    TEST_FN_EQ(1, FileExists(fileName.c_str()), "File exists");
     FileHandle fileHandle;
     rc = pfm->openFile(fileName.c_str(), fileHandle);
-    assert(rc == success);
+    TEST_FN_EQ(success, rc, "Open file");
     unsigned count = fileHandle.getNumberOfPages();
-    assert(count == (unsigned)0);
+    TEST_FN_EQ(0, count, "Number of pages correct");
     rc = pfm->closeFile(fileHandle);
-    assert(rc == success);
+    TEST_FN_EQ(success, rc, "Close file");
 
-    // Re-open, check pages, write to 1, write to 0, close
+    // Re-open, check open again, check pages
     rc = pfm->openFile(fileName.c_str(), fileHandle);
-    assert(rc == success);
+    TEST_FN_EQ(success, rc, "Open file");
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    TEST_FN_EQ(rc::FILE_HANDLE_ALREADY_INITIALIZED, rc, "Open file fails when same filehandle already pointing to an open file");
     count = fileHandle.getNumberOfPages();
-    assert(count == (unsigned)0);
+    TEST_FN_EQ(0, count, "Number of pages correct");
+
+    // Write page 1 (error), write page 0 (error), append page, close
+    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+    for (unsigned i = 0; i < PAGE_SIZE; i++) 
+    {
+        buffer[i] = i % 256;
+    }
+    rc = fileHandle.writePage(1, buffer);
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Writing to non-existent page");
+    rc = fileHandle.writePage(0, buffer);
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Writing to non-existent page");
+    rc = fileHandle.appendPage(buffer);
+    TEST_FN_EQ(success, rc, "Appending a new page");
     rc = pfm->closeFile(fileHandle);
-    assert(rc == success);    
+    TEST_FN_EQ(success, rc, "Close file");
+
+    // Open, read page 1 (fail), read page 0, check contents
+    unsigned char* buffer_copy = (unsigned char*)malloc(PAGE_SIZE);
+    memset(buffer_copy, 0, PAGE_SIZE);
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    TEST_FN_EQ(success, rc, "Open file");
+    rc = fileHandle.readPage(1, buffer_copy);
+    TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, rc, "Reading from non-existent page");
+    rc = fileHandle.readPage(0, buffer_copy);
+    TEST_FN_EQ(success, rc, "Reading previously written data");
+    TEST_FN_EQ(0, memcmp(buffer, buffer_copy, PAGE_SIZE), "Comparing data read and written");
+
+    // Test appending PAGE_SIZE pages and reading them all (overkill, perhaps)
+    for (unsigned i = 0; i < PAGE_SIZE; i++)
+    {
+        for (unsigned j = 0; j < PAGE_SIZE; j++)
+        {
+            buffer[j] = buffer[j] ^ 0xFF; // flip for kicks
+        }
+        rc = fileHandle.appendPage(buffer);
+        assert(rc == success);
+    }
+    for (unsigned i = 1; i < PAGE_SIZE + 1; i++)
+    {
+        memset(buffer_copy, 0, PAGE_SIZE);
+        rc = fileHandle.readPage(i, buffer_copy);
+        assert(rc == success);
+        for (unsigned j = 0; j < PAGE_SIZE; j++)
+        {
+            if (i % 2 == 1) assert((buffer_copy[j] ^ 0xFF) == (j % 256)); // flip for kicks
+            else assert(buffer_copy[j] == (j % 256)); // flip for kicks
+        }
+    }
+    rc = pfm->closeFile(fileHandle);
+    TEST_FN_EQ(success, rc, "Close file");
+
+    // Test multiple file handles to open/close/delete correctness
+    rc = pfm->openFile(fileName.c_str(), fileHandle);
+    TEST_FN_EQ(success, rc, "Open file");
+    FileHandle fileHandle2;
+    rc = pfm->openFile(fileName.c_str(), fileHandle2);
+    TEST_FN_EQ(success, rc, "Open second handle to same file");
+
+    memset(buffer, 0, PAGE_SIZE);
+    memset(buffer_copy, 0, PAGE_SIZE);
+    rc = fileHandle.readPage(1, buffer);
+    assert(rc == success);
+    rc = fileHandle2.readPage(1, buffer_copy);
+    assert(rc == success);
+    TEST_FN_EQ(0, memcmp(buffer, buffer_copy, PAGE_SIZE), "Reading same file through two different handles");
+
+    // Test close/delete correctness
+    rc = pfm->destroyFile(fileName.c_str());
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy attempt #1 when file is still open (two pins)");
+    rc = pfm->closeFile(fileHandle2);
+    assert(rc == success);
+    rc = pfm->destroyFile(fileName.c_str());
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy attempt #2 when file is still open (one pin)");    
+    rc = pfm->closeFile(fileHandle2);
+    TEST_FN_EQ(rc::FILE_HANDLE_NOT_INITIALIZED, rc, "Multiple close through the same handle");
+    rc = pfm->closeFile(fileHandle);
+    assert(rc == success);
+    rc = pfm->destroyFile(fileName.c_str());
+    TEST_FN_EQ(success, rc, "Destroy attempt with no pins");    
+
+    // Test deletion of non-existent file
+    string dummy = "dummy"; 
+    rc = pfm->destroyFile(dummy.c_str());
+    TEST_FN_EQ(rc::FILE_COULD_NOT_DELETE, rc, "Destroy non-existent file");
+
+    cout << "\nFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
+    assert(numPassed == numTests);
 }
 
 
@@ -571,6 +658,7 @@ int RBFTest_4(PagedFileManager *pfm)
    
     // Get the number of pages
     unsigned count = fileHandle.getNumberOfPages();
+    printf("%d\n", count);
     assert(count == (unsigned)1);
 
     // Close the file "test_1"
@@ -1030,7 +1118,7 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     cout << "****In RBF Test Case 11****" << endl;
    
     RC rc;
-    string fileName = "our_test_5";
+    string fileName = "test_5";
 
     // Create a file named "our_test_4"
     rc = rbfm->createFile(fileName.c_str());
@@ -1105,10 +1193,11 @@ void cleanup()
     remove("test_2");
     remove("test_3");
     remove("test_4");
-    remove("our_test_5");
+    remove("test_5");
     remove("testFile0.db");
     remove("testFile1.db");
     remove("testFile2.db");
+    remove("fh_test");
 }
 
 int main()
@@ -1132,10 +1221,10 @@ int main()
     RBFTest_9(rbfm, rids, sizes);
     RBFTest_10(rbfm, rids, sizes);
 
-    // Our tests...
+    // Our tests
     RBFTest_11(rbfm, rids, sizes);
-
 	pfmTest();
+    fhTest();
 	rbfmTest();
 
     cleanup();
