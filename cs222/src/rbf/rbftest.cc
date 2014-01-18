@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdexcept>
 #include <stdio.h>
+#include <vector>
 
 #include "pfm.h"
 #include "rbfm.h"
@@ -23,6 +24,147 @@ const int success = 0;
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
 
+bool testSmallRecords1(FileHandle& fileHandle)
+{
+	int numRecords = 10000;
+	PagedFileManager *pfm = PagedFileManager::instance();
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	Attribute nanoRecordDescriptor;
+	nanoRecordDescriptor.name = "Nano";
+    nanoRecordDescriptor.type = TypeInt;
+    nanoRecordDescriptor.length = (AttrLength)4;
+
+	Attribute tinyRecordDescriptor;
+	tinyRecordDescriptor.name = "Tiny";
+	tinyRecordDescriptor.type = TypeVarChar;
+    tinyRecordDescriptor.length = (AttrLength)1;
+
+	Attribute smallRecordDescriptor;
+	smallRecordDescriptor.name = "Small";
+	smallRecordDescriptor.type = TypeVarChar;
+    smallRecordDescriptor.length = (AttrLength)3;
+
+	std::vector<RID> nanoRids;
+	std::vector<char*> nanoRecords;
+	std::vector<char*> nanoReturnedRecords;
+	std::vector<Attribute> nanoRecordAttributes;
+
+	std::vector<RID> tinyRids;
+	std::vector<char*> tinyRecords;
+	std::vector<char*> tinyReturnedRecords;
+	std::vector<Attribute> tinyRecordAttributes;
+
+	std::vector<RID> smallRids;
+	std::vector<char*> smallRecords;
+	std::vector<char*> smallReturnedRecords;
+	std::vector<Attribute> smallRecordAttributes;
+
+	size_t nanoSize = nanoRecordDescriptor.length;
+	size_t tinySize = tinyRecordDescriptor.length + sizeof(int);
+	size_t smallSize = smallRecordDescriptor.length + sizeof(int);
+
+	// Allocate memory for the data and for the return data
+	for( int i=0; i<numRecords; ++i )
+	{
+		nanoRids.push_back(RID());
+		nanoRecords.push_back( (char*)malloc(nanoSize) );
+		nanoReturnedRecords.push_back( (char*)malloc(nanoSize) );
+
+		tinyRids.push_back(RID());
+		tinyRecords.push_back ( (char*)malloc(tinySize) );
+		tinyReturnedRecords.push_back ( (char*)malloc(tinySize) );
+
+		smallRids.push_back(RID());
+		smallRecords.push_back ( (char*)malloc(smallSize) );
+		smallReturnedRecords.push_back ( (char*)malloc(smallSize) );
+	}
+
+	nanoRecordAttributes.push_back(nanoRecordDescriptor);
+	tinyRecordAttributes.push_back(tinyRecordDescriptor);
+	smallRecordAttributes.push_back(smallRecordDescriptor);
+
+	// Fill out the values of all the data
+	for ( int i=0; i<numRecords; ++i )
+	{
+		int nanoInt = i;
+		char tinyChar = (i % 93) + ' ';
+		char smallChars[3] = {tinyChar, tinyChar, tinyChar};
+
+		int tinyCount = 1;
+		int smallCount = 1;
+
+		memcpy(nanoRecords[i], &nanoInt, sizeof(int));
+		
+		memcpy(tinyRecords[i], &tinyCount, sizeof(int));
+		memcpy(tinyRecords[i] + sizeof(int), &tinyChar, tinyCount*sizeof(char));
+
+		memcpy(smallRecords[i], &smallCount, sizeof(int));
+		memcpy(smallRecords[i] + sizeof(int), &smallChars, smallCount*sizeof(char));
+	}
+
+	// Insert records into the file
+	for( int i=0; i<numRecords; ++i )
+	{
+		rbfm->insertRecord(fileHandle, nanoRecordAttributes, nanoRecords[i], nanoRids[i]);
+		rbfm->insertRecord(fileHandle, tinyRecordAttributes, tinyRecords[i], tinyRids[i]);
+		rbfm->insertRecord(fileHandle, smallRecordAttributes, smallRecords[i], smallRids[i]);
+	}
+
+	// Read the records back in
+	for ( int i=numRecords - 1; i>=0; --i )
+	{
+		rbfm->readRecord(fileHandle, nanoRecordAttributes, nanoRids[i], nanoReturnedRecords[i]);
+		rbfm->readRecord(fileHandle, tinyRecordAttributes, tinyRids[i], tinyReturnedRecords[i]);
+		rbfm->readRecord(fileHandle, smallRecordAttributes, smallRids[i], smallReturnedRecords[i]);
+	}
+
+	// Verify the data is correct
+	bool success = true;
+	for( int i=0; i<numRecords; ++i )
+	{
+		if (memcmp(nanoRecords[i], nanoReturnedRecords[i], nanoSize))
+		{
+			std::cout << "testSmallRecords1() failed on nano[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+
+		if (memcmp(tinyRecords[i], tinyReturnedRecords[i], tinySize))
+		{
+			std::cout << "testSmallRecords1() failed on tiny[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+
+		if (memcmp(smallRecords[i], smallReturnedRecords[i], smallSize))
+		{
+			std::cout << "testSmallRecords1() failed on small[" << i << "]" << std::endl << std::endl;
+			success = false;
+			break;
+		}
+	}
+
+	for( int i=0; i<numRecords; ++i )
+	{
+		free(nanoRecords[i]);
+		free(nanoReturnedRecords[i]);
+
+		free(tinyRecords[i]);
+		free(tinyReturnedRecords[i]);
+
+		free(smallRecords[i]);
+		free(smallReturnedRecords[i]);
+	}
+
+	return success;
+}
+
+bool testSmallRecords2(FileHandle& fileHandle)
+{
+	return true;
+}
+
 void rbfmTest()
 {
 	unsigned numTests = 0;
@@ -37,14 +179,16 @@ void rbfmTest()
 	// Test creating many very small records
 	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
 	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+	TEST_FN_EQ( true, testSmallRecords1(handle0), "Testing inserting many tiny records individually");
+	TEST_FN_EQ( true, testSmallRecords2(handle0), "Testing inserting many tiny records in batches");
 
 	// Test creating records with odd sizes
 	TEST_FN_EQ( 0, pfm->createFile("testFile1.db"), "Create testFile1.db");
-	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle0), "Open testFile1.db and store in handle1");
+	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
 
 	// Test closing/opening the file inbetween every operation
 	TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
-	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle0), "Open testFile2.db and store in handle2");
+	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
 
 	// Clean up
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
