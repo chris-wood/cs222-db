@@ -249,8 +249,138 @@ void killRBFM()
 bool pfmKillProcTest1()
 {
 	killPFM();
+	return PagedFileManager::instance() != NULL;
+}
 
-	return true;
+RC pfmKillProcTest2()
+{
+	RC ret = PagedFileManager::instance()->createFile("testFile1.db");
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	killPFM();
+
+	FileHandle handle1;
+	ret = PagedFileManager::instance()->openFile("testFile1.db", handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->closeFile(handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->destroyFile("testFile1.db");
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	return rc::OK;
+}
+
+RC pfmKillProcTest3()
+{
+	RC ret = PagedFileManager::instance()->createFile("testFile1.db");
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	FileHandle handle1;
+	ret = PagedFileManager::instance()->openFile("testFile1.db", handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->closeFile(handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	killPFM();
+
+	ret = PagedFileManager::instance()->openFile("testFile1.db", handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->closeFile(handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->destroyFile("testFile1.db");
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	return rc::OK;
+}
+
+RC pfmKillProcTest4()
+{
+	RC ret = PagedFileManager::instance()->createFile("testFile1.db");
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	FileHandle handle1;
+	ret = PagedFileManager::instance()->openFile("testFile1.db", handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	char bufferIn[PAGE_SIZE];
+	char bufferOut[PAGE_SIZE];
+	memset(bufferIn, 0, PAGE_SIZE);
+	bufferIn[0] = 1;
+	bufferIn[PAGE_SIZE - 1] = 1;
+
+	ret = handle1.appendPage(bufferIn);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = PagedFileManager::instance()->closeFile(handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	killPFM();
+
+	ret = PagedFileManager::instance()->openFile("testFile1.db", handle1);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	ret = handle1.readPage(0, bufferOut);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	if (memcmp(bufferIn, bufferOut, PAGE_SIZE))
+	{
+		return -1;
+	}
+
+	return rc::OK;
 }
 
 void pfmTest()
@@ -282,7 +412,12 @@ void pfmTest()
     TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle1_copy), "Close handle1_copy");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
-	TEST_FN_EQ( true, pfmKillProcTest1(), "Test some cases where the process 'exits' between some calls");
+
+	pfm = NULL;
+	TEST_FN_EQ( true, pfmKillProcTest1(), "Test that we can successfully destroy and then reinitialize the PFM");
+	TEST_FN_EQ( rc::OK, pfmKillProcTest2(), "Test that we can 'kill' the process after createFile");
+	TEST_FN_EQ( rc::OK, pfmKillProcTest3(), "Test that we can 'kill' the process after openFile");
+	TEST_FN_EQ( rc::OK, pfmKillProcTest4(), "Test that we can 'kill' the process after writing a page");
 
     cout << "\nPFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);
