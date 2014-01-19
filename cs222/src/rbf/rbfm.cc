@@ -51,6 +51,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
         return ret;
     }
 
+    // Initialize and validate the header for the new file
     init(header);
     ret = validate(header);
     if (ret != rc::OK)
@@ -58,6 +59,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
         return ret;
     }
 
+    // Flush the header page to disk
     ret = writeHeader(handle, &header);
     if (ret != rc::OK)
     {
@@ -65,6 +67,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
         return ret;
     }
 
+    // Drop the handle to the file
     ret = _pfm.closeFile(handle);
     if (ret != rc::OK)
     {
@@ -104,7 +107,6 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
     {
         return ret;
     }
-
     return rc::OK;
 }
 
@@ -349,7 +351,6 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         return ret;
     }
 
-	// WARNING: The caller must write out the pageHeader to disk!
     return rc::OK;
 }
 
@@ -409,18 +410,22 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     unsigned offsetIndex = 0;
     unsigned dataOffset = 0;
 
+    // Allocate an array of offets with N entries, where N is the number of fields as indicated
+    // by the recordDescriptor vector. Each entry i in this array points to the address offset,
+    // from the base address of the record on disk, where the i-th field is stored. 
 	unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
 	if (!offsets)
 	{
 		return rc::OUT_OF_MEMORY;
 	}
 
+    // Compute the compact record length and values to be inserted into the offset array
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         // First, store the offset
         offsets[offsetIndex++] = recLength;
 
-        // Now bump the length as needed based on the type
+        // Now bump the length as needed based on the length of the contents
         int count = 0;
         Attribute attr = *itr;
         switch(attr.type)
@@ -475,6 +480,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     memcpy(pageBuffer + header.freeSpaceOffset, offsets, offsetFieldsSize);
     memcpy(pageBuffer + header.freeSpaceOffset + offsetFieldsSize, data, recLength - offsetFieldsSize);
 
+    // Release up the offsets array 
     free(offsets);
 
     // Create a new index slot entry and prepend it to the list
@@ -522,7 +528,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {    
-    // Pull the page into memory
+    // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE];
     RC ret = fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
 	if (ret != rc::OK)
@@ -530,11 +536,11 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 		return ret;
 	}
 
-    // Find the slot where the record is stored
+    // Find the slot where the record is stored - O(1)
 	PageIndexSlot slotIndex;
     memcpy(&slotIndex, pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
 
-    // Copy the contents of the record into the data block
+    // Copy the contents of the record into the data block - O(1)
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
     memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size - fieldOffset);
 
