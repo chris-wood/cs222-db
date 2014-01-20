@@ -604,6 +604,19 @@ PFHeader::PFHeader()
     memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
 }
 
+// The cutoffs for the free space lists will end up like this:
+//  [0] =    0
+//  [1] =   32
+//  [2] =  288
+//  [3] =  544
+//  [4] =  800
+//  [5] = 1056
+//  [6] = 1312
+//  [7] = 1568
+//  [8] = 1824
+//  [9] = 2080
+// [10] = 2336
+// [11] = 2592
 void PFHeader::init()
 {
     // Divide the freespace lists evenly, except for the first and last
