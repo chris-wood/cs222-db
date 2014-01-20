@@ -31,18 +31,18 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntryLo">0.0 %</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntryLo">66.7 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
             <td class="headerValue">2014-01-20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">0</td>
             <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntryLo">0.0 %</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryLo">50.0 %</td>
           </tr>
           <tr>
             <td></td>
@@ -2635,11 +2635,11 @@
 <span class="lineNum">    2564 </span>                :            :    *  @param __rhs  Second string.
 <span class="lineNum">    2565 </span>                :            :    *  @return  True if @a __lhs precedes @a __rhs.  False otherwise.
 <span class="lineNum">    2566 </span>                :            :    */
-<span class="lineNum">    2567 </span>                :            :   template&lt;typename _CharT, typename _Traits, typename _Alloc&gt;
+<a name="2567"><span class="lineNum">    2567 </span>                :            :   template&lt;typename _CharT, typename _Traits, typename _Alloc&gt;</a>
 <span class="lineNum">    2568 </span>                :            :     inline bool
-<span class="lineNum">    2569 </span>                :            :     operator&lt;(const basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __lhs,
+<span class="lineNum">    2569 </span>                :<span class="lineCov">        427 :     operator&lt;(const basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __lhs,</span>
 <span class="lineNum">    2570 </span>                :            :               const basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __rhs)
-<span class="lineNum">    2571 </span>                :            :     { return __lhs.compare(__rhs) &lt; 0; }
+<span class="lineNum">    2571 </span>                :<span class="lineCov">        427 :     { return __lhs.compare(__rhs) &lt; 0; }</span>
 <span class="lineNum">    2572 </span>                :            : 
 <span class="lineNum">    2573 </span>                :            :   /**
 <span class="lineNum">    2574 </span>                :            :    *  @brief  Test if string precedes C string.

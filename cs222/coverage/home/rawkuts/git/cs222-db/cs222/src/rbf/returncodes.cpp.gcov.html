@@ -32,7 +32,7 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">28</td>
+            <td class="headerCovTableEntry">29</td>
             <td class="headerCovTableEntryLo">0.0 %</td>
           </tr>
           <tr>
@@ -50,7 +50,7 @@
             <td></td>
             <td class="headerItem">Branches:</td>
             <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">26</td>
+            <td class="headerCovTableEntry">27</td>
             <td class="headerCovTableEntryLo">0.0 %</td>
           </tr>
           <tr><td><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -80,7 +80,7 @@
 <span class="lineNum">         </span><span class="branchNoExec" title="Branch 9 was not executed"> # </span><span class="branchNoExec" title="Branch 10 was not executed"> # </span><span class="branchNoExec" title="Branch 11 was not executed"> # </span><span class="branchNoExec" title="Branch 12 was not executed"> # </span><span class="branchNoExec" title="Branch 13 was not executed"> # </span> 
 <span class="lineNum">         </span><span class="branchNoExec" title="Branch 14 was not executed"> # </span><span class="branchNoExec" title="Branch 15 was not executed"> # </span><span class="branchNoExec" title="Branch 16 was not executed"> # </span><span class="branchNoExec" title="Branch 17 was not executed"> # </span><span class="branchNoExec" title="Branch 18 was not executed"> # </span> 
 <span class="lineNum">         </span><span class="branchNoExec" title="Branch 19 was not executed"> # </span><span class="branchNoExec" title="Branch 20 was not executed"> # </span><span class="branchNoExec" title="Branch 21 was not executed"> # </span><span class="branchNoExec" title="Branch 22 was not executed"> # </span><span class="branchNoExec" title="Branch 23 was not executed"> # </span> 
-<span class="lineNum">         </span>         <span class="branchNoExec" title="Branch 24 was not executed"> # </span><span class="branchNoExec" title="Branch 25 was not executed"> # </span>]
+<span class="lineNum">         </span>      <span class="branchNoExec" title="Branch 24 was not executed"> # </span><span class="branchNoExec" title="Branch 25 was not executed"> # </span><span class="branchNoExec" title="Branch 26 was not executed"> # </span>]
 <span class="lineNum">       8 </span>                :            :         {
 <span class="lineNum">       9 </span>                :<span class="lineNoCov">          0 :         case UNKNOWN_FAILURE:                       return &quot;UNKNOWN_FAILURE&quot;;</span>
 <span class="lineNum">      10 </span>                :<span class="lineNoCov">          0 :         case OK:                                    return &quot;OK&quot;;</span>
@@ -103,15 +103,16 @@
 <span class="lineNum">      27 </span>                :<span class="lineNoCov">          0 :         case HEADER_PAGESIZE_MISMATCH:              return &quot;HEADER_PAGESIZE_MISMATCH&quot;;</span>
 <span class="lineNum">      28 </span>                :<span class="lineNoCov">          0 :         case HEADER_VERSION_MISMATCH:               return &quot;HEADER_VERSION_MISMATCH&quot;;</span>
 <span class="lineNum">      29 </span>                :<span class="lineNoCov">          0 :         case HEADER_FREESPACE_LISTS_MISMATCH:       return &quot;HEADER_FREESPACE_LISTS_MISMATCH&quot;;</span>
-<span class="lineNum">      30 </span>                :<span class="lineNoCov">          0 :         case HEADER_SIZE_TOO_LARGE:                 return &quot;HEADER_SIZE_TOO_LARGE&quot;;</span>
-<span class="lineNum">      31 </span>                :<span class="lineNoCov">          0 :         case RECORD_SIZE_INVALID:                   return &quot;RECORD_SIZE_INVALID&quot;;</span>
-<span class="lineNum">      32 </span>                :<span class="lineNoCov">          0 :         case ATTRIBUTE_INVALID_TYPE:                return &quot;ATTRIBUTE_INVALID_TYPE&quot;;</span>
-<span class="lineNum">      33 </span>                :<span class="lineNoCov">          0 :                 case OUT_OF_MEMORY:                                                     return &quot;OUT_OF_MEMORY&quot;;</span>
-<span class="lineNum">      34 </span>                :            :         }
-<span class="lineNum">      35 </span>                :            : 
-<span class="lineNum">      36 </span>                :<span class="lineNoCov">          0 :         return &quot;UNKNOWN_ERROR_CODE&quot;;</span>
-<span class="lineNum">      37 </span>                :            :     }
-<span class="lineNum">      38 </span>                :            : }
+<span class="lineNum">      30 </span>                :<span class="lineNoCov">          0 :         case HEADER_FREESPACE_LISTS_CORRUPT:         return &quot;HEADER_FREESPACE_LIST_CORRUPT&quot;;</span>
+<span class="lineNum">      31 </span>                :<span class="lineNoCov">          0 :         case HEADER_SIZE_TOO_LARGE:                 return &quot;HEADER_SIZE_TOO_LARGE&quot;;</span>
+<span class="lineNum">      32 </span>                :<span class="lineNoCov">          0 :         case RECORD_SIZE_INVALID:                   return &quot;RECORD_SIZE_INVALID&quot;;</span>
+<span class="lineNum">      33 </span>                :<span class="lineNoCov">          0 :         case ATTRIBUTE_INVALID_TYPE:                return &quot;ATTRIBUTE_INVALID_TYPE&quot;;</span>
+<span class="lineNum">      34 </span>                :<span class="lineNoCov">          0 :                 case OUT_OF_MEMORY:                                                     return &quot;OUT_OF_MEMORY&quot;;</span>
+<span class="lineNum">      35 </span>                :            :         }
+<span class="lineNum">      36 </span>                :            : 
+<span class="lineNum">      37 </span>                :<span class="lineNoCov">          0 :         return &quot;UNKNOWN_ERROR_CODE&quot;;</span>
+<span class="lineNum">      38 </span>                :            :     }
+<span class="lineNum">      39 </span>                :            : }
 </pre>
       </td>
     </tr>

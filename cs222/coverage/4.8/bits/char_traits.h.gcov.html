@@ -32,7 +32,7 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">4</td>
             <td class="headerCovTableEntryLo">0.0 %</td>
           </tr>
           <tr>
@@ -41,7 +41,7 @@
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">2</td>
             <td class="headerCovTableEntryLo">0.0 %</td>
           </tr>
           <tr>
@@ -320,10 +320,10 @@
 <span class="lineNum">     249 </span>                :            :       static _GLIBCXX_CONSTEXPR bool
 <span class="lineNum">     250 </span>                :            :       lt(const char_type&amp; __c1, const char_type&amp; __c2) _GLIBCXX_NOEXCEPT
 <span class="lineNum">     251 </span>                :            :       { return __c1 &lt; __c2; }
-<span class="lineNum">     252 </span>                :            : 
+<a name="252"><span class="lineNum">     252 </span>                :            : </a>
 <span class="lineNum">     253 </span>                :            :       static int
-<span class="lineNum">     254 </span>                :            :       compare(const char_type* __s1, const char_type* __s2, size_t __n)
-<span class="lineNum">     255 </span>                :            :       { return __builtin_memcmp(__s1, __s2, __n); }
+<span class="lineNum">     254 </span>                :<span class="lineNoCov">          0 :       compare(const char_type* __s1, const char_type* __s2, size_t __n)</span>
+<span class="lineNum">     255 </span>                :<span class="lineNoCov">          0 :       { return __builtin_memcmp(__s1, __s2, __n); }</span>
 <a name="256"><span class="lineNum">     256 </span>                :            : </a>
 <span class="lineNum">     257 </span>                :            :       static size_t
 <span class="lineNum">     258 </span>                :<span class="lineNoCov">          0 :       length(const char_type* __s)</span>
