@@ -464,7 +464,7 @@ void rbfmTest()
     // Test creation of varying sized records that should fill up any freespace lists
     TEST_FN_EQ( 0, pfm->createFile("testFile3.db"), "Create testFile3.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
-    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 97, sizeof(int) + sizeof(char), false), "Testing insertion of increasingly large records");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 256, sizeof(int) + sizeof(char), false), "Testing insertion of increasingly large records");
 
 	// Test creating records with odd sizes
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
