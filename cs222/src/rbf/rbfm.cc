@@ -136,8 +136,7 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     }
 
     // If we did not find a suitible location, append however many pages we need to store the data
-	unsigned char listSwapBuffer[PAGE_SIZE];
-
+    unsigned char listSwapBuffer[PAGE_SIZE] = {0};
     unsigned requiredPages = 1 + ((bytes - 1) / PAGE_SIZE);
     unsigned char* newPages = (unsigned char*)malloc(requiredPages * PAGE_SIZE);
 	if (!newPages)
@@ -250,7 +249,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
 
     RC ret;
     PFHeader header;
-	unsigned char pageBuffer[PAGE_SIZE];
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
 
 	ret = readHeader(fileHandle, &header);
 	if (ret != rc::OK)
@@ -359,7 +358,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::writeHeader(" << fileHandle.getFilename() << ")\n";
 
     // Copy the header data into a newly allocated buffer
-    unsigned char buffer[PAGE_SIZE];
+    unsigned char buffer[PAGE_SIZE] = {0};
     memcpy(buffer, header, sizeof(PFHeader));
 
     // Commit the header to disk
@@ -381,8 +380,8 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n";
 
     // Allocate the page header buffer and read it in from the disk.
-    unsigned char buffer[PAGE_SIZE];
     RC ret = rc::OK;
+    unsigned char buffer[PAGE_SIZE] = {0};
     if (fileHandle.getNumberOfPages() == 0)
     {
         PFHeader blankHeader;
@@ -462,7 +461,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Read in the designated page
-    unsigned char pageBuffer[PAGE_SIZE];
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
     ret = fileHandle.readPage(pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
@@ -529,7 +528,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
 {    
     // Pull the page into memory - O(1)
-    unsigned char pageBuffer[PAGE_SIZE];
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
 	if (ret != rc::OK)
 	{
@@ -615,6 +614,7 @@ PFHeader::PFHeader()
       numPages(0),
       numFreespaceLists(NUM_FREESPACE_LISTS)
 {
+    memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
 }
 
 void PFHeader::init()
