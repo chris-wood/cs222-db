@@ -22,6 +22,7 @@ namespace rc
         case FILE_NOT_OPENED:                       return "FILE_NOT_OPENED";
         case RECORD_DOES_NOT_EXIST:                 return "RECORD_DOES_NOT_EXIST";
         case RECORD_CORRUPT:                        return "RECORD_CORRUPT";
+        case RECORD_EXCEEDS_PAGE_SIZE:              return "RECORD_EXCEEDS_PAGE_SIZE";
         case HEADER_SIZE_CORRUPT:                   return "HEADER_SIZE_CORRUPT";
         case HEADER_PAGESIZE_MISMATCH:              return "HEADER_PAGESIZE_MISMATCH";
         case HEADER_VERSION_MISMATCH:               return "HEADER_VERSION_MISMATCH";

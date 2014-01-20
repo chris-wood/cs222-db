@@ -151,7 +151,7 @@ FileHandle::FileHandle()
 
 FileHandle::~FileHandle()
 {
-    unloadFile();
+    //unloadFile();
 }
 
 RC FileHandle::updatePageCount()
