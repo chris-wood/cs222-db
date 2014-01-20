@@ -43,6 +43,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
 
     FileHandle handle;
     PFHeader header;
+    header.init();
 
     // Write out the header data to the reserved page (page 0)
     ret = _pfm.openFile(fileName.c_str(), handle);
@@ -52,8 +53,7 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     }
 
     // Initialize and validate the header for the new file
-    init(header);
-    ret = validate(header);
+    ret = header.validate();
     if (ret != rc::OK)
     {
         return ret;
@@ -97,7 +97,7 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
     }
 
     // Validate header is in our correct format
-    ret = validate(header);
+    ret = header.validate();
     return ret;
 }
 
@@ -386,7 +386,7 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     if (fileHandle.getNumberOfPages() == 0)
     {
         PFHeader blankHeader;
-        init(blankHeader);
+        blankHeader.init();
 
         memcpy(buffer, &blankHeader, sizeof(PFHeader));
         ret = fileHandle.appendPage(buffer);
@@ -608,44 +608,47 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
     return rc::OK;
 }
 
-void RecordBasedFileManager::init(PFHeader &header)
+PFHeader::PFHeader()
+    : headerSize(sizeof(PFHeader)),
+      pageSize(PAGE_SIZE),
+      version(CURRENT_PF_VERSION),
+      numPages(0),
+      numFreespaceLists(NUM_FREESPACE_LISTS)
 {
-    header.headerSize = sizeof(PFHeader);;
-    header.pageSize = PAGE_SIZE;
-    header.version = CURRENT_PF_VERSION;
-    header.numPages = 0;
-    header.numFreespaceLists = NUM_FREESPACE_LISTS;
+}
 
+void PFHeader::init()
+{
     // Divide the freespace lists evenly, except for the first and last
     unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
     unsigned short cutoff = cutoffDelta / 8; // Anything under this value is considered a 'full' page
 
-	// the 0th index will have pages that are esentially considered compeltely full
-	header.freespaceLists[0].listHead = 0;
-    header.freespaceLists[0].cutoff = 0;
+    // the 0th index will have pages that are esentially considered compeltely full
+    freespaceLists[0].listHead = 0;
+    freespaceLists[0].cutoff = 0;
 
     // Each element starts a linked list of pages, which is garunteed to have at least the cutoff value of bytes free
     // So elements in the largest index will have the most amount of bytes free
     for (int i=1; i<NUM_FREESPACE_LISTS; ++i)
     {
-        header.freespaceLists[i].listHead = 0;
-        header.freespaceLists[i].cutoff = cutoff;
+        freespaceLists[i].listHead = 0;
+        freespaceLists[i].cutoff = cutoff;
         cutoff += cutoffDelta;
     }
 }
 
-RC RecordBasedFileManager::validate(PFHeader &header)
+RC PFHeader::validate()
 {
-    if (header.headerSize != sizeof(PFHeader))
+    if (headerSize != sizeof(PFHeader))
         return rc::HEADER_SIZE_CORRUPT;
  
-    if (header.pageSize != PAGE_SIZE)
+    if (pageSize != PAGE_SIZE)
         return rc::HEADER_PAGESIZE_MISMATCH;
  
-    if (header.version != CURRENT_PF_VERSION)
+    if (version != CURRENT_PF_VERSION)
         return rc::HEADER_VERSION_MISMATCH;
  
-    if (header.numFreespaceLists != NUM_FREESPACE_LISTS)
+    if (numFreespaceLists != NUM_FREESPACE_LISTS)
         return rc::HEADER_FREESPACE_LISTS_MISMATCH;
  
     return rc::OK;

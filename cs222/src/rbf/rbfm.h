@@ -80,13 +80,17 @@ struct FreeSpaceList
 // PageFile Header (should fit in 1st page)
 struct PFHeader
 {
-  unsigned headerSize;
-  unsigned pageSize;
-  unsigned version;
-  unsigned numPages;
-  unsigned numFreespaceLists;
+    PFHeader();
+    void init();
+    RC validate();
 
-  FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
+    unsigned headerSize;
+    unsigned pageSize;
+    unsigned version;
+    unsigned numPages;
+    unsigned numFreespaceLists;
+
+    FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
 };
 
 
@@ -129,10 +133,6 @@ public:
   RC openFile(const string &fileName, FileHandle &fileHandle);
   
   RC closeFile(FileHandle &fileHandle);
-
-//// OUR ADDED METHODs
-  RC validate(PFHeader &header);
-  void init(PFHeader &header);
 
   //  Format of the data passed into the function is the following:
   //  1) data is a concatenation of values of the attributes
