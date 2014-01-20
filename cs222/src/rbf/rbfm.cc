@@ -237,7 +237,7 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
         }
     }
 
-    return rc::UNKNOWN_FAILURE;
+    return rc::RECORD_EXCEEDS_PAGE_SIZE;
 }
 
 RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
