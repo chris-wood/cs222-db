@@ -349,7 +349,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
     return ret;
 }
 
-RC testMaxSizeRecords(FileHandle& fileHandle)
+RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta)
 {
     std::vector<char*> buffersIn;
     std::vector<char*> buffersOut;
@@ -366,7 +366,7 @@ RC testMaxSizeRecords(FileHandle& fileHandle)
 
     // Allocate memory
     int seed = 0x7ed55d16;
-    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    for (int size = minRecordSize, index = 0; size <= maxRecordSize; size +=recordSizeDelta, ++index)
     {
         rids.push_back(RID());
         buffersIn.push_back((char*)malloc(size));
@@ -389,9 +389,8 @@ RC testMaxSizeRecords(FileHandle& fileHandle)
     // Do inserts
     RC ret;
     RecordBasedFileManager* rbfm = RecordBasedFileManager::instance();
-    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    for (int size = minRecordSize, index = 0; size <= maxRecordSize; size +=recordSizeDelta, ++index)
     {
-        int index = size - minRecordSize;
         recordDescriptor.back().length = size - sizeof(int);
         ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
     }
@@ -399,28 +398,23 @@ RC testMaxSizeRecords(FileHandle& fileHandle)
     // Check data was not harmed
     if (ret == rc::OK)
     {
-        for (int size = minRecordSize; size <= maxRecordSize; ++size)
+        for (int size = minRecordSize, index = 0; size <= maxRecordSize; size +=recordSizeDelta, ++index)
         {
-            int index = size - minRecordSize;
             recordDescriptor.back().length = size - sizeof(int);
             ret = rbfm->readRecord(fileHandle, recordDescriptor, rids[index], buffersOut[index]);
 
-            if (ret == rc::OK)
+            if (ret == rc::OK && memcmp(buffersIn[index], buffersOut[index], size))
             {
-                if (memcmp(buffersIn[index], buffersOut[index], size))
-                {
-                    std::cout << "There was an error checking the big string[" << index << "], size=" << size << std::endl;
-                    ret = rc::FILE_CORRUPT;
-                    break;
-                }
+                std::cout << "There was an error checking the big string[" << index << "], size=" << size << std::endl;
+                ret = rc::FILE_CORRUPT;
+                break;
             }
         }
     }
 
     // Clean up memory
-    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    for (int size = minRecordSize, index = 0; size <= maxRecordSize; size +=recordSizeDelta, ++index)
     {
-        int index = size - minRecordSize;
         free(buffersIn[index]);
         free(buffersOut[index]);
     }
@@ -436,11 +430,12 @@ void rbfmTest()
 
 	cout << "RecordBasedFileManager tests" << endl;
 	PagedFileManager *pfm = PagedFileManager::instance();
-    FileHandle handle0, handle1, handle2;
+    FileHandle handle0, handle1, handle2, handle3;
 
 	remove("testFile0.db");
 	remove("testFile1.db");
 	remove("testFile2.db");
+    remove("testFile3.db");
 
 	// Test creating many very small records
 	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
@@ -454,8 +449,12 @@ void rbfmTest()
     // Test creating large records (close to PAGE_FILE size)
     TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
-    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2), "Testing insertion of large records");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2, 1), "Testing insertion of large records");
 
+    // Test creation of varying sized records that should fill up any freespace lists
+    TEST_FN_EQ( 0, pfm->createFile("testFile3.db"), "Create testFile3.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 97), "Testing insertion of increasingly large records");
 
 	// Test creating records with odd sizes
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
@@ -469,9 +468,11 @@ void rbfmTest()
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
 	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close handle3");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile3.db"), "Destroy testFile3.db");
 
 	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);
@@ -1555,6 +1556,7 @@ void cleanup()
     remove("testFile0.db");
     remove("testFile1.db");
     remove("testFile2.db");
+    remove("testFile3.db");
     remove("fh_test");
 }
 
