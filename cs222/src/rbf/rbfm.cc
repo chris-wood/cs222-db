@@ -168,9 +168,31 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         }
         else
         {
-            // We are always inserting into the largest container (since this page is empty as of now)
-            // This case should never happen
-            return rc::HEADER_FREESPACE_LISTS_CORRUPT;
+            // Read in the previous list head
+            PageIndexHeader previousListHead;
+            ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
+            if (ret != rc::OK)
+            {
+                free(newPages);
+                return ret;
+            }
+
+            // Udpate the prev pointer of the previous head to be our page number
+            memcpy((void*)&previousListHead, listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+            previousListHead.prevPage = pageNum;
+            memcpy(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
+
+            ret = fileHandle.writePage(previousListHead.pageNumber, listSwapBuffer);
+
+            if (ret != rc::OK)
+            {
+                free(newPages);
+                return ret;
+            }
+
+            // Update the header info so the list points to the newly created page as the head
+            oldFreeSpaceList.listHead = index.pageNumber;
+            index.nextPage = previousListHead.pageNumber;
         }
 
         memcpy(newPages + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
