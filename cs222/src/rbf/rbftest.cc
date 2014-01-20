@@ -360,9 +360,9 @@ RC testMaxSizeRecords(FileHandle fileHandle)
     bigString.type = TypeVarChar;
     recordDescriptor.push_back(bigString);
 
-    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader);
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size();
     //const int maxRecordSize = PAGE_SIZE - 36;
-    const int minRecordSize = maxRecordSize;//9 * PAGE_SIZE / 10;
+    const int minRecordSize = 9 * PAGE_SIZE / 10;
 
     // Allocate memory
     int seed = 0x7ed55d16;
@@ -371,13 +371,14 @@ RC testMaxSizeRecords(FileHandle fileHandle)
         rids.push_back(RID());
         buffersIn.push_back((char*)malloc(size));
         buffersOut.push_back((char*)malloc(size));
+
         char* buffer = buffersIn.back();
 
-        recordDescriptor.back().length = size - sizeof(unsigned);
+        recordDescriptor.back().length = size - sizeof(int);
 
         // First write out the size of the string, then fill it with data
-        memcpy(buffer, &recordDescriptor.back().length, sizeof(unsigned));
-        for (int i=sizeof(unsigned); i<size; ++i)
+        memcpy(buffer, &recordDescriptor.back().length, sizeof(int));
+        for (int i=sizeof(int); i<size; ++i)
         {
             seed *= (i * 0xfd7046c5) + (i << 24); // not a real hash, do not use for actual hashing!
             char c = ' ' + seed % 90;
@@ -391,7 +392,7 @@ RC testMaxSizeRecords(FileHandle fileHandle)
     for (int size = minRecordSize; size <= maxRecordSize; ++size)
     {
         int index = size - minRecordSize;
-        recordDescriptor.back().length = size - sizeof(unsigned);
+        recordDescriptor.back().length = size - sizeof(int);
         ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
     }
 
@@ -401,7 +402,7 @@ RC testMaxSizeRecords(FileHandle fileHandle)
         for (int size = minRecordSize; size <= maxRecordSize; ++size)
         {
             int index = size - minRecordSize;
-            recordDescriptor.back().length = size - sizeof(unsigned);
+            recordDescriptor.back().length = size - sizeof(int);
             ret = rbfm->readRecord(fileHandle, recordDescriptor, rids[index], buffersOut[index]);
 
             if (ret == rc::OK)
@@ -467,10 +468,10 @@ void rbfmTest()
 	// Clean up
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
 	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
-	//TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
-	//TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
 
 	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);
@@ -1564,7 +1565,7 @@ int main()
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
     
     cleanup();
-    
+
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -1587,5 +1588,8 @@ int main()
 
     cleanup();
 
+    // Clean up remaining memory so it doesn't look like we leaked to valgrind
+    delete reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
+    delete reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
     return 0;
 }
