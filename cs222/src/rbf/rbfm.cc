@@ -168,6 +168,9 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         }
         else
         {
+            // TODO: WRITE TEST CODE THAT HITS HERE!!!
+            dbg::out <<"!?!?!?!?!?!?!?!?!?!?";
+
             // Read in the previous list head
             PageIndexHeader previousListHead;
             ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
@@ -260,24 +263,8 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // Update prevPage to point to our nextPage
     if (pageHeader.prevPage > 0)
     {
-        // Read in the previous page
-        PageIndexHeader prevPageHeader;
-        ret = fileHandle.readPage(pageHeader.prevPage, pageBuffer);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
-
-        // Update the next pointer of the previous page to our next pointer
-        memcpy((void*)&prevPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
-        prevPageHeader.nextPage = pageHeader.nextPage;
-        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&prevPageHeader, sizeof(PageIndexHeader));
-
-        ret = fileHandle.writePage(prevPageHeader.pageNumber, pageBuffer);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
+        // We only ever insert into the head of the list, this case should never happen
+        return rc::HEADER_FREESPACE_LISTS_CORRUPT;
     }
     else
     {
