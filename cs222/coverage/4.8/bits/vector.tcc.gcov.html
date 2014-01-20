@@ -386,13 +386,13 @@
 <span class="lineNum">     315 </span>                :            : #else
 <a name="316"><span class="lineNum">     316 </span>                :            :   template&lt;typename _Tp, typename _Alloc&gt;</a>
 <span class="lineNum">     317 </span>                :            :     void
-<span class="lineNum">     318 </span>                :<span class="lineCov">      22525 :     vector&lt;_Tp, _Alloc&gt;::</span>
+<span class="lineNum">     318 </span>                :<span class="lineCov">      22548 :     vector&lt;_Tp, _Alloc&gt;::</span>
 <span class="lineNum">     319 </span>                :            :     _M_insert_aux(iterator __position, const _Tp&amp; __x)
 <span class="lineNum">     320 </span>                :            : #endif
 <span class="lineNum">     321 </span>                :            :     {
-<span class="lineNum">     322 </span>[<span class="branchNoCov" title="Branch 0 was not taken"> - </span><span class="branchCov" title="Branch 1 was taken 30 times"> + </span>][<span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 3 was taken 15 times"> + </span>]:<span class="lineCov">      22525 :       if (this-&gt;_M_impl._M_finish != this-&gt;_M_impl._M_end_of_storage)</span>
-<span class="lineNum">         </span>[<span class="branchNoCov" title="Branch 4 was not taken"> - </span><span class="branchCov" title="Branch 5 was taken 42 times"> + </span>][<span class="branchNoCov" title="Branch 6 was not taken"> - </span><span class="branchCov" title="Branch 7 was taken 110 times"> + </span>]
-<span class="lineNum">         </span>[<span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 9 was taken 82 times"> + </span>][<span class="branchNoCov" title="Branch 10 was not taken"> - </span><span class="branchCov" title="Branch 11 was taken 22246 times"> + </span>]
+<span class="lineNum">     322 </span>[<span class="branchNoCov" title="Branch 0 was not taken"> - </span><span class="branchCov" title="Branch 1 was taken 30 times"> + </span>][<span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 3 was taken 15 times"> + </span>]:<span class="lineCov">      22548 :       if (this-&gt;_M_impl._M_finish != this-&gt;_M_impl._M_end_of_storage)</span>
+<span class="lineNum">         </span>[<span class="branchNoCov" title="Branch 4 was not taken"> - </span><span class="branchCov" title="Branch 5 was taken 42 times"> + </span>][<span class="branchNoCov" title="Branch 6 was not taken"> - </span><span class="branchCov" title="Branch 7 was taken 124 times"> + </span>]
+<span class="lineNum">         </span>[<span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 9 was taken 89 times"> + </span>][<span class="branchNoCov" title="Branch 10 was not taken"> - </span><span class="branchCov" title="Branch 11 was taken 22248 times"> + </span>]
 <span class="lineNum">     323 </span>                :            :         {
 <span class="lineNum">     324 </span>[<span class="branchNoExec" title="Branch 2 was not executed"> # </span><span class="branchNoExec" title="Branch 3 was not executed"> # </span>][<span class="branchNoExec" title="Branch 7 was not executed"> # </span><span class="branchNoExec" title="Branch 8 was not executed"> # </span>]:<span class="lineNoCov">          0 :           _Alloc_traits::construct(this-&gt;_M_impl, this-&gt;_M_impl._M_finish,</span>
 <span class="lineNum">         </span>        [<span class="branchNoExec" title="Branch 10 was not executed"> # </span><span class="branchNoExec" title="Branch 11 was not executed"> # </span>]
@@ -416,42 +416,42 @@
 <span class="lineNum">     340 </span>                :            :       else
 <span class="lineNum">     341 </span>                :            :         {
 <span class="lineNum">     342 </span>                :            :           const size_type __len =
-<span class="lineNum">     343 </span>                :<span class="lineCov">      22525 :             _M_check_len(size_type(1), &quot;vector::_M_insert_aux&quot;);</span>
-<span class="lineNum">     344 </span>        [<span class="branchCov" title="Branch 6 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 7 was not taken"> - </span>]:<span class="lineCov">      22525 :           const size_type __elems_before = __position - begin();</span>
-<span class="lineNum">     345 </span>                :<span class="lineCov">      22525 :           pointer __new_start(this-&gt;_M_allocate(__len));</span>
-<span class="lineNum">     346 </span>                :<span class="lineCov">      22525 :           pointer __new_finish(__new_start);</span>
+<span class="lineNum">     343 </span>                :<span class="lineCov">      22548 :             _M_check_len(size_type(1), &quot;vector::_M_insert_aux&quot;);</span>
+<span class="lineNum">     344 </span>        [<span class="branchCov" title="Branch 6 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 7 was not taken"> - </span>]:<span class="lineCov">      22548 :           const size_type __elems_before = __position - begin();</span>
+<span class="lineNum">     345 </span>                :<span class="lineCov">      22548 :           pointer __new_start(this-&gt;_M_allocate(__len));</span>
+<span class="lineNum">     346 </span>                :<span class="lineCov">      22548 :           pointer __new_finish(__new_start);</span>
 <span class="lineNum">     347 </span>                :            :           __try
 <span class="lineNum">     348 </span>                :            :             {
 <span class="lineNum">     349 </span>                :            :               // The order of the three operations is dictated by the C++0x
 <span class="lineNum">     350 </span>                :            :               // case, where the moves could alter a new element belonging
 <span class="lineNum">     351 </span>                :            :               // to the existing vector.  This is an issue only for callers
 <span class="lineNum">     352 </span>                :            :               // taking the element by const lvalue ref (see 23.1/13).
-<span class="lineNum">     353 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22525 :               _Alloc_traits::construct(this-&gt;_M_impl,</span>
-<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 110 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 82 times"> + </span> 
-<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22246 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
+<span class="lineNum">     353 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22548 :               _Alloc_traits::construct(this-&gt;_M_impl,</span>
+<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 124 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 89 times"> + </span> 
+<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22248 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
 <span class="lineNum">     354 </span>                :            :                                        __new_start + __elems_before,
 <span class="lineNum">     355 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">     356 </span>                :            :                                        std::forward&lt;_Args&gt;(__args)...);
 <span class="lineNum">     357 </span>                :            : #else
-<span class="lineNum">     358 </span>                :<span class="lineCov">      22525 :                                        __x);</span>
+<span class="lineNum">     358 </span>                :<span class="lineCov">      22548 :                                        __x);</span>
 <span class="lineNum">     359 </span>                :            : #endif
-<span class="lineNum">     360 </span>                :<span class="lineCov">      22525 :               __new_finish = 0;</span>
+<span class="lineNum">     360 </span>                :<span class="lineCov">      22548 :               __new_finish = 0;</span>
 <span class="lineNum">     361 </span>                :            : 
-<span class="lineNum">     362 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22525 :               __new_finish</span>
-<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 110 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 82 times"> + </span> 
-<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22246 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
+<span class="lineNum">     362 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22548 :               __new_finish</span>
+<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 124 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 89 times"> + </span> 
+<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22248 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
 <span class="lineNum">     363 </span>                :            :                 = std::__uninitialized_move_if_noexcept_a
 <span class="lineNum">     364 </span>                :            :                 (this-&gt;_M_impl._M_start, __position.base(),
-<span class="lineNum">     365 </span>                :<span class="lineCov">      22525 :                  __new_start, _M_get_Tp_allocator());</span>
+<span class="lineNum">     365 </span>                :<span class="lineCov">      22548 :                  __new_start, _M_get_Tp_allocator());</span>
 <span class="lineNum">     366 </span>                :            : 
-<span class="lineNum">     367 </span>                :<span class="lineCov">      22525 :               ++__new_finish;</span>
+<span class="lineNum">     367 </span>                :<span class="lineCov">      22548 :               ++__new_finish;</span>
 <span class="lineNum">     368 </span>                :            : 
-<span class="lineNum">     369 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22525 :               __new_finish</span>
-<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 110 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 82 times"> + </span> 
-<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22246 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
+<span class="lineNum">     369 </span>  [<span class="branchCov" title="Branch 1 was taken 30 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span><span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span> :<span class="lineCov">      22548 :               __new_finish</span>
+<span class="lineNum">         </span><span class="branchCov" title="Branch 7 was taken 42 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span><span class="branchCov" title="Branch 10 was taken 124 times"> + </span><span class="branchNoCov" title="Branch 11 was not taken"> - </span><span class="branchCov" title="Branch 13 was taken 89 times"> + </span> 
+<span class="lineNum">         </span>      <span class="branchNoCov" title="Branch 14 was not taken"> - </span><span class="branchCov" title="Branch 16 was taken 22248 times"> + </span><span class="branchNoCov" title="Branch 17 was not taken"> - </span>]
 <span class="lineNum">     370 </span>                :            :                 = std::__uninitialized_move_if_noexcept_a
 <span class="lineNum">     371 </span>                :            :                 (__position.base(), this-&gt;_M_impl._M_finish,
-<span class="lineNum">     372 </span>                :<span class="lineCov">      22525 :                  __new_finish, _M_get_Tp_allocator());</span>
+<span class="lineNum">     372 </span>                :<span class="lineCov">      22548 :                  __new_finish, _M_get_Tp_allocator());</span>
 <span class="lineNum">     373 </span>                :            :             }
 <span class="lineNum">     374 </span>                :            :           __catch(...)
 <span class="lineNum">     375 </span>                :            :             {
@@ -471,16 +471,16 @@
 <span class="lineNum">         </span>      <span class="branchNoExec" title="Branch 14 was not executed"> # </span><span class="branchNoExec" title="Branch 16 was not executed"> # </span><span class="branchNoExec" title="Branch 17 was not executed"> # </span>]
 <span class="lineNum">     382 </span>                :            :               __throw_exception_again;
 <span class="lineNum">     383 </span>                :            :             }
-<span class="lineNum">     384 </span>                :<span class="lineCov">      22525 :           std::_Destroy(this-&gt;_M_impl._M_start, this-&gt;_M_impl._M_finish,</span>
-<span class="lineNum">     385 </span>                :<span class="lineCov">      22525 :                         _M_get_Tp_allocator());</span>
-<span class="lineNum">     386 </span>                :<span class="lineCov">      22525 :           _M_deallocate(this-&gt;_M_impl._M_start,</span>
+<span class="lineNum">     384 </span>                :<span class="lineCov">      22548 :           std::_Destroy(this-&gt;_M_impl._M_start, this-&gt;_M_impl._M_finish,</span>
+<span class="lineNum">     385 </span>                :<span class="lineCov">      22548 :                         _M_get_Tp_allocator());</span>
+<span class="lineNum">     386 </span>                :<span class="lineCov">      22548 :           _M_deallocate(this-&gt;_M_impl._M_start,</span>
 <span class="lineNum">     387 </span>                :            :                         this-&gt;_M_impl._M_end_of_storage
-<span class="lineNum">     388 </span>                :<span class="lineCov">      22525 :                         - this-&gt;_M_impl._M_start);</span>
-<span class="lineNum">     389 </span>                :<span class="lineCov">      22525 :           this-&gt;_M_impl._M_start = __new_start;</span>
-<span class="lineNum">     390 </span>                :<span class="lineCov">      22525 :           this-&gt;_M_impl._M_finish = __new_finish;</span>
-<span class="lineNum">     391 </span>                :<span class="lineCov">      22525 :           this-&gt;_M_impl._M_end_of_storage = __new_start + __len;</span>
+<span class="lineNum">     388 </span>                :<span class="lineCov">      22548 :                         - this-&gt;_M_impl._M_start);</span>
+<span class="lineNum">     389 </span>                :<span class="lineCov">      22548 :           this-&gt;_M_impl._M_start = __new_start;</span>
+<span class="lineNum">     390 </span>                :<span class="lineCov">      22548 :           this-&gt;_M_impl._M_finish = __new_finish;</span>
+<span class="lineNum">     391 </span>                :<span class="lineCov">      22548 :           this-&gt;_M_impl._M_end_of_storage = __new_start + __len;</span>
 <span class="lineNum">     392 </span>                :            :         }
-<span class="lineNum">     393 </span>                :<span class="lineCov">      22525 :     }</span>
+<span class="lineNum">     393 </span>                :<span class="lineCov">      22548 :     }</span>
 <span class="lineNum">     394 </span>                :            : 
 <span class="lineNum">     395 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">     396 </span>                :            :   template&lt;typename _Tp, typename _Alloc&gt;

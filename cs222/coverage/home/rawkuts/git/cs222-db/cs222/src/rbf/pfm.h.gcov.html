@@ -126,14 +126,14 @@
 <span class="lineNum">      55 </span>                :            : 
 <a name="56"><span class="lineNum">      56 </span>                :            :     FILE* getFile() { return _file; }</a>
 <a name="57"><span class="lineNum">      57 </span>                :            :     const FILE* getFile() const { return _file; }</a>
-<span class="lineNum">      58 </span>                :<span class="lineCov">     195508 :     const std::string&amp; getFilename() const { return _filename; }</span>
-<span class="lineNum">      59 </span>                :<span class="lineCov">        130 :     bool hasFile() const { return _file != NULL; }</span>
+<span class="lineNum">      58 </span>                :<span class="lineCov">     195672 :     const std::string&amp; getFilename() const { return _filename; }</span>
+<span class="lineNum">      59 </span>                :<span class="lineCov">        138 :     bool hasFile() const { return _file != NULL; }</span>
 <span class="lineNum">      60 </span>                :            :     bool operator== (const FileHandle&amp; that) const { return this-&gt;_file == that._file; }
 <span class="lineNum">      61 </span>                :            : 
 <span class="lineNum">      62 </span>                :            :     RC updatePageCount();
 <a name="63"><span class="lineNum">      63 </span>                :            :     RC unloadFile();</a>
 <span class="lineNum">      64 </span>                :            :     RC loadFile(const char*, FILE* file);
-<span class="lineNum">      65 </span>                :<span class="lineCov">         29 :     void closeFile() { _file = NULL; }</span>
+<span class="lineNum">      65 </span>                :<span class="lineCov">         31 :     void closeFile() { _file = NULL; }</span>
 <span class="lineNum">      66 </span>                :            : 
 <span class="lineNum">      67 </span>                :            : private:
 <span class="lineNum">      68 </span>                :            :     // Name of the OS file opened
