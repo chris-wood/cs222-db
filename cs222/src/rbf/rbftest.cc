@@ -349,7 +349,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
     return ret;
 }
 
-RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, bool insertForwards=true)
+RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, int minRecordSize, bool insertForwards)
 {
     std::vector<char*> buffersIn;
     std::vector<char*> buffersOut;
@@ -360,9 +360,8 @@ RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, bool insertFo
     bigString.type = TypeVarChar;
     recordDescriptor.push_back(bigString);
 
-    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size();
     //const int maxRecordSize = PAGE_SIZE - 36;
-    const int minRecordSize = 9 * PAGE_SIZE / 10;
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size();
 
     // Allocate memory
     int seed = 0x7ed55d16;
@@ -460,12 +459,12 @@ void rbfmTest()
     // Test creating large records (close to PAGE_FILE size)
     TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
-    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2, 1), "Testing insertion of large records");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2, 1, 9 * PAGE_SIZE / 10, true), "Testing insertion of large records");
 
     // Test creation of varying sized records that should fill up any freespace lists
     TEST_FN_EQ( 0, pfm->createFile("testFile3.db"), "Create testFile3.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
-    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 97, false), "Testing insertion of increasingly large records");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 97, sizeof(int) + sizeof(char), false), "Testing insertion of increasingly large records");
 
 	// Test creating records with odd sizes
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
