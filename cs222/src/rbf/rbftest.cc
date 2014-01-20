@@ -349,7 +349,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
     return ret;
 }
 
-RC testMaxSizeRecords(FileHandle fileHandle)
+RC testMaxSizeRecords(FileHandle& fileHandle)
 {
     std::vector<char*> buffersIn;
     std::vector<char*> buffersOut;
