@@ -41,11 +41,11 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
         return rc::HEADER_SIZE_TOO_LARGE;
     }
 
-    FileHandle handle;
+    FileHandle* handle = new FileHandle();
     PFHeader header;
 
     // Write out the header data to the reserved page (page 0)
-    ret = _pfm.openFile(fileName.c_str(), handle);
+    ret = _pfm.openFile(fileName.c_str(), *handle);
     if (ret != rc::OK)
     {
         return ret;
@@ -60,19 +60,21 @@ RC RecordBasedFileManager::createFile(const string &fileName) {
     }
 
     // Flush the header page to disk
-    ret = writeHeader(handle, &header);
+    ret = writeHeader(*handle, &header);
     if (ret != rc::OK)
     {
-        _pfm.closeFile(handle);
+        _pfm.closeFile(*handle);
         return ret;
     }
 
     // Drop the handle to the file
-    ret = _pfm.closeFile(handle);
+    ret = _pfm.closeFile(*handle);
     if (ret != rc::OK)
     {
         return ret;
     }
+
+    delete(handle);
 
     return rc::OK;
 }
