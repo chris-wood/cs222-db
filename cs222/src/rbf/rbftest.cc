@@ -373,11 +373,11 @@ RC testMaxSizeRecords(FileHandle fileHandle)
         buffersOut.push_back((char*)malloc(size));
         char* buffer = buffersIn.back();
 
-        bigString.length = size - sizeof(bigString.length);
+        recordDescriptor.back().length = size - sizeof(unsigned);
 
         // First write out the size of the string, then fill it with data
-        memcpy(buffer, &bigString.length, sizeof(bigString.length));
-        for (int i=sizeof(bigString.length); i<size; ++i)
+        memcpy(buffer, &recordDescriptor.back().length, sizeof(unsigned));
+        for (int i=sizeof(unsigned); i<size; ++i)
         {
             seed *= (i * 0xfd7046c5) + (i << 24); // not a real hash, do not use for actual hashing!
             char c = ' ' + seed % 90;
@@ -391,7 +391,7 @@ RC testMaxSizeRecords(FileHandle fileHandle)
     for (int size = minRecordSize; size <= maxRecordSize; ++size)
     {
         int index = size - minRecordSize;
-        bigString.length = size - sizeof(bigString.length);
+        recordDescriptor.back().length = size - sizeof(unsigned);
         ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
     }
 
@@ -401,7 +401,7 @@ RC testMaxSizeRecords(FileHandle fileHandle)
         for (int size = minRecordSize; size <= maxRecordSize; ++size)
         {
             int index = size - minRecordSize;
-            bigString.length = size - sizeof(bigString.length);
+            recordDescriptor.back().length = size - sizeof(unsigned);
             ret = rbfm->readRecord(fileHandle, recordDescriptor, rids[index], buffersOut[index]);
 
             if (ret == rc::OK)
