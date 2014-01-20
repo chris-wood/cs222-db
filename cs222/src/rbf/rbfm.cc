@@ -613,7 +613,6 @@ PFHeader::PFHeader()
 //  [8] = 1824
 //  [9] = 2080
 // [10] = 2336
-// [11] = 2592
 void PFHeader::init()
 {
     // Divide the freespace lists evenly, except for the first and last
