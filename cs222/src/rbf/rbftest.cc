@@ -693,7 +693,7 @@ void fhTest()
     TEST_FN_EQ(0, count, "Number of pages correct");
 
     // Write page 1 (error), write page 0 (error), append page, close
-    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer[PAGE_SIZE];
     for (unsigned i = 0; i < PAGE_SIZE; i++) 
     {
         buffer[i] = i % 256;
@@ -704,7 +704,7 @@ void fhTest()
     TEST_FN_EQ(success, pfm->closeFile(fileHandle), "Close file");
 
     // Open, read page 1 (fail), read page 0, check contents
-    unsigned char* buffer_copy = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer_copy[PAGE_SIZE];
     memset(buffer_copy, 0, PAGE_SIZE);
     TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
     TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, fileHandle.readPage(1, buffer_copy), "Reading from non-existent page");
@@ -1501,8 +1501,8 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
 
 
     RID rid; 
-    void *record = malloc(1000);
-    void *record_copy = malloc(1000);
+    char record[1000];
+    char record_copy[1000];
     int numRecords = 10;
 
     vector<Attribute> recordDescriptor;
@@ -1539,7 +1539,6 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
 
-    free(record);    
     cout << "Test Case 11 Passed!" << endl << endl;
 
     return 0;
