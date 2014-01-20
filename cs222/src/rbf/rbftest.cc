@@ -333,6 +333,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
 			if (memcmp(buffersIn[i], buffersOut[i], sizes[i]))
 			{
 				std::cout << "Failed to read correct data of shuffled record[" << i << "]" << std::endl;
+                ret = rc::RECORD_CORRUPT;
 				break;
 			}
 		}
@@ -345,7 +346,85 @@ RC testSmallRecords2(FileHandle& fileHandle)
 		free(buffersOut[i]);
 	}
 
-	return rc::OK;
+    return ret;
+}
+
+RC testMaxSizeRecords(FileHandle fileHandle)
+{
+    std::vector<char*> buffersIn;
+    std::vector<char*> buffersOut;
+    std::vector<RID> rids;
+    std::vector< Attribute > recordDescriptor;
+    Attribute bigString;
+    bigString.name = "Big String";
+    bigString.type = TypeVarChar;
+    recordDescriptor.push_back(bigString);
+
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader);
+    //const int maxRecordSize = PAGE_SIZE - 36;
+    const int minRecordSize = maxRecordSize;//9 * PAGE_SIZE / 10;
+
+    // Allocate memory
+    int seed = 0x7ed55d16;
+    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    {
+        rids.push_back(RID());
+        buffersIn.push_back((char*)malloc(size));
+        buffersOut.push_back((char*)malloc(size));
+        char* buffer = buffersIn.back();
+
+        bigString.length = size - sizeof(bigString.length);
+
+        // First write out the size of the string, then fill it with data
+        memcpy(buffer, &bigString.length, sizeof(bigString.length));
+        for (int i=sizeof(bigString.length); i<size; ++i)
+        {
+            seed *= (i * 0xfd7046c5) + (i << 24); // not a real hash, do not use for actual hashing!
+            char c = ' ' + seed % 90;
+            buffer[i] = c;
+        }
+    }
+
+    // Do inserts
+    RC ret;
+    RecordBasedFileManager* rbfm = RecordBasedFileManager::instance();
+    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    {
+        int index = size - minRecordSize;
+        bigString.length = size - sizeof(bigString.length);
+        ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
+    }
+
+    // Check data was not harmed
+    if (ret == rc::OK)
+    {
+        for (int size = minRecordSize; size <= maxRecordSize; ++size)
+        {
+            int index = size - minRecordSize;
+            bigString.length = size - sizeof(bigString.length);
+            ret = rbfm->readRecord(fileHandle, recordDescriptor, rids[index], buffersOut[index]);
+
+            if (ret == rc::OK)
+            {
+                if (memcmp(buffersIn[index], buffersOut[index], size))
+                {
+                    std::cout << "There was an error checking the big string[" << index << "], size=" << size << std::endl;
+                    ret = rc::FILE_CORRUPT;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Clean up memory
+    for (int size = minRecordSize; size <= maxRecordSize; ++size)
+    {
+        int index = size - minRecordSize;
+        free(buffersIn[index]);
+        free(buffersOut[index]);
+    }
+
+    return ret;
 }
 
 void rbfmTest()
@@ -370,6 +449,12 @@ void rbfmTest()
 	TEST_FN_EQ( 0, pfm->createFile("testFile1.db"), "Create testFile1.db");
 	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
 	TEST_FN_EQ( rc::OK, testSmallRecords2(handle1), "Testing inserting many tiny records in batches");
+
+    // Test creating large records (close to PAGE_FILE size)
+    TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2), "Testing insertion of large records");
+
 
 	// Test creating records with odd sizes
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
