@@ -168,9 +168,6 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         }
         else
         {
-            // TODO: WRITE TEST CODE THAT HITS HERE!!!
-            dbg::out <<"!?!?!?!?!?!?!?!?!?!?";
-
             // Read in the previous list head
             PageIndexHeader previousListHead;
             ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
@@ -616,7 +613,6 @@ PFHeader::PFHeader()
 //  [8] = 1824
 //  [9] = 2080
 // [10] = 2336
-// [11] = 2592
 void PFHeader::init()
 {
     // Divide the freespace lists evenly, except for the first and last

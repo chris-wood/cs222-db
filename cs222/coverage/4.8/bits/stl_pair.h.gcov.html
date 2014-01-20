@@ -164,7 +164,7 @@
 <span class="lineNum">      93 </span>                :            :    *  @tparam _T2  Type of second object.
 <a name="94"><span class="lineNum">      94 </span>                :            :    */</a>
 <span class="lineNum">      95 </span>                :            :   template&lt;class _T1, class _T2&gt;
-<span class="lineNum">      96 </span>                :<span class="lineCov">         78 :     struct pair</span>
+<span class="lineNum">      96 </span>                :<span class="lineCov">         90 :     struct pair</span>
 <span class="lineNum">      97 </span>                :            :     {
 <span class="lineNum">      98 </span>                :            :       typedef _T1 first_type;    /// @c first_type is the first bound type
 <span class="lineNum">      99 </span>                :            :       typedef _T2 second_type;   /// @c second_type is the second bound type
@@ -180,8 +180,8 @@
 <span class="lineNum">     109 </span>                :            :       : first(), second() { }
 <a name="110"><span class="lineNum">     110 </span>                :            : </a>
 <span class="lineNum">     111 </span>                :            :       /** Two objects may be passed to a @c pair constructor to be copied.  */
-<span class="lineNum">     112 </span>                :<span class="lineCov">         26 :       _GLIBCXX_CONSTEXPR pair(const _T1&amp; __a, const _T2&amp; __b)</span>
-<span class="lineNum">     113 </span>                :<span class="lineCov">         13 :       : first(__a), second(__b) { }</span>
+<span class="lineNum">     112 </span>                :<span class="lineCov">         30 :       _GLIBCXX_CONSTEXPR pair(const _T1&amp; __a, const _T2&amp; __b)</span>
+<span class="lineNum">     113 </span>                :<span class="lineCov">         15 :       : first(__a), second(__b) { }</span>
 <span class="lineNum">     114 </span>                :            : 
 <span class="lineNum">     115 </span>                :            :       /** There is also a templated copy ctor for the @c pair class itself.  */
 <span class="lineNum">     116 </span>                :            : #if __cplusplus &lt; 201103L

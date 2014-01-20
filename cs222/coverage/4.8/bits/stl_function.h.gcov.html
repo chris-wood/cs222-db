@@ -302,8 +302,8 @@
 <span class="lineNum">     231 </span>                :            :     struct less : public binary_function&lt;_Tp, _Tp, bool&gt;
 <a name="232"><span class="lineNum">     232 </span>                :            :     {</a>
 <span class="lineNum">     233 </span>                :            :       bool
-<span class="lineNum">     234 </span>                :<span class="lineCov">        427 :       operator()(const _Tp&amp; __x, const _Tp&amp; __y) const</span>
-<span class="lineNum">     235 </span>                :<span class="lineCov">        427 :       { return __x &lt; __y; }</span>
+<span class="lineNum">     234 </span>                :<span class="lineCov">        483 :       operator()(const _Tp&amp; __x, const _Tp&amp; __y) const</span>
+<span class="lineNum">     235 </span>                :<span class="lineCov">        483 :       { return __x &lt; __y; }</span>
 <span class="lineNum">     236 </span>                :            :     };
 <span class="lineNum">     237 </span>                :            : 
 <span class="lineNum">     238 </span>                :            :   /// One of the @link comparison_functors comparison functors@endlink.
@@ -562,8 +562,8 @@
 <span class="lineNum">     491 </span>                :            :       { return __x.first; }
 <a name="492"><span class="lineNum">     492 </span>                :            : </a>
 <span class="lineNum">     493 </span>                :            :       const typename _Pair::first_type&amp;
-<span class="lineNum">     494 </span>                :<span class="lineCov">        384 :       operator()(const _Pair&amp; __x) const</span>
-<span class="lineNum">     495 </span>                :<span class="lineCov">        384 :       { return __x.first; }</span>
+<span class="lineNum">     494 </span>                :<span class="lineCov">        440 :       operator()(const _Pair&amp; __x) const</span>
+<span class="lineNum">     495 </span>                :<span class="lineCov">        440 :       { return __x.first; }</span>
 <span class="lineNum">     496 </span>                :            : 
 <span class="lineNum">     497 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">     498 </span>                :            :       template&lt;typename _Pair2&gt;

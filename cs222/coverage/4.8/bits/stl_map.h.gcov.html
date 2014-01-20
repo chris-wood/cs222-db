@@ -406,8 +406,8 @@
 <span class="lineNum">     335 </span>                :            :        *  according to the keys.
 <a name="336"><span class="lineNum">     336 </span>                :            :        */</a>
 <span class="lineNum">     337 </span>                :            :       iterator
-<span class="lineNum">     338 </span>                :<span class="lineCov">        147 :       end() _GLIBCXX_NOEXCEPT</span>
-<span class="lineNum">     339 </span>                :<span class="lineCov">        147 :       { return _M_t.end(); }</span>
+<span class="lineNum">     338 </span>                :<span class="lineCov">        159 :       end() _GLIBCXX_NOEXCEPT</span>
+<span class="lineNum">     339 </span>                :<span class="lineCov">        159 :       { return _M_t.end(); }</span>
 <span class="lineNum">     340 </span>                :            : 
 <span class="lineNum">     341 </span>                :            :       /**
 <span class="lineNum">     342 </span>                :            :        *  Returns a read-only (constant) iterator that points one past the last
@@ -524,27 +524,27 @@
 <span class="lineNum">     453 </span>                :            :        *  Lookup requires logarithmic time.
 <a name="454"><span class="lineNum">     454 </span>                :            :        */</a>
 <span class="lineNum">     455 </span>                :            :       mapped_type&amp;
-<span class="lineNum">     456 </span>                :<span class="lineCov">         72 :       operator[](const key_type&amp; __k)</span>
+<span class="lineNum">     456 </span>                :<span class="lineCov">         78 :       operator[](const key_type&amp; __k)</span>
 <span class="lineNum">     457 </span>                :            :       {
 <span class="lineNum">     458 </span>                :            :         // concept requirements
 <span class="lineNum">     459 </span>                :            :         __glibcxx_function_requires(_DefaultConstructibleConcept&lt;mapped_type&gt;)
 <span class="lineNum">     460 </span>                :            : 
-<span class="lineNum">     461 </span>        [<span class="branchCov" title="Branch 1 was taken 72 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         72 :         iterator __i = lower_bound(__k);</span>
+<span class="lineNum">     461 </span>        [<span class="branchCov" title="Branch 1 was taken 78 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         78 :         iterator __i = lower_bound(__k);</span>
 <span class="lineNum">     462 </span>                :            :         // __i-&gt;first is greater than or equivalent to __k.
-<span class="lineNum">     463 </span>[<span class="branchCov" title="Branch 1 was taken 72 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 63 times"> + </span><span class="branchCov" title="Branch 5 was taken 9 times"> + </span>]:<span class="lineCov">         72 :         if (__i == end() || key_comp()(__k, (*__i).first))</span>
-<span class="lineNum">         </span>[<span class="branchCov" title="Branch 8 was taken 63 times"> + </span><span class="branchNoCov" title="Branch 9 was not taken"> - </span>][<span class="branchCov" title="Branch 11 was taken 63 times"> + </span><span class="branchNoCov" title="Branch 12 was not taken"> - </span>]
-<span class="lineNum">         </span>[<span class="branchCov" title="Branch 13 was taken 4 times"> + </span><span class="branchCov" title="Branch 14 was taken 59 times"> + </span>][<span class="branchCov" title="Branch 15 was taken 63 times"> + </span><span class="branchCov" title="Branch 16 was taken 9 times"> + </span>]
-<span class="lineNum">         </span>[<span class="branchCov" title="Branch 17 was taken 72 times"> + </span><span class="branchNoCov" title="Branch 18 was not taken"> - </span>][<span class="branchCov" title="Branch 19 was taken 13 times"> + </span><span class="branchCov" title="Branch 20 was taken 59 times"> + </span> 
+<span class="lineNum">     463 </span>[<span class="branchCov" title="Branch 1 was taken 78 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 67 times"> + </span><span class="branchCov" title="Branch 5 was taken 11 times"> + </span>]:<span class="lineCov">         78 :         if (__i == end() || key_comp()(__k, (*__i).first))</span>
+<span class="lineNum">         </span>[<span class="branchCov" title="Branch 8 was taken 67 times"> + </span><span class="branchNoCov" title="Branch 9 was not taken"> - </span>][<span class="branchCov" title="Branch 11 was taken 67 times"> + </span><span class="branchNoCov" title="Branch 12 was not taken"> - </span>]
+<span class="lineNum">         </span>[<span class="branchCov" title="Branch 13 was taken 4 times"> + </span><span class="branchCov" title="Branch 14 was taken 63 times"> + </span>][<span class="branchCov" title="Branch 15 was taken 67 times"> + </span><span class="branchCov" title="Branch 16 was taken 11 times"> + </span>]
+<span class="lineNum">         </span>[<span class="branchCov" title="Branch 17 was taken 78 times"> + </span><span class="branchNoCov" title="Branch 18 was not taken"> - </span>][<span class="branchCov" title="Branch 19 was taken 15 times"> + </span><span class="branchCov" title="Branch 20 was taken 63 times"> + </span> 
 <span class="lineNum">         </span>   <span class="branchNoExec" title="Branch 21 was not executed"> # </span><span class="branchNoExec" title="Branch 22 was not executed"> # </span><span class="branchNoExec" title="Branch 23 was not executed"> # </span><span class="branchNoExec" title="Branch 24 was not executed"> # </span>]
 <span class="lineNum">     464 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">     465 </span>                :            :           __i = _M_t._M_emplace_hint_unique(__i, std::piecewise_construct,
 <span class="lineNum">     466 </span>                :            :                                             std::tuple&lt;const key_type&amp;&gt;(__k),
 <span class="lineNum">     467 </span>                :            :                                             std::tuple&lt;&gt;());
 <span class="lineNum">     468 </span>                :            : #else
-<span class="lineNum">     469 </span>[<span class="branchCov" title="Branch 1 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span>]:<span class="lineCov">         13 :           __i = insert(__i, value_type(__k, mapped_type()));</span>
-<span class="lineNum">         </span>        [<span class="branchCov" title="Branch 7 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span>]
+<span class="lineNum">     469 </span>[<span class="branchCov" title="Branch 1 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span>]:<span class="lineCov">         15 :           __i = insert(__i, value_type(__k, mapped_type()));</span>
+<span class="lineNum">         </span>        [<span class="branchCov" title="Branch 7 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 8 was not taken"> - </span>]
 <span class="lineNum">     470 </span>                :            : #endif
-<span class="lineNum">     471 </span>                :<span class="lineCov">         72 :         return (*__i).second;</span>
+<span class="lineNum">     471 </span>                :<span class="lineCov">         78 :         return (*__i).second;</span>
 <span class="lineNum">     472 </span>                :            :       }
 <span class="lineNum">     473 </span>                :            : 
 <span class="lineNum">     474 </span>                :            : #if __cplusplus &gt;= 201103L
@@ -719,9 +719,9 @@
 <span class="lineNum">     643 </span>                :            : #if __cplusplus &gt;= 201103L
 <a name="644"><span class="lineNum">     644 </span>                :            :       insert(const_iterator __position, const value_type&amp; __x)</a>
 <span class="lineNum">     645 </span>                :            : #else
-<span class="lineNum">     646 </span>                :<span class="lineCov">         13 :       insert(iterator __position, const value_type&amp; __x)</span>
+<span class="lineNum">     646 </span>                :<span class="lineCov">         15 :       insert(iterator __position, const value_type&amp; __x)</span>
 <span class="lineNum">     647 </span>                :            : #endif
-<span class="lineNum">     648 </span>        [<span class="branchCov" title="Branch 2 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>]:<span class="lineCov">         13 :       { return _M_t._M_insert_unique_(__position, __x); }</span>
+<span class="lineNum">     648 </span>        [<span class="branchCov" title="Branch 2 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>]:<span class="lineCov">         15 :       { return _M_t._M_insert_unique_(__position, __x); }</span>
 <span class="lineNum">     649 </span>                :            : 
 <span class="lineNum">     650 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">     651 </span>                :            :       template&lt;typename _Pair, typename = typename
@@ -870,8 +870,8 @@
 <span class="lineNum">     794 </span>                :            :        *  constructed.
 <a name="795"><span class="lineNum">     795 </span>                :            :        */</a>
 <span class="lineNum">     796 </span>                :            :       key_compare
-<span class="lineNum">     797 </span>                :<span class="lineCov">         63 :       key_comp() const</span>
-<span class="lineNum">     798 </span>                :<span class="lineCov">         63 :       { return _M_t.key_comp(); }</span>
+<span class="lineNum">     797 </span>                :<span class="lineCov">         67 :       key_comp() const</span>
+<span class="lineNum">     798 </span>                :<span class="lineCov">         67 :       { return _M_t.key_comp(); }</span>
 <span class="lineNum">     799 </span>                :            : 
 <span class="lineNum">     800 </span>                :            :       /**
 <span class="lineNum">     801 </span>                :            :        *  Returns a value comparison object, built from the key comparison
@@ -894,8 +894,8 @@
 <span class="lineNum">     818 </span>                :            :        *  past-the-end ( @c end() ) iterator.
 <a name="819"><span class="lineNum">     819 </span>                :            :        */</a>
 <span class="lineNum">     820 </span>                :            :       iterator
-<span class="lineNum">     821 </span>                :<span class="lineCov">         75 :       find(const key_type&amp; __x)</span>
-<span class="lineNum">     822 </span>                :<span class="lineCov">         75 :       { return _M_t.find(__x); }</span>
+<span class="lineNum">     821 </span>                :<span class="lineCov">         81 :       find(const key_type&amp; __x)</span>
+<span class="lineNum">     822 </span>                :<span class="lineCov">         81 :       { return _M_t.find(__x); }</span>
 <span class="lineNum">     823 </span>                :            : 
 <span class="lineNum">     824 </span>                :            :       /**
 <span class="lineNum">     825 </span>                :            :        *  @brief Tries to locate an element in a %map.
@@ -936,8 +936,8 @@
 <span class="lineNum">     860 </span>                :            :        *  or end() if no such element exists.
 <a name="861"><span class="lineNum">     861 </span>                :            :        */</a>
 <span class="lineNum">     862 </span>                :            :       iterator
-<span class="lineNum">     863 </span>                :<span class="lineCov">         72 :       lower_bound(const key_type&amp; __x)</span>
-<span class="lineNum">     864 </span>                :<span class="lineCov">         72 :       { return _M_t.lower_bound(__x); }</span>
+<span class="lineNum">     863 </span>                :<span class="lineCov">         78 :       lower_bound(const key_type&amp; __x)</span>
+<span class="lineNum">     864 </span>                :<span class="lineCov">         78 :       { return _M_t.lower_bound(__x); }</span>
 <span class="lineNum">     865 </span>                :            : 
 <span class="lineNum">     866 </span>                :            :       /**
 <span class="lineNum">     867 </span>                :            :        *  @brief Finds the beginning of a subsequence matching given key.

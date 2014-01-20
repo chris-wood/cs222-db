@@ -242,12 +242,12 @@
 <span class="lineNum">     171 </span>                :            :       : _M_node() { }
 <a name="172"><span class="lineNum">     172 </span>                :            : </a>
 <span class="lineNum">     173 </span>                :            :       explicit
-<span class="lineNum">     174 </span>                :<span class="lineCov">        419 :       _Rb_tree_iterator(_Link_type __x)</span>
-<span class="lineNum">     175 </span>                :<span class="lineCov">        419 :       : _M_node(__x) { }</span>
+<span class="lineNum">     174 </span>                :<span class="lineCov">        455 :       _Rb_tree_iterator(_Link_type __x)</span>
+<span class="lineNum">     175 </span>                :<span class="lineCov">        455 :       : _M_node(__x) { }</span>
 <a name="176"><span class="lineNum">     176 </span>                :            : </a>
 <span class="lineNum">     177 </span>                :            :       reference
-<span class="lineNum">     178 </span>                :<span class="lineCov">        135 :       operator*() const</span>
-<span class="lineNum">     179 </span>                :<span class="lineCov">        135 :       { return static_cast&lt;_Link_type&gt;(_M_node)-&gt;_M_value_field; }</span>
+<span class="lineNum">     178 </span>                :<span class="lineCov">        145 :       operator*() const</span>
+<span class="lineNum">     179 </span>                :<span class="lineCov">        145 :       { return static_cast&lt;_Link_type&gt;(_M_node)-&gt;_M_value_field; }</span>
 <span class="lineNum">     180 </span>                :            : 
 <span class="lineNum">     181 </span>                :            :       pointer
 <span class="lineNum">     182 </span>                :            :       operator-&gt;() const
@@ -285,8 +285,8 @@
 <span class="lineNum">     214 </span>                :            :       }
 <a name="215"><span class="lineNum">     215 </span>                :            : </a>
 <span class="lineNum">     216 </span>                :            :       bool
-<span class="lineNum">     217 </span>                :<span class="lineCov">        226 :       operator==(const _Self&amp; __x) const</span>
-<span class="lineNum">     218 </span>                :<span class="lineCov">        226 :       { return _M_node == __x._M_node; }</span>
+<span class="lineNum">     217 </span>                :<span class="lineCov">        244 :       operator==(const _Self&amp; __x) const</span>
+<span class="lineNum">     218 </span>                :<span class="lineCov">        244 :       { return _M_node == __x._M_node; }</span>
 <span class="lineNum">     219 </span>                :            : 
 <span class="lineNum">     220 </span>                :            :       bool
 <span class="lineNum">     221 </span>                :            :       operator!=(const _Self&amp; __x) const
@@ -318,13 +318,13 @@
 <span class="lineNum">     247 </span>                :            :       _Rb_tree_const_iterator(_Link_type __x)
 <a name="248"><span class="lineNum">     248 </span>                :            :       : _M_node(__x) { }</a>
 <span class="lineNum">     249 </span>                :            : 
-<span class="lineNum">     250 </span>                :<span class="lineCov">         13 :       _Rb_tree_const_iterator(const iterator&amp; __it)</span>
-<span class="lineNum">     251 </span>                :<span class="lineCov">         13 :       : _M_node(__it._M_node) { }</span>
+<span class="lineNum">     250 </span>                :<span class="lineCov">         15 :       _Rb_tree_const_iterator(const iterator&amp; __it)</span>
+<span class="lineNum">     251 </span>                :<span class="lineCov">         15 :       : _M_node(__it._M_node) { }</span>
 <a name="252"><span class="lineNum">     252 </span>                :            : </a>
 <span class="lineNum">     253 </span>                :            :       iterator
-<span class="lineNum">     254 </span>                :<span class="lineCov">         13 :       _M_const_cast() const</span>
+<span class="lineNum">     254 </span>                :<span class="lineCov">         15 :       _M_const_cast() const</span>
 <span class="lineNum">     255 </span>                :            :       { return iterator(static_cast&lt;typename iterator::_Link_type&gt;
-<span class="lineNum">     256 </span>                :<span class="lineCov">         13 :                         (const_cast&lt;typename iterator::_Base_ptr&gt;(_M_node))); }</span>
+<span class="lineNum">     256 </span>                :<span class="lineCov">         15 :                         (const_cast&lt;typename iterator::_Base_ptr&gt;(_M_node))); }</span>
 <span class="lineNum">     257 </span>                :            : 
 <span class="lineNum">     258 </span>                :            :       reference
 <span class="lineNum">     259 </span>                :            :       operator*() const
@@ -428,44 +428,44 @@
 <span class="lineNum">     357 </span>                :            :       { return *static_cast&lt;_Node_allocator*&gt;(&amp;this-&gt;_M_impl); }
 <a name="358"><span class="lineNum">     358 </span>                :            :       </a>
 <span class="lineNum">     359 </span>                :            :       const _Node_allocator&amp;
-<span class="lineNum">     360 </span>                :<span class="lineCov">         26 :       _M_get_Node_allocator() const _GLIBCXX_NOEXCEPT</span>
-<span class="lineNum">     361 </span>                :<span class="lineCov">         26 :       { return *static_cast&lt;const _Node_allocator*&gt;(&amp;this-&gt;_M_impl); }</span>
+<span class="lineNum">     360 </span>                :<span class="lineCov">         30 :       _M_get_Node_allocator() const _GLIBCXX_NOEXCEPT</span>
+<span class="lineNum">     361 </span>                :<span class="lineCov">         30 :       { return *static_cast&lt;const _Node_allocator*&gt;(&amp;this-&gt;_M_impl); }</span>
 <a name="362"><span class="lineNum">     362 </span>                :            : </a>
 <span class="lineNum">     363 </span>                :            :       allocator_type
-<span class="lineNum">     364 </span>                :<span class="lineCov">         26 :       get_allocator() const _GLIBCXX_NOEXCEPT</span>
-<span class="lineNum">     365 </span>                :<span class="lineCov">         26 :       { return allocator_type(_M_get_Node_allocator()); }</span>
+<span class="lineNum">     364 </span>                :<span class="lineCov">         30 :       get_allocator() const _GLIBCXX_NOEXCEPT</span>
+<span class="lineNum">     365 </span>                :<span class="lineCov">         30 :       { return allocator_type(_M_get_Node_allocator()); }</span>
 <span class="lineNum">     366 </span>                :            : 
 <a name="367"><span class="lineNum">     367 </span>                :            :     protected:</a>
 <span class="lineNum">     368 </span>                :            :       _Link_type
-<span class="lineNum">     369 </span>                :<span class="lineCov">         13 :       _M_get_node()</span>
-<span class="lineNum">     370 </span>                :<span class="lineCov">         13 :       { return _M_impl._Node_allocator::allocate(1); }</span>
+<span class="lineNum">     369 </span>                :<span class="lineCov">         15 :       _M_get_node()</span>
+<span class="lineNum">     370 </span>                :<span class="lineCov">         15 :       { return _M_impl._Node_allocator::allocate(1); }</span>
 <a name="371"><span class="lineNum">     371 </span>                :            : </a>
 <span class="lineNum">     372 </span>                :            :       void
-<span class="lineNum">     373 </span>                :<span class="lineCov">         13 :       _M_put_node(_Link_type __p)</span>
-<span class="lineNum">     374 </span>                :<span class="lineCov">         13 :       { _M_impl._Node_allocator::deallocate(__p, 1); }</span>
+<span class="lineNum">     373 </span>                :<span class="lineCov">         15 :       _M_put_node(_Link_type __p)</span>
+<span class="lineNum">     374 </span>                :<span class="lineCov">         15 :       { _M_impl._Node_allocator::deallocate(__p, 1); }</span>
 <span class="lineNum">     375 </span>                :            : 
 <a name="376"><span class="lineNum">     376 </span>                :            : #if __cplusplus &lt; 201103L</a>
 <span class="lineNum">     377 </span>                :            :       _Link_type
-<span class="lineNum">     378 </span>                :<span class="lineCov">         13 :       _M_create_node(const value_type&amp; __x)</span>
+<span class="lineNum">     378 </span>                :<span class="lineCov">         15 :       _M_create_node(const value_type&amp; __x)</span>
 <span class="lineNum">     379 </span>                :            :       {
-<span class="lineNum">     380 </span>                :<span class="lineCov">         13 :         _Link_type __tmp = _M_get_node();</span>
+<span class="lineNum">     380 </span>                :<span class="lineCov">         15 :         _Link_type __tmp = _M_get_node();</span>
 <span class="lineNum">     381 </span>                :            :         __try
-<span class="lineNum">     382 </span>[<span class="branchCov" title="Branch 2 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 5 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>]:<span class="lineCov">         13 :           { get_allocator().construct</span>
+<span class="lineNum">     382 </span>[<span class="branchCov" title="Branch 2 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 5 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>]:<span class="lineCov">         15 :           { get_allocator().construct</span>
 <span class="lineNum">     383 </span>                :            :               (std::__addressof(__tmp-&gt;_M_value_field), __x); }
 <span class="lineNum">     384 </span>                :            :         __catch(...)
 <span class="lineNum">     385 </span>                :            :           {
 <span class="lineNum">     386 </span>        [<span class="branchNoExec" title="Branch 1 was not executed"> # </span><span class="branchNoExec" title="Branch 2 was not executed"> # </span>]:            :             _M_put_node(__tmp);
 <span class="lineNum">     387 </span>                :            :             __throw_exception_again;
 <span class="lineNum">     388 </span>                :            :           }
-<span class="lineNum">     389 </span>                :<span class="lineCov">         13 :         return __tmp;</span>
+<span class="lineNum">     389 </span>                :<span class="lineCov">         15 :         return __tmp;</span>
 <span class="lineNum">     390 </span>                :            :       }
 <a name="391"><span class="lineNum">     391 </span>                :            : </a>
 <span class="lineNum">     392 </span>                :            :       void
-<span class="lineNum">     393 </span>                :<span class="lineCov">         13 :       _M_destroy_node(_Link_type __p)</span>
+<span class="lineNum">     393 </span>                :<span class="lineCov">         15 :       _M_destroy_node(_Link_type __p)</span>
 <span class="lineNum">     394 </span>                :            :       {
-<span class="lineNum">     395 </span>        [<span class="branchCov" title="Branch 3 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         13 :         get_allocator().destroy(std::__addressof(__p-&gt;_M_value_field));</span>
-<span class="lineNum">     396 </span>                :<span class="lineCov">         13 :         _M_put_node(__p);</span>
-<span class="lineNum">     397 </span>                :<span class="lineCov">         13 :       }</span>
+<span class="lineNum">     395 </span>        [<span class="branchCov" title="Branch 3 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         15 :         get_allocator().destroy(std::__addressof(__p-&gt;_M_value_field));</span>
+<span class="lineNum">     396 </span>                :<span class="lineCov">         15 :         _M_put_node(__p);</span>
+<span class="lineNum">     397 </span>                :<span class="lineCov">         15 :       }</span>
 <span class="lineNum">     398 </span>                :            : #else
 <span class="lineNum">     399 </span>                :            :       template&lt;typename... _Args&gt;
 <span class="lineNum">     400 </span>                :            :         _Link_type
@@ -561,16 +561,16 @@
 <span class="lineNum">     490 </span>                :            :       { return this-&gt;_M_impl._M_header._M_left; }
 <a name="491"><span class="lineNum">     491 </span>                :            : </a>
 <span class="lineNum">     492 </span>                :            :       _Base_ptr&amp;
-<span class="lineNum">     493 </span>                :<span class="lineCov">         10 :       _M_rightmost()</span>
-<span class="lineNum">     494 </span>                :<span class="lineCov">         10 :       { return this-&gt;_M_impl._M_header._M_right; }</span>
+<span class="lineNum">     493 </span>                :<span class="lineCov">         14 :       _M_rightmost()</span>
+<span class="lineNum">     494 </span>                :<span class="lineCov">         14 :       { return this-&gt;_M_impl._M_header._M_right; }</span>
 <span class="lineNum">     495 </span>                :            : 
 <span class="lineNum">     496 </span>                :            :       _Const_Base_ptr
 <span class="lineNum">     497 </span>                :            :       _M_rightmost() const
 <span class="lineNum">     498 </span>                :            :       { return this-&gt;_M_impl._M_header._M_right; }
 <a name="499"><span class="lineNum">     499 </span>                :            : </a>
 <span class="lineNum">     500 </span>                :            :       _Link_type
-<span class="lineNum">     501 </span>                :<span class="lineCov">        156 :       _M_begin()</span>
-<span class="lineNum">     502 </span>                :<span class="lineCov">        156 :       { return static_cast&lt;_Link_type&gt;(this-&gt;_M_impl._M_header._M_parent); }</span>
+<span class="lineNum">     501 </span>                :<span class="lineCov">        168 :       _M_begin()</span>
+<span class="lineNum">     502 </span>                :<span class="lineCov">        168 :       { return static_cast&lt;_Link_type&gt;(this-&gt;_M_impl._M_header._M_parent); }</span>
 <span class="lineNum">     503 </span>                :            : 
 <span class="lineNum">     504 </span>                :            :       _Const_Link_type
 <span class="lineNum">     505 </span>                :            :       _M_begin() const
@@ -580,44 +580,44 @@
 <span class="lineNum">     509 </span>                :            :       }
 <a name="510"><span class="lineNum">     510 </span>                :            : </a>
 <span class="lineNum">     511 </span>                :            :       _Link_type
-<span class="lineNum">     512 </span>                :<span class="lineCov">        175 :       _M_end()</span>
-<span class="lineNum">     513 </span>                :<span class="lineCov">        175 :       { return static_cast&lt;_Link_type&gt;(&amp;this-&gt;_M_impl._M_header); }</span>
+<span class="lineNum">     512 </span>                :<span class="lineCov">        191 :       _M_end()</span>
+<span class="lineNum">     513 </span>                :<span class="lineCov">        191 :       { return static_cast&lt;_Link_type&gt;(&amp;this-&gt;_M_impl._M_header); }</span>
 <span class="lineNum">     514 </span>                :            : 
 <span class="lineNum">     515 </span>                :            :       _Const_Link_type
 <span class="lineNum">     516 </span>                :            :       _M_end() const
 <span class="lineNum">     517 </span>                :            :       { return static_cast&lt;_Const_Link_type&gt;(&amp;this-&gt;_M_impl._M_header); }
 <a name="518"><span class="lineNum">     518 </span>                :            : </a>
 <span class="lineNum">     519 </span>                :            :       static const_reference
-<span class="lineNum">     520 </span>                :<span class="lineCov">        281 :       _S_value(_Const_Link_type __x)</span>
-<span class="lineNum">     521 </span>                :<span class="lineCov">        281 :       { return __x-&gt;_M_value_field; }</span>
+<span class="lineNum">     520 </span>                :<span class="lineCov">        325 :       _S_value(_Const_Link_type __x)</span>
+<span class="lineNum">     521 </span>                :<span class="lineCov">        325 :       { return __x-&gt;_M_value_field; }</span>
 <a name="522"><span class="lineNum">     522 </span>                :            : </a>
 <span class="lineNum">     523 </span>                :            :       static const _Key&amp;
-<span class="lineNum">     524 </span>                :<span class="lineCov">        281 :       _S_key(_Const_Link_type __x)</span>
-<span class="lineNum">     525 </span>                :<span class="lineCov">        281 :       { return _KeyOfValue()(_S_value(__x)); }</span>
+<span class="lineNum">     524 </span>                :<span class="lineCov">        325 :       _S_key(_Const_Link_type __x)</span>
+<span class="lineNum">     525 </span>                :<span class="lineCov">        325 :       { return _KeyOfValue()(_S_value(__x)); }</span>
 <a name="526"><span class="lineNum">     526 </span>                :            : </a>
 <span class="lineNum">     527 </span>                :            :       static _Link_type
-<span class="lineNum">     528 </span>                :<span class="lineCov">        191 :       _S_left(_Base_ptr __x)</span>
-<span class="lineNum">     529 </span>                :<span class="lineCov">        191 :       { return static_cast&lt;_Link_type&gt;(__x-&gt;_M_left); }</span>
+<span class="lineNum">     528 </span>                :<span class="lineCov">        205 :       _S_left(_Base_ptr __x)</span>
+<span class="lineNum">     529 </span>                :<span class="lineCov">        205 :       { return static_cast&lt;_Link_type&gt;(__x-&gt;_M_left); }</span>
 <span class="lineNum">     530 </span>                :            : 
 <span class="lineNum">     531 </span>                :            :       static _Const_Link_type
 <span class="lineNum">     532 </span>                :            :       _S_left(_Const_Base_ptr __x)
 <span class="lineNum">     533 </span>                :            :       { return static_cast&lt;_Const_Link_type&gt;(__x-&gt;_M_left); }
 <a name="534"><span class="lineNum">     534 </span>                :            : </a>
 <span class="lineNum">     535 </span>                :            :       static _Link_type
-<span class="lineNum">     536 </span>                :<span class="lineCov">        118 :       _S_right(_Base_ptr __x)</span>
-<span class="lineNum">     537 </span>                :<span class="lineCov">        118 :       { return static_cast&lt;_Link_type&gt;(__x-&gt;_M_right); }</span>
+<span class="lineNum">     536 </span>                :<span class="lineCov">        152 :       _S_right(_Base_ptr __x)</span>
+<span class="lineNum">     537 </span>                :<span class="lineCov">        152 :       { return static_cast&lt;_Link_type&gt;(__x-&gt;_M_right); }</span>
 <span class="lineNum">     538 </span>                :            : 
 <span class="lineNum">     539 </span>                :            :       static _Const_Link_type
 <span class="lineNum">     540 </span>                :            :       _S_right(_Const_Base_ptr __x)
 <span class="lineNum">     541 </span>                :            :       { return static_cast&lt;_Const_Link_type&gt;(__x-&gt;_M_right); }
 <a name="542"><span class="lineNum">     542 </span>                :            : </a>
 <span class="lineNum">     543 </span>                :            :       static const_reference
-<span class="lineNum">     544 </span>                :<span class="lineCov">         83 :       _S_value(_Const_Base_ptr __x)</span>
-<span class="lineNum">     545 </span>                :<span class="lineCov">         83 :       { return static_cast&lt;_Const_Link_type&gt;(__x)-&gt;_M_value_field; }</span>
+<span class="lineNum">     544 </span>                :<span class="lineCov">         91 :       _S_value(_Const_Base_ptr __x)</span>
+<span class="lineNum">     545 </span>                :<span class="lineCov">         91 :       { return static_cast&lt;_Const_Link_type&gt;(__x)-&gt;_M_value_field; }</span>
 <a name="546"><span class="lineNum">     546 </span>                :            : </a>
 <span class="lineNum">     547 </span>                :            :       static const _Key&amp;
-<span class="lineNum">     548 </span>                :<span class="lineCov">         83 :       _S_key(_Const_Base_ptr __x)</span>
-<span class="lineNum">     549 </span>                :<span class="lineCov">         83 :       { return _KeyOfValue()(_S_value(__x)); }</span>
+<span class="lineNum">     548 </span>                :<span class="lineCov">         91 :       _S_key(_Const_Base_ptr __x)</span>
+<span class="lineNum">     549 </span>                :<span class="lineCov">         91 :       { return _KeyOfValue()(_S_value(__x)); }</span>
 <span class="lineNum">     550 </span>                :            : 
 <span class="lineNum">     551 </span>                :            :       static _Base_ptr
 <span class="lineNum">     552 </span>                :            :       _S_minimum(_Base_ptr __x)
@@ -746,8 +746,8 @@
 <span class="lineNum">     675 </span>                :            : 
 <a name="676"><span class="lineNum">     676 </span>                :            :       // Accessors.</a>
 <span class="lineNum">     677 </span>                :            :       _Compare
-<span class="lineNum">     678 </span>                :<span class="lineCov">         63 :       key_comp() const</span>
-<span class="lineNum">     679 </span>                :<span class="lineCov">         63 :       { return _M_impl._M_key_compare; }</span>
+<span class="lineNum">     678 </span>                :<span class="lineCov">         67 :       key_comp() const</span>
+<span class="lineNum">     679 </span>                :<span class="lineCov">         67 :       { return _M_impl._M_key_compare; }</span>
 <a name="680"><span class="lineNum">     680 </span>                :            : </a>
 <span class="lineNum">     681 </span>                :            :       iterator
 <span class="lineNum">     682 </span>                :<span class="lineCov">          4 :       begin() _GLIBCXX_NOEXCEPT</span>
@@ -764,8 +764,8 @@
 <span class="lineNum">     693 </span>                :            :       }
 <a name="694"><span class="lineNum">     694 </span>                :            : </a>
 <span class="lineNum">     695 </span>                :            :       iterator
-<span class="lineNum">     696 </span>                :<span class="lineCov">        238 :       end() _GLIBCXX_NOEXCEPT</span>
-<span class="lineNum">     697 </span>                :<span class="lineCov">        238 :       { return iterator(static_cast&lt;_Link_type&gt;(&amp;this-&gt;_M_impl._M_header)); }</span>
+<span class="lineNum">     696 </span>                :<span class="lineCov">        258 :       end() _GLIBCXX_NOEXCEPT</span>
+<span class="lineNum">     697 </span>                :<span class="lineCov">        258 :       { return iterator(static_cast&lt;_Link_type&gt;(&amp;this-&gt;_M_impl._M_header)); }</span>
 <span class="lineNum">     698 </span>                :            : 
 <span class="lineNum">     699 </span>                :            :       const_iterator
 <span class="lineNum">     700 </span>                :            :       end() const _GLIBCXX_NOEXCEPT
@@ -795,8 +795,8 @@
 <span class="lineNum">     724 </span>                :            :       { return _M_impl._M_node_count == 0; }
 <a name="725"><span class="lineNum">     725 </span>                :            : </a>
 <span class="lineNum">     726 </span>                :            :       size_type
-<span class="lineNum">     727 </span>                :<span class="lineCov">          9 :       size() const _GLIBCXX_NOEXCEPT </span>
-<span class="lineNum">     728 </span>                :<span class="lineCov">          9 :       { return _M_impl._M_node_count; }</span>
+<span class="lineNum">     727 </span>                :<span class="lineCov">         11 :       size() const _GLIBCXX_NOEXCEPT </span>
+<span class="lineNum">     728 </span>                :<span class="lineCov">         11 :       { return _M_impl._M_node_count; }</span>
 <span class="lineNum">     729 </span>                :            : 
 <span class="lineNum">     730 </span>                :            :       size_type
 <span class="lineNum">     731 </span>                :            :       max_size() const _GLIBCXX_NOEXCEPT
@@ -946,8 +946,8 @@
 <span class="lineNum">     875 </span>                :            :       count(const key_type&amp; __k) const;
 <a name="876"><span class="lineNum">     876 </span>                :            : </a>
 <span class="lineNum">     877 </span>                :            :       iterator
-<span class="lineNum">     878 </span>                :<span class="lineCov">         72 :       lower_bound(const key_type&amp; __k)</span>
-<span class="lineNum">     879 </span>                :<span class="lineCov">         72 :       { return _M_lower_bound(_M_begin(), _M_end(), __k); }</span>
+<span class="lineNum">     878 </span>                :<span class="lineCov">         78 :       lower_bound(const key_type&amp; __k)</span>
+<span class="lineNum">     879 </span>                :<span class="lineCov">         78 :       { return _M_lower_bound(_M_begin(), _M_end(), __k); }</span>
 <span class="lineNum">     880 </span>                :            : 
 <span class="lineNum">     881 </span>                :            :       const_iterator
 <span class="lineNum">     882 </span>                :            :       lower_bound(const key_type&amp; __k) const
@@ -1080,25 +1080,25 @@
 <span class="lineNum">    1009 </span>                :            :     template&lt;typename _Arg&gt;
 <a name="1010"><span class="lineNum">    1010 </span>                :            : #endif</a>
 <span class="lineNum">    1011 </span>                :            :     typename _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::iterator
-<span class="lineNum">    1012 </span>                :<span class="lineCov">         13 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1012 </span>                :<span class="lineCov">         15 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1013 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">    1014 </span>                :            :     _M_insert_(_Base_ptr __x, _Base_ptr __p, _Arg&amp;&amp; __v)
 <span class="lineNum">    1015 </span>                :            : #else
 <span class="lineNum">    1016 </span>                :            :     _M_insert_(_Base_ptr __x, _Base_ptr __p, const _Val&amp; __v)
 <span class="lineNum">    1017 </span>                :            : #endif
 <span class="lineNum">    1018 </span>                :            :     {
-<span class="lineNum">    1019 </span>                :<span class="lineCov">         11 :       bool __insert_left = (__x != 0 || __p == _M_end()</span>
-<span class="lineNum">    1020 </span>[<span class="branchCov" title="Branch 2 was taken 7 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 6 times"> + </span><span class="branchCov" title="Branch 5 was taken 7 times"> + </span>]:<span class="lineCov">         27 :                             || _M_impl._M_key_compare(_KeyOfValue()(__v),</span>
+<span class="lineNum">    1019 </span>                :<span class="lineCov">         13 :       bool __insert_left = (__x != 0 || __p == _M_end()</span>
+<span class="lineNum">    1020 </span>[<span class="branchCov" title="Branch 2 was taken 9 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 4 was taken 6 times"> + </span><span class="branchCov" title="Branch 5 was taken 9 times"> + </span>]:<span class="lineCov">         33 :                             || _M_impl._M_key_compare(_KeyOfValue()(__v),</span>
 <span class="lineNum">         </span>        [<span class="branchNoExec" title="Branch 6 was not executed"> # </span><span class="branchNoExec" title="Branch 7 was not executed"> # </span>]
-<span class="lineNum">    1021 </span>  [<span class="branchCov" title="Branch 0 was taken 11 times"> + </span><span class="branchCov" title="Branch 1 was taken 2 times"> + </span><span class="branchCov" title="Branch 2 was taken 7 times"> + </span><span class="branchCov" title="Branch 3 was taken 4 times"> + </span>]:<span class="lineCov">         44 :                                                       _S_key(__p)));</span>
-<span class="lineNum">         </span>[<span class="branchCov" title="Branch 5 was taken 7 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>][<span class="branchNoCov" title="Branch 7 was not taken"> - </span><span class="branchCov" title="Branch 8 was taken 7 times"> + </span>]
+<span class="lineNum">    1021 </span>  [<span class="branchCov" title="Branch 0 was taken 13 times"> + </span><span class="branchCov" title="Branch 1 was taken 2 times"> + </span><span class="branchCov" title="Branch 2 was taken 9 times"> + </span><span class="branchCov" title="Branch 3 was taken 4 times"> + </span>]:<span class="lineCov">         52 :                                                       _S_key(__p)));</span>
+<span class="lineNum">         </span>[<span class="branchCov" title="Branch 5 was taken 9 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>][<span class="branchNoCov" title="Branch 7 was not taken"> - </span><span class="branchCov" title="Branch 8 was taken 9 times"> + </span>]
 <span class="lineNum">    1022 </span>                :            : 
-<span class="lineNum">    1023 </span>                :<span class="lineCov">         13 :       _Link_type __z = _M_create_node(_GLIBCXX_FORWARD(_Arg, __v));</span>
+<span class="lineNum">    1023 </span>                :<span class="lineCov">         15 :       _Link_type __z = _M_create_node(_GLIBCXX_FORWARD(_Arg, __v));</span>
 <span class="lineNum">    1024 </span>                :            : 
-<span class="lineNum">    1025 </span>                :<span class="lineCov">         13 :       _Rb_tree_insert_and_rebalance(__insert_left, __z, __p,</span>
-<span class="lineNum">    1026 </span>                :<span class="lineCov">         13 :                                     this-&gt;_M_impl._M_header);</span>
-<span class="lineNum">    1027 </span>                :<span class="lineCov">         13 :       ++_M_impl._M_node_count;</span>
-<span class="lineNum">    1028 </span>                :<span class="lineCov">         13 :       return iterator(__z);</span>
+<span class="lineNum">    1025 </span>                :<span class="lineCov">         15 :       _Rb_tree_insert_and_rebalance(__insert_left, __z, __p,</span>
+<span class="lineNum">    1026 </span>                :<span class="lineCov">         15 :                                     this-&gt;_M_impl._M_header);</span>
+<span class="lineNum">    1027 </span>                :<span class="lineCov">         15 :       ++_M_impl._M_node_count;</span>
+<span class="lineNum">    1028 </span>                :<span class="lineCov">         15 :       return iterator(__z);</span>
 <span class="lineNum">    1029 </span>                :            :     }
 <span class="lineNum">    1030 </span>                :            : 
 <span class="lineNum">    1031 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
@@ -1189,33 +1189,33 @@
 <span class="lineNum">    1116 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
 <a name="1117"><span class="lineNum">    1117 </span>                :            :            typename _Compare, typename _Alloc&gt;</a>
 <span class="lineNum">    1118 </span>                :            :     void
-<span class="lineNum">    1119 </span>                :<span class="lineCov">         18 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1119 </span>                :<span class="lineCov">         20 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1120 </span>                :            :     _M_erase(_Link_type __x)
 <span class="lineNum">    1121 </span>                :            :     {
 <span class="lineNum">    1122 </span>                :            :       // Erase without rebalancing.
-<span class="lineNum">    1123 </span>        [<span class="branchCov" title="Branch 0 was taken 13 times"> + </span><span class="branchCov" title="Branch 1 was taken 18 times"> + </span>]:<span class="lineCov">         31 :       while (__x != 0)</span>
+<span class="lineNum">    1123 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchCov" title="Branch 1 was taken 20 times"> + </span>]:<span class="lineCov">         35 :       while (__x != 0)</span>
 <span class="lineNum">    1124 </span>                :            :         {
-<span class="lineNum">    1125 </span>                :<span class="lineCov">         13 :           _M_erase(_S_right(__x));</span>
-<span class="lineNum">    1126 </span>                :<span class="lineCov">         13 :           _Link_type __y = _S_left(__x);</span>
-<span class="lineNum">    1127 </span>                :<span class="lineCov">         13 :           _M_destroy_node(__x);</span>
-<span class="lineNum">    1128 </span>                :<span class="lineCov">         13 :           __x = __y;</span>
+<span class="lineNum">    1125 </span>                :<span class="lineCov">         15 :           _M_erase(_S_right(__x));</span>
+<span class="lineNum">    1126 </span>                :<span class="lineCov">         15 :           _Link_type __y = _S_left(__x);</span>
+<span class="lineNum">    1127 </span>                :<span class="lineCov">         15 :           _M_destroy_node(__x);</span>
+<span class="lineNum">    1128 </span>                :<span class="lineCov">         15 :           __x = __y;</span>
 <span class="lineNum">    1129 </span>                :            :         }
-<span class="lineNum">    1130 </span>                :<span class="lineCov">         18 :     }</span>
+<span class="lineNum">    1130 </span>                :<span class="lineCov">         20 :     }</span>
 <span class="lineNum">    1131 </span>                :            : 
 <span class="lineNum">    1132 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
 <span class="lineNum">    1133 </span>                :            :            typename _Compare, typename _Alloc&gt;
 <a name="1134"><span class="lineNum">    1134 </span>                :            :     typename _Rb_tree&lt;_Key, _Val, _KeyOfValue,</a>
 <span class="lineNum">    1135 </span>                :            :                       _Compare, _Alloc&gt;::iterator
-<span class="lineNum">    1136 </span>                :<span class="lineCov">        147 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1136 </span>                :<span class="lineCov">        159 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1137 </span>                :            :     _M_lower_bound(_Link_type __x, _Link_type __y,
 <span class="lineNum">    1138 </span>                :            :                    const _Key&amp; __k)
 <span class="lineNum">    1139 </span>                :            :     {
-<span class="lineNum">    1140 </span>        [<span class="branchCov" title="Branch 0 was taken 281 times"> + </span><span class="branchCov" title="Branch 1 was taken 147 times"> + </span>]:<span class="lineCov">        428 :       while (__x != 0)</span>
-<span class="lineNum">    1141 </span>        [<span class="branchCov" title="Branch 2 was taken 178 times"> + </span><span class="branchCov" title="Branch 3 was taken 103 times"> + </span>]:<span class="lineCov">        281 :         if (!_M_impl._M_key_compare(_S_key(__x), __k))</span>
-<span class="lineNum">    1142 </span>                :<span class="lineCov">        178 :           __y = __x, __x = _S_left(__x);</span>
+<span class="lineNum">    1140 </span>        [<span class="branchCov" title="Branch 0 was taken 325 times"> + </span><span class="branchCov" title="Branch 1 was taken 159 times"> + </span>]:<span class="lineCov">        484 :       while (__x != 0)</span>
+<span class="lineNum">    1141 </span>        [<span class="branchCov" title="Branch 2 was taken 190 times"> + </span><span class="branchCov" title="Branch 3 was taken 135 times"> + </span>]:<span class="lineCov">        325 :         if (!_M_impl._M_key_compare(_S_key(__x), __k))</span>
+<span class="lineNum">    1142 </span>                :<span class="lineCov">        190 :           __y = __x, __x = _S_left(__x);</span>
 <span class="lineNum">    1143 </span>                :            :         else
-<span class="lineNum">    1144 </span>                :<span class="lineCov">        103 :           __x = _S_right(__x);</span>
-<span class="lineNum">    1145 </span>                :<span class="lineCov">        147 :       return iterator(__y);</span>
+<span class="lineNum">    1144 </span>                :<span class="lineCov">        135 :           __x = _S_right(__x);</span>
+<span class="lineNum">    1145 </span>                :<span class="lineCov">        159 :       return iterator(__y);</span>
 <span class="lineNum">    1146 </span>                :            :     }
 <span class="lineNum">    1147 </span>                :            : 
 <span class="lineNum">    1148 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
@@ -1482,20 +1482,20 @@
 <span class="lineNum">    1408 </span>                :            :                            _Compare, _Alloc&gt;::_Base_ptr,
 <a name="1409"><span class="lineNum">    1409 </span>                :            :          typename _Rb_tree&lt;_Key, _Val, _KeyOfValue,</a>
 <span class="lineNum">    1410 </span>                :            :                            _Compare, _Alloc&gt;::_Base_ptr&gt;
-<span class="lineNum">    1411 </span>                :<span class="lineCov">         13 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1411 </span>                :<span class="lineCov">         15 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1412 </span>                :            :     _M_get_insert_hint_unique_pos(const_iterator __position,
 <span class="lineNum">    1413 </span>                :            :                                   const key_type&amp; __k)
 <span class="lineNum">    1414 </span>                :            :     {
-<span class="lineNum">    1415 </span>                :<span class="lineCov">         13 :       iterator __pos = __position._M_const_cast();</span>
+<span class="lineNum">    1415 </span>                :<span class="lineCov">         15 :       iterator __pos = __position._M_const_cast();</span>
 <span class="lineNum">    1416 </span>                :            :       typedef pair&lt;_Base_ptr, _Base_ptr&gt; _Res;
 <span class="lineNum">    1417 </span>                :            : 
 <span class="lineNum">    1418 </span>                :            :       // end()
-<span class="lineNum">    1419 </span>        [<span class="branchCov" title="Branch 1 was taken 9 times"> + </span><span class="branchCov" title="Branch 2 was taken 4 times"> + </span>]:<span class="lineCov">         13 :       if (__pos._M_node == _M_end())</span>
+<span class="lineNum">    1419 </span>        [<span class="branchCov" title="Branch 1 was taken 11 times"> + </span><span class="branchCov" title="Branch 2 was taken 4 times"> + </span>]:<span class="lineCov">         15 :       if (__pos._M_node == _M_end())</span>
 <span class="lineNum">    1420 </span>                :            :         {
-<span class="lineNum">    1421 </span>[<span class="branchCov" title="Branch 1 was taken 5 times"> + </span><span class="branchCov" title="Branch 2 was taken 4 times"> + </span>][<span class="branchCov" title="Branch 3 was taken 5 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         14 :           if (size() &gt; 0</span>
-<span class="lineNum">         </span>        [<span class="branchCov" title="Branch 5 was taken 5 times"> + </span><span class="branchCov" title="Branch 6 was taken 4 times"> + </span>]
-<span class="lineNum">    1422 </span>[<span class="branchCov" title="Branch 2 was taken 5 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 5 was taken 5 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>]:<span class="lineCov">          5 :               &amp;&amp; _M_impl._M_key_compare(_S_key(_M_rightmost()), __k))</span>
-<span class="lineNum">    1423 </span>                :<span class="lineCov">          5 :             return _Res(0, _M_rightmost());</span>
+<span class="lineNum">    1421 </span>[<span class="branchCov" title="Branch 1 was taken 7 times"> + </span><span class="branchCov" title="Branch 2 was taken 4 times"> + </span>][<span class="branchCov" title="Branch 3 was taken 7 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         18 :           if (size() &gt; 0</span>
+<span class="lineNum">         </span>        [<span class="branchCov" title="Branch 5 was taken 7 times"> + </span><span class="branchCov" title="Branch 6 was taken 4 times"> + </span>]
+<span class="lineNum">    1422 </span>[<span class="branchCov" title="Branch 2 was taken 7 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>][<span class="branchCov" title="Branch 5 was taken 7 times"> + </span><span class="branchNoCov" title="Branch 6 was not taken"> - </span>]:<span class="lineCov">          7 :               &amp;&amp; _M_impl._M_key_compare(_S_key(_M_rightmost()), __k))</span>
+<span class="lineNum">    1423 </span>                :<span class="lineCov">          7 :             return _Res(0, _M_rightmost());</span>
 <span class="lineNum">    1424 </span>                :            :           else
 <span class="lineNum">    1425 </span>        [<span class="branchCov" title="Branch 1 was taken 4 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">          4 :             return _M_get_insert_unique_pos(__k);</span>
 <span class="lineNum">    1426 </span>                :            :         }
@@ -1537,7 +1537,7 @@
 <span class="lineNum">    1458 </span>                :            :         }
 <span class="lineNum">    1459 </span>                :            :       else
 <span class="lineNum">    1460 </span>                :            :         // Equivalent keys.
-<span class="lineNum">    1461 </span>                :<span class="lineCov">         13 :         return _Res(__pos._M_node, 0);</span>
+<span class="lineNum">    1461 </span>                :<span class="lineCov">         15 :         return _Res(__pos._M_node, 0);</span>
 <span class="lineNum">    1462 </span>                :            :     }
 <span class="lineNum">    1463 </span>                :            : 
 <span class="lineNum">    1464 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
@@ -1546,7 +1546,7 @@
 <span class="lineNum">    1467 </span>                :            :     template&lt;typename _Arg&gt;
 <a name="1468"><span class="lineNum">    1468 </span>                :            : #endif</a>
 <span class="lineNum">    1469 </span>                :            :     typename _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::iterator
-<span class="lineNum">    1470 </span>                :<span class="lineCov">         13 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1470 </span>                :<span class="lineCov">         15 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1471 </span>                :            : #if __cplusplus &gt;= 201103L
 <span class="lineNum">    1472 </span>                :            :     _M_insert_unique_(const_iterator __position, _Arg&amp;&amp; __v)
 <span class="lineNum">    1473 </span>                :            : #else
@@ -1554,12 +1554,12 @@
 <span class="lineNum">    1475 </span>                :            : #endif
 <span class="lineNum">    1476 </span>                :            :     {
 <span class="lineNum">    1477 </span>                :            :       pair&lt;_Base_ptr, _Base_ptr&gt; __res
-<span class="lineNum">    1478 </span>        [<span class="branchCov" title="Branch 2 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>]:<span class="lineCov">         13 :         = _M_get_insert_hint_unique_pos(__position, _KeyOfValue()(__v));</span>
+<span class="lineNum">    1478 </span>        [<span class="branchCov" title="Branch 2 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 3 was not taken"> - </span>]:<span class="lineCov">         15 :         = _M_get_insert_hint_unique_pos(__position, _KeyOfValue()(__v));</span>
 <span class="lineNum">    1479 </span>                :            : 
-<span class="lineNum">    1480 </span>        [<span class="branchCov" title="Branch 0 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         13 :       if (__res.second)</span>
+<span class="lineNum">    1480 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         15 :       if (__res.second)</span>
 <span class="lineNum">    1481 </span>                :            :         return _M_insert_(__res.first, __res.second,
-<span class="lineNum">    1482 </span>        [<span class="branchCov" title="Branch 1 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         13 :                           _GLIBCXX_FORWARD(_Arg, __v));</span>
-<span class="lineNum">    1483 </span>                :<span class="lineCov">         13 :       return iterator(static_cast&lt;_Link_type&gt;(__res.first));</span>
+<span class="lineNum">    1482 </span>        [<span class="branchCov" title="Branch 1 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         15 :                           _GLIBCXX_FORWARD(_Arg, __v));</span>
+<span class="lineNum">    1483 </span>                :<span class="lineCov">         15 :       return iterator(static_cast&lt;_Link_type&gt;(__res.first));</span>
 <span class="lineNum">    1484 </span>                :            :     }
 <span class="lineNum">    1485 </span>                :            : 
 <span class="lineNum">    1486 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,
@@ -1865,15 +1865,15 @@
 <span class="lineNum">    1786 </span>                :            :            typename _Compare, typename _Alloc&gt;
 <a name="1787"><span class="lineNum">    1787 </span>                :            :     typename _Rb_tree&lt;_Key, _Val, _KeyOfValue,</a>
 <span class="lineNum">    1788 </span>                :            :                       _Compare, _Alloc&gt;::iterator
-<span class="lineNum">    1789 </span>                :<span class="lineCov">         75 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
+<span class="lineNum">    1789 </span>                :<span class="lineCov">         81 :     _Rb_tree&lt;_Key, _Val, _KeyOfValue, _Compare, _Alloc&gt;::</span>
 <span class="lineNum">    1790 </span>                :            :     find(const _Key&amp; __k)
 <span class="lineNum">    1791 </span>                :            :     {
-<span class="lineNum">    1792 </span>        [<span class="branchCov" title="Branch 3 was taken 75 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         75 :       iterator __j = _M_lower_bound(_M_begin(), _M_end(), __k);</span>
-<span class="lineNum">    1793 </span>[<span class="branchCov" title="Branch 1 was taken 75 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchNoCov" title="Branch 4 was not taken"> - </span><span class="branchCov" title="Branch 5 was taken 75 times"> + </span>]:<span class="lineCov">        225 :       return (__j == end()</span>
+<span class="lineNum">    1792 </span>        [<span class="branchCov" title="Branch 3 was taken 81 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">         81 :       iterator __j = _M_lower_bound(_M_begin(), _M_end(), __k);</span>
+<span class="lineNum">    1793 </span>[<span class="branchCov" title="Branch 1 was taken 81 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchNoCov" title="Branch 4 was not taken"> - </span><span class="branchCov" title="Branch 5 was taken 81 times"> + </span>]:<span class="lineCov">        243 :       return (__j == end()</span>
 <span class="lineNum">         </span>        [<span class="branchNoExec" title="Branch 6 was not executed"> # </span><span class="branchNoExec" title="Branch 7 was not executed"> # </span>]
-<span class="lineNum">    1794 </span>        [<span class="branchCov" title="Branch 1 was taken 65 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         65 :               || _M_impl._M_key_compare(__k,</span>
-<span class="lineNum">    1795 </span>[<span class="branchCov" title="Branch 0 was taken 65 times"> + </span><span class="branchCov" title="Branch 1 was taken 10 times"> + </span>][<span class="branchCov" title="Branch 3 was taken 65 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">        290 :                                         _S_key(__j._M_node))) ? end() : __j;</span>
-<span class="lineNum">         </span>[<span class="branchCov" title="Branch 5 was taken 6 times"> + </span><span class="branchCov" title="Branch 6 was taken 59 times"> + </span>][<span class="branchCov" title="Branch 8 was taken 16 times"> + </span><span class="branchNoCov" title="Branch 9 was not taken"> - </span>]
+<span class="lineNum">    1794 </span>        [<span class="branchCov" title="Branch 1 was taken 69 times"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>]:<span class="lineCov">         69 :               || _M_impl._M_key_compare(__k,</span>
+<span class="lineNum">    1795 </span>[<span class="branchCov" title="Branch 0 was taken 69 times"> + </span><span class="branchCov" title="Branch 1 was taken 12 times"> + </span>][<span class="branchCov" title="Branch 3 was taken 69 times"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">        312 :                                         _S_key(__j._M_node))) ? end() : __j;</span>
+<span class="lineNum">         </span>[<span class="branchCov" title="Branch 5 was taken 6 times"> + </span><span class="branchCov" title="Branch 6 was taken 63 times"> + </span>][<span class="branchCov" title="Branch 8 was taken 18 times"> + </span><span class="branchNoCov" title="Branch 9 was not taken"> - </span>]
 <span class="lineNum">    1796 </span>                :            :     }
 <span class="lineNum">    1797 </span>                :            : 
 <span class="lineNum">    1798 </span>                :            :   template&lt;typename _Key, typename _Val, typename _KeyOfValue,

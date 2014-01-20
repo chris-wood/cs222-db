@@ -181,15 +181,15 @@
 <span class="lineNum">     110 </span>                :            :       typedef true_type propagate_on_container_move_assignment;
 <a name="111"><span class="lineNum">     111 </span>                :            : #endif</a>
 <span class="lineNum">     112 </span>                :            : 
-<a name="113"><span class="lineNum">     113 </span>                :<span class="lineCov">      24756 :       allocator() throw() { }</span></a>
+<a name="113"><span class="lineNum">     113 </span>                :<span class="lineCov">      24772 :       allocator() throw() { }</span></a>
 <span class="lineNum">     114 </span>                :            : 
 <span class="lineNum">     115 </span>                :<span class="lineCov">      28728 :       allocator(const allocator&amp; __a) throw()</span>
 <span class="lineNum">     116 </span>                :<span class="lineCov">      28728 :       : __allocator_base&lt;_Tp&gt;(__a) { }</span>
 <a name="117"><span class="lineNum">     117 </span>                :            : </a>
 <span class="lineNum">     118 </span>                :            :       template&lt;typename _Tp1&gt;
-<a name="119"><span class="lineNum">     119 </span>                :<span class="lineCov">         52 :         allocator(const allocator&lt;_Tp1&gt;&amp;) throw() { }</span></a>
+<a name="119"><span class="lineNum">     119 </span>                :<span class="lineCov">         60 :         allocator(const allocator&lt;_Tp1&gt;&amp;) throw() { }</span></a>
 <span class="lineNum">     120 </span>                :            : 
-<span class="lineNum">     121 </span>                :<span class="lineCov">      82264 :       ~allocator() throw() { }</span>
+<span class="lineNum">     121 </span>                :<span class="lineCov">      82288 :       ~allocator() throw() { }</span>
 <span class="lineNum">     122 </span>                :            : 
 <span class="lineNum">     123 </span>                :            :       // Inherit everything else.
 <span class="lineNum">     124 </span>                :            :     };

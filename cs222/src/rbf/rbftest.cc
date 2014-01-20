@@ -440,12 +440,13 @@ void rbfmTest()
 
 	cout << "RecordBasedFileManager tests" << endl;
 	PagedFileManager *pfm = PagedFileManager::instance();
-    FileHandle handle0, handle1, handle2, handle3;
+    FileHandle handle0, handle1, handle2, handle3, handle4;
 
 	remove("testFile0.db");
 	remove("testFile1.db");
 	remove("testFile2.db");
     remove("testFile3.db");
+    remove("testFile4.db");
 
 	// Test creating many very small records
 	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
@@ -464,7 +465,13 @@ void rbfmTest()
     // Test creation of varying sized records that should fill up any freespace lists
     TEST_FN_EQ( 0, pfm->createFile("testFile3.db"), "Create testFile3.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
-    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 97, sizeof(int) + sizeof(char), false), "Testing insertion of increasingly large records");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 257, sizeof(int) + sizeof(char), false), "Testing insertion of varying records");
+
+    // Test creation of a very small record followed by a large record
+    // With our freespace offsets, this is specifically designed to ensure we can insert in a bucket with a page already in it
+    TEST_FN_EQ( 0, pfm->createFile("testFile4.db"), "Create testFile4.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle4, 3000, sizeof(int) + sizeof(char), true), "Testing insertion of varying records");
 
 	// Test creating records with odd sizes
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
@@ -479,10 +486,12 @@ void rbfmTest()
 	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
     TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
     TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close handle3");
+    TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close handle4");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
     TEST_FN_EQ( 0, pfm->destroyFile("testFile3.db"), "Destroy testFile3.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile4.db"), "Destroy testFile4.db");
 
 	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);
@@ -1567,6 +1576,7 @@ void cleanup()
     remove("testFile1.db");
     remove("testFile2.db");
     remove("testFile3.db");
+    remove("testFile4.db");
     remove("fh_test");
 }
 
