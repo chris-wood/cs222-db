@@ -392,7 +392,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     // Allocate an array of offets with N entries, where N is the number of fields as indicated
     // by the recordDescriptor vector. Each entry i in this array points to the address offset,
     // from the base address of the record on disk, where the i-th field is stored. 
-	unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
+    unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
 	if (!offsets)
 	{
 		return rc::OUT_OF_MEMORY;
@@ -501,25 +501,24 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 {    
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
-    RC ret = fileHandle.readPage(rid.pageNum, (void*)pageBuffer);
+    RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
     // Find the slot where the record is stored - O(1)
-	PageIndexSlot slotIndex;
-    memcpy(&slotIndex, pageBuffer + PAGE_SIZE - (int)sizeof(PageIndexHeader) - (int)((rid.slotNum + 1) * sizeof(PageIndexSlot)), sizeof(PageIndexSlot));
+    PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
 
     // Copy the contents of the record into the data block - O(1)
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
-    memcpy(data, pageBuffer + slotIndex.pageOffset + fieldOffset, slotIndex.size - fieldOffset);
+    memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
     dbg::out << "RecordBasedFileManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << ")\n";;
     dbg::out << "RecordBasedFileManager::readRecord: Reading from: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n";;
-    dbg::out << "RecordBasedFileManager::readRecord: Offset: " << slotIndex.pageOffset << "\n";
-    dbg::out << "RecordBasedFileManager::readRecord: Size: " << slotIndex.size << "\n";
+    dbg::out << "RecordBasedFileManager::readRecord: Offset: " << slotIndex->pageOffset << "\n";
+    dbg::out << "RecordBasedFileManager::readRecord: Size: " << slotIndex->size << "\n";
 
     return rc::OK;
 }
