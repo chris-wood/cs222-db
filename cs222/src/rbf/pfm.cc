@@ -140,7 +140,6 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
 
 	// Unload before decrementing and returning
     fileHandle.unloadFile();
-    fileHandle.closeFile();
     _openFileCount[fileHandle.getFilename()]--;
 
     //// NOTE: we do not explicitly flush to disk since all calls to write/append
@@ -185,6 +184,8 @@ RC FileHandle::unloadFile()
     {
         fclose(_file);
     }
+
+    _file = NULL;
 
     return rc::OK;
 }

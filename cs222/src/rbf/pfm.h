@@ -60,7 +60,6 @@ public:
     bool operator== (const FileHandle& that) const { return this->_file == that._file; }
 
     RC unloadFile();
-    void closeFile() { _file = NULL; }
     RC loadFile(const char*, FILE* file);
 
 private:
