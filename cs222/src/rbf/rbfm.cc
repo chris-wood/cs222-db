@@ -268,19 +268,17 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     if (pageHeader.nextPage > 0)
     {
         // Read in the next page
-        PageIndexHeader nextPageHeader;
+
         ret = fileHandle.readPage(pageHeader.nextPage, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
         }
 
-        // Udpate the prev pointer of the next page to our prev pointer
-        memcpy((void*)&nextPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
-        nextPageHeader.prevPage = pageHeader.prevPage;
-        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&nextPageHeader, sizeof(PageIndexHeader));
-
-        ret = fileHandle.writePage(nextPageHeader.pageNumber, pageBuffer);
+        // Update the prev pointer of the next page to our prev pointer
+        PageIndexHeader* nextPageHeader = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+        nextPageHeader->prevPage = pageHeader.prevPage;
+        ret = fileHandle.writePage(nextPageHeader->pageNumber, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
@@ -293,19 +291,17 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     if (destinationList.listHead > 0)
     {
         // Read in the page
-        PageIndexHeader listFirstPageHeader;
+
         ret = fileHandle.readPage(destinationList.listHead, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
         }
 
-        // Udpate the prev pointer of the previous head to be our page number
-        memcpy((void*)&listFirstPageHeader, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
-        listFirstPageHeader.prevPage = pageHeader.pageNumber;
-        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&listFirstPageHeader, sizeof(PageIndexHeader));
-
-        ret = fileHandle.writePage(listFirstPageHeader.pageNumber, pageBuffer);
+        // Update the prev pointer of the previous head to be our page number
+        PageIndexHeader* listFirstPageHeader = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+        listFirstPageHeader->prevPage = pageHeader.pageNumber;
+        ret = fileHandle.writePage(listFirstPageHeader->pageNumber, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
