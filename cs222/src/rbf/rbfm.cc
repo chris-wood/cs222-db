@@ -152,24 +152,24 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     {
         // Create the blank index structure on each page (at the end)
         // Note: there are no slots yet, so there are no slotOffsets prepended to this struct on disk
-        PageIndexHeader index;
-        index.freeSpaceOffset = 0;
-        index.numSlots = 0;
-        index.pageNumber = fileHandle.getNumberOfPages();
-        index.prevPage = 0;
-        index.nextPage = 0;
-        index.freespaceList = header.numFreespaceLists - 1; // This is an empty page right now, put it in the largest slot
+        PageIndexHeader* index = (PageIndexHeader*)(newPages + PAGE_SIZE - sizeof(PageIndexHeader));
+        index->freeSpaceOffset = 0;
+        index->numSlots = 0;
+        index->pageNumber = fileHandle.getNumberOfPages();
+        index->prevPage = 0;
+        index->nextPage = 0;
+        index->freespaceList = header.numFreespaceLists - 1; // This is an empty page right now, put it in the largest slot
 
         // Append this page to the list of free pages (into the beginning of the largest freespace slot)
-        FreeSpaceList& oldFreeSpaceList = header.freespaceLists[index.freespaceList];
+        FreeSpaceList& oldFreeSpaceList = header.freespaceLists[index->freespaceList];
         if (oldFreeSpaceList.listHead == 0)
         {
-            oldFreeSpaceList.listHead = index.pageNumber;
+            oldFreeSpaceList.listHead = index->pageNumber;
         }
         else
         {
             // Read in the previous list head
-            PageIndexHeader previousListHead;
+
             ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
             if (ret != rc::OK)
             {
@@ -177,13 +177,10 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
                 return ret;
             }
 
-            // Udpate the prev pointer of the previous head to be our page number
-            memcpy((void*)&previousListHead, listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
-            previousListHead.prevPage = pageNum;
-            memcpy(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&previousListHead, sizeof(PageIndexHeader));
-
-            ret = fileHandle.writePage(previousListHead.pageNumber, listSwapBuffer);
-
+            // Update the prev pointer of the previous head to be our page number
+            PageIndexHeader* previousListHead = (PageIndexHeader*)(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+            previousListHead->prevPage = pageNum;
+            ret = fileHandle.writePage(previousListHead->pageNumber, listSwapBuffer);
             if (ret != rc::OK)
             {
                 free(newPages);
@@ -191,11 +188,9 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             }
 
             // Update the header info so the list points to the newly created page as the head
-            oldFreeSpaceList.listHead = index.pageNumber;
-            index.nextPage = previousListHead.pageNumber;
+            oldFreeSpaceList.listHead = index->pageNumber;
+            index->nextPage = previousListHead->pageNumber;
         }
-
-        memcpy(newPages + PAGE_SIZE - sizeof(PageIndexHeader), (void*)&index, sizeof(PageIndexHeader));
 
         // Append this new page to the file
         ret = fileHandle.appendPage(newPages);
