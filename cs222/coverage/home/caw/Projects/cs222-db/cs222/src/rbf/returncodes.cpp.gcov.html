@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - /home/caw/Projects/cs222-db/cs222/src/rbf/returncodes.cpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../../../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../../../../../index.html">top level</a> - <a href="index.html">home/caw/Projects/cs222-db/cs222/src/rbf</a> - returncodes.cpp<span style="font-size: 80%;"> (source / <a href="returncodes.cpp.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">29</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2014-01-21</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">27</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">           Branch data     Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>                :            : #include &quot;returncodes.h&quot;</a>
+<span class="lineNum">       2 </span>                :            : 
+<a name="3"><span class="lineNum">       3 </span>                :            : namespace rc</a>
+<span class="lineNum">       4 </span>                :            : {
+<span class="lineNum">       5 </span>                :<span class="lineNoCov">          0 :     const char* rcToString(int rc)</span>
+<span class="lineNum">       6 </span>                :            :     {
+<span class="lineNum">       7 </span>  [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchNoExec" title="Branch 1 was not executed"> # </span><span class="branchNoExec" title="Branch 2 was not executed"> # </span><span class="branchNoExec" title="Branch 3 was not executed"> # </span> :<span class="lineNoCov">          0 :         switch((ReturnCode)rc)</span>
+<span class="lineNum">         </span><span class="branchNoExec" title="Branch 4 was not executed"> # </span><span class="branchNoExec" title="Branch 5 was not executed"> # </span><span class="branchNoExec" title="Branch 6 was not executed"> # </span><span class="branchNoExec" title="Branch 7 was not executed"> # </span><span class="branchNoExec" title="Branch 8 was not executed"> # </span> 
+<span class="lineNum">         </span><span class="branchNoExec" title="Branch 9 was not executed"> # </span><span class="branchNoExec" title="Branch 10 was not executed"> # </span><span class="branchNoExec" title="Branch 11 was not executed"> # </span><span class="branchNoExec" title="Branch 12 was not executed"> # </span><span class="branchNoExec" title="Branch 13 was not executed"> # </span> 
+<span class="lineNum">         </span><span class="branchNoExec" title="Branch 14 was not executed"> # </span><span class="branchNoExec" title="Branch 15 was not executed"> # </span><span class="branchNoExec" title="Branch 16 was not executed"> # </span><span class="branchNoExec" title="Branch 17 was not executed"> # </span><span class="branchNoExec" title="Branch 18 was not executed"> # </span> 
+<span class="lineNum">         </span><span class="branchNoExec" title="Branch 19 was not executed"> # </span><span class="branchNoExec" title="Branch 20 was not executed"> # </span><span class="branchNoExec" title="Branch 21 was not executed"> # </span><span class="branchNoExec" title="Branch 22 was not executed"> # </span><span class="branchNoExec" title="Branch 23 was not executed"> # </span> 
+<span class="lineNum">         </span>      <span class="branchNoExec" title="Branch 24 was not executed"> # </span><span class="branchNoExec" title="Branch 25 was not executed"> # </span><span class="branchNoExec" title="Branch 26 was not executed"> # </span>]
+<span class="lineNum">       8 </span>                :            :         {
+<span class="lineNum">       9 </span>                :<span class="lineNoCov">          0 :         case UNKNOWN_FAILURE:                       return &quot;UNKNOWN_FAILURE&quot;;</span>
+<span class="lineNum">      10 </span>                :<span class="lineNoCov">          0 :         case OK:                                    return &quot;OK&quot;;</span>
+<span class="lineNum">      11 </span>                :<span class="lineNoCov">          0 :         case FEATURE_NOT_YET_IMPLEMENTED:           return &quot;FEATURE_NOT_YET_IMPLEMENTED&quot;;</span>
+<span class="lineNum">      12 </span>                :<span class="lineNoCov">          0 :         case FILE_PAGE_NOT_FOUND:                   return &quot;FILE_PAGE_NOT_FOUND&quot;;</span>
+<span class="lineNum">      13 </span>                :<span class="lineNoCov">          0 :         case FILE_SEEK_FAILED:                      return &quot;FILE_SEEK_FAILED&quot;;</span>
+<span class="lineNum">      14 </span>                :<span class="lineNoCov">          0 :         case FILE_NOT_FOUND:                        return &quot;FILE_NOT_FOUND&quot;;</span>
+<span class="lineNum">      15 </span>                :<span class="lineNoCov">          0 :         case FILE_ALREADY_EXISTS:                   return &quot;FILE_ALREADY_EXISTS&quot;;</span>
+<span class="lineNum">      16 </span>                :<span class="lineNoCov">          0 :         case FILE_CORRUPT:                          return &quot;FILE_CORRUPT&quot;;</span>
+<span class="lineNum">      17 </span>                :<span class="lineNoCov">          0 :         case FILE_COULD_NOT_OPEN:                   return &quot;FILE_COULD_NOT_APPEND&quot;;</span>
+<span class="lineNum">      18 </span>                :<span class="lineNoCov">          0 :         case FILE_COULD_NOT_DELETE:                 return &quot;FILE_COULD_NOT_DELETE&quot;;</span>
+<span class="lineNum">      19 </span>                :<span class="lineNoCov">          0 :         case FILE_HANDLE_ALREADY_INITIALIZED:       return &quot;FILE_HANDLE_ALREADY_INITIALIZED&quot;;</span>
+<span class="lineNum">      20 </span>                :<span class="lineNoCov">          0 :         case FILE_HANDLE_NOT_INITIALIZED:           return &quot;FILE_HANDLE_NOT_INITIALIZED&quot;;</span>
+<span class="lineNum">      21 </span>                :<span class="lineNoCov">          0 :         case FILE_HANDLE_UNKNOWN:                   return &quot;FILE_HANDLE_UNKNOWN&quot;;</span>
+<span class="lineNum">      22 </span>                :<span class="lineNoCov">          0 :         case FILE_NOT_OPENED:                       return &quot;FILE_NOT_OPENED&quot;;</span>
+<span class="lineNum">      23 </span>                :<span class="lineNoCov">          0 :         case RECORD_DOES_NOT_EXIST:                 return &quot;RECORD_DOES_NOT_EXIST&quot;;</span>
+<span class="lineNum">      24 </span>                :<span class="lineNoCov">          0 :         case RECORD_CORRUPT:                        return &quot;RECORD_CORRUPT&quot;;</span>
+<span class="lineNum">      25 </span>                :<span class="lineNoCov">          0 :         case RECORD_EXCEEDS_PAGE_SIZE:              return &quot;RECORD_EXCEEDS_PAGE_SIZE&quot;;</span>
+<span class="lineNum">      26 </span>                :<span class="lineNoCov">          0 :         case HEADER_SIZE_CORRUPT:                   return &quot;HEADER_SIZE_CORRUPT&quot;;</span>
+<span class="lineNum">      27 </span>                :<span class="lineNoCov">          0 :         case HEADER_PAGESIZE_MISMATCH:              return &quot;HEADER_PAGESIZE_MISMATCH&quot;;</span>
+<span class="lineNum">      28 </span>                :<span class="lineNoCov">          0 :         case HEADER_VERSION_MISMATCH:               return &quot;HEADER_VERSION_MISMATCH&quot;;</span>
+<span class="lineNum">      29 </span>                :<span class="lineNoCov">          0 :         case HEADER_FREESPACE_LISTS_MISMATCH:       return &quot;HEADER_FREESPACE_LISTS_MISMATCH&quot;;</span>
+<span class="lineNum">      30 </span>                :<span class="lineNoCov">          0 :         case HEADER_FREESPACE_LISTS_CORRUPT:         return &quot;HEADER_FREESPACE_LIST_CORRUPT&quot;;</span>
+<span class="lineNum">      31 </span>                :<span class="lineNoCov">          0 :         case HEADER_SIZE_TOO_LARGE:                 return &quot;HEADER_SIZE_TOO_LARGE&quot;;</span>
+<span class="lineNum">      32 </span>                :<span class="lineNoCov">          0 :         case RECORD_SIZE_INVALID:                   return &quot;RECORD_SIZE_INVALID&quot;;</span>
+<span class="lineNum">      33 </span>                :<span class="lineNoCov">          0 :         case ATTRIBUTE_INVALID_TYPE:                return &quot;ATTRIBUTE_INVALID_TYPE&quot;;</span>
+<span class="lineNum">      34 </span>                :<span class="lineNoCov">          0 :                 case OUT_OF_MEMORY:                                                     return &quot;OUT_OF_MEMORY&quot;;</span>
+<span class="lineNum">      35 </span>                :            :         }
+<span class="lineNum">      36 </span>                :            : 
+<span class="lineNum">      37 </span>                :<span class="lineNoCov">          0 :         return &quot;UNKNOWN_ERROR_CODE&quot;;</span>
+<span class="lineNum">      38 </span>                :            :     }
+<span class="lineNum">      39 </span>                :            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.9</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

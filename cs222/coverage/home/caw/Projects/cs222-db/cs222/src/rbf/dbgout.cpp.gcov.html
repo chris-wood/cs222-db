@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - /home/caw/Projects/cs222-db/cs222/src/rbf/dbgout.cpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../../../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../../../../../index.html">top level</a> - <a href="index.html">home/caw/Projects/cs222-db/cs222/src/rbf</a> - dbgout.cpp<span style="font-size: 80%;"> (source / <a href="dbgout.cpp.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2014-01-21</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryLo">50.0 %</td>
+          </tr>
+          <tr><td><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">           Branch data     Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>                :            : #include &quot;dbgout.h&quot;</a>
+<span class="lineNum">       2 </span>                :            : 
+<a name="3"><span class="lineNum">       3 </span>                :            : namespace dbg</a>
+<span class="lineNum">       4 </span>                :            : {
+<a name="5"><span class="lineNum">       5 </span>                :<span class="lineCov">          1 :     Dbgout out;</span></a>
+<span class="lineNum">       6 </span>                :            : 
+<span class="lineNum">       7 </span>                :<span class="lineCov">          1 :     Dbgout::Dbgout()</span>
+<span class="lineNum">       8 </span>                :            : #if DEBUG_ENABLED
+<span class="lineNum">       9 </span>                :            :         : _out(std::cerr),
+<span class="lineNum">      10 </span>                :            :           _logLevel(DEFAULT_VERBOSITY),
+<span class="lineNum">      11 </span>                :            :           _verbosity(DEFAULT_VERBOSITY)
+<span class="lineNum">      12 </span>                :            : #endif
+<span class="lineNum">      13 </span>                :            :     {
+<span class="lineNum">      14 </span>                :            : #if REDIRECT_COUT_TO_FILE
+<span class="lineNum">      15 </span>                :            :         // This is basically only for QTCreator because it can't handle debugging a program at the same time it's redirecting output
+<span class="lineNum">      16 </span>                :            :         std::ofstream out(&quot;out.txt&quot;);
+<span class="lineNum">      17 </span>                :            :         _savedCout = std::cout.rdbuf(); //save old buf
+<span class="lineNum">      18 </span>                :            :         std::cout.rdbuf(out.rdbuf()); //redirect std::cout to out.txt!
+<span class="lineNum">      19 </span>                :            : #endif
+<a name="20"><span class="lineNum">      20 </span>                :<span class="lineCov">          1 :     }</span></a>
+<span class="lineNum">      21 </span>                :            : 
+<span class="lineNum">      22 </span>                :<span class="lineCov">          1 :     Dbgout::~Dbgout()</span>
+<a name="23"><span class="lineNum">      23 </span>                :            :     {</a>
+<span class="lineNum">      24 </span>                :<span class="lineCov">          1 :     }</span>
+<span class="lineNum">      25 </span>[<span class="branchCov" title="Branch 1 was taken 1 time"> + </span><span class="branchNoCov" title="Branch 2 was not taken"> - </span>][<span class="branchCov" title="Branch 3 was taken 1 time"> + </span><span class="branchNoCov" title="Branch 4 was not taken"> - </span>]:<span class="lineCov">          3 : }</span>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.9</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
