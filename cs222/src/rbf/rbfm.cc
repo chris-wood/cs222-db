@@ -334,6 +334,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::writeHeader(" << fileHandle.getFilename() << ")\n";
 
     // Copy the header data into a newly allocated buffer
+    // We know the only data in page 0 is PFHeader, so we can stomp over everything already there
     unsigned char buffer[PAGE_SIZE] = {0};
     memcpy(buffer, header, sizeof(PFHeader));
 
