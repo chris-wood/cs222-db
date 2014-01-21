@@ -542,35 +542,38 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
         {
             case TypeInt:
             {
-                int ival = 0;
-                memcpy(&ival, (char*)data + offset, sizeof(int));
+                int* ival = (int*)((char*)data + offset);
                 offset += sizeof(int);
-                out << ival;
+                out << *ival;
                 break;
             }
             case TypeReal:
             {
-                float rval = 0.0;
-                memcpy(&rval, (char*)data + offset, sizeof(float));
+                float* rval = (float*)((char*)data + offset);
                 offset += sizeof(float);
-                out << rval;
+                out << *rval;
                 break;
             }
             case TypeVarChar:
             {
                 out << "\"";
-                int count = 0;
-                memcpy(&count, (char*)data + offset, sizeof(int));
+
+                int* count = (int*)((char*)data + offset);
                 offset += sizeof(int);
-                for (int i=0; i < count; i++)
+                for (int i=0; i < *count; i++)
                 {
                     out << ((char*)data)[offset++];
                 }
+
                 out << "\"";
             }
         }
+
         index++;
-        if (index != recordDescriptor.size()) out << ",";
+        if (index != recordDescriptor.size())
+        {
+            out << ",";
+        }
     }
 
     out << ")" << endl;
