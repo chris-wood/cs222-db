@@ -27,6 +27,7 @@ PagedFileManager::PagedFileManager()
 
 PagedFileManager::~PagedFileManager()
 {
+    // We don't want our static pointer to be pointing to deleted data in case the object is ever deleted!
 	_pf_manager = NULL;
 }
 
