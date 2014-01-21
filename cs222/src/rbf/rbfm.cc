@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <cstring>
 #include <iostream>
+#include <new>
 
 #ifdef REDIRECT_PRINT_RECORD
 #include <fstream>
@@ -352,25 +353,29 @@ RC RecordBasedFileManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 
 RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 {
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n";
-
-    // Allocate the page header buffer and read it in from the disk.
     RC ret = rc::OK;
     unsigned char buffer[PAGE_SIZE] = {0};
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::readHeader(" << fileHandle.getFilename() << ")\n";
+
+    // If the header page does not exist, create it
     if (fileHandle.getNumberOfPages() == 0)
     {
-        PFHeader blankHeader;
-        blankHeader.init();
-
-        memcpy(buffer, &blankHeader, sizeof(PFHeader));
+        PFHeader* blankHeader = (PFHeader*)buffer;
+        blankHeader->init();
         ret = fileHandle.appendPage(buffer);
     }
 
-    // Verify correctness
+    // Read in the header
     if(ret == rc::OK)
     {
         ret = fileHandle.readPage(0, buffer);
         memcpy(header, buffer, sizeof(PFHeader));
+    }
+
+    // Verify header
+    if (ret == rc::OK)
+    {
+        ret = header->validate();
     }
 
     return ret;
@@ -583,11 +588,6 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 }
 
 PFHeader::PFHeader()
-    : headerSize(sizeof(PFHeader)),
-      pageSize(PAGE_SIZE),
-      version(CURRENT_PF_VERSION),
-      numPages(0),
-      numFreespaceLists(NUM_FREESPACE_LISTS)
 {
     memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
 }
@@ -606,6 +606,13 @@ PFHeader::PFHeader()
 // [10] = 2336
 void PFHeader::init()
 {
+    // Store constants so we are sure we're working with formats of files we expect
+    headerSize = sizeof(PFHeader);
+    pageSize = PAGE_SIZE;
+    version = CURRENT_PF_VERSION;
+    numPages = 0;
+    numFreespaceLists = NUM_FREESPACE_LISTS;
+
     // Divide the freespace lists evenly, except for the first and last
     unsigned short cutoffDelta = PAGE_SIZE / (NUM_FREESPACE_LISTS + 5);
     unsigned short cutoff = cutoffDelta / 8; // Anything under this value is considered a 'full' page
