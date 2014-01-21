@@ -36,13 +36,13 @@ typedef struct
 // /-----------------------------------------\
 // | Page N                                  |
 // | --------------------------------------- |
-// | .... record data ...................... |
-// | .... record data ...................... |
-// | .... record data ...................... |
-// | .... free space ....................... |
-// | .... free space ....................... |
-// | .... free space ....................... |
-// | [PageIndexSlot_K] [PageIndexSlot_K-1].. |
+// | [Rec size][Rec offsets][Rec data......] |
+// | [Rec size][Rec offsets....][Rec data... |
+// | ............[Rec Size][Rec offsets][Rec |
+// | data.......]                            |
+// |               <free space>              |
+// |                                         |
+// | [PageIndexSlot_K] [PageIndexSlot_K-1]   |
 // | ... [PageIndexSlot_0] [PageIndexHeader] |
 // \-----------------------------------------/
 struct PageIndexHeader
