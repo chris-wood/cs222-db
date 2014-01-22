@@ -481,6 +481,36 @@ void rbfmTest()
 	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
 	//TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
 
+	// Test opening and closing of files of files
+	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
+    TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close handle3");
+    TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close handle4");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle1), "Open testFile4.db and store in handle1");
+	TEST_FN_EQ( rc::FILE_HANDLE_ALREADY_INITIALIZED, pfm->openFile("testFile0.db", handle1), "Open testFile0.db and store in already initialized file handle");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle2), "Open testFile4.db and store in handle2");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle3), "Open testFile4.db and store in handle3");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close testFile1.db");
+	TEST_FN_EQ( rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(handle1), "Close testFile0.db again");
+	TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close testFile2.db");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close testFile3.db");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close testFile4.db");
+	TEST_FN_EQ( rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(handle4), "Close testFile4.db through uninitialized file handle");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+
+	// Re-open the files to be closed again
+	TEST_FN_EQ( 0, pfm->createFile("testFile4.db"), "Create testFile4.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
+	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+	TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+
 	// Clean up
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
 	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
