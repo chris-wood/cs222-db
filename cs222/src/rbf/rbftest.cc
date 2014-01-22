@@ -453,7 +453,7 @@ Attribute randomAttribute()
     case 2:
         attr.name = "Random-VarChar";
         attr.type = TypeVarChar;
-        attr.length = 1 + rand() % 3907;
+        attr.length = 1 + rand() % 17;
         break;
     }
 
@@ -681,10 +681,10 @@ void rbfmTest()
     // Test creating randomly sized records
     TEST_FN_EQ( 0, pfm->createFile("testFile5.db"), "Create testFile5.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile5.db", handle5), "Open testFile5.db and store in handle5");
-    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 5, 1, 4), "Testing insertion of randomly sized tiny records");
-    //TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40), "Testing insertion of randomly sized medium records");
-    //TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 400, 1, 400), "Testing insertion of randomly sized large records");
-    //TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 8000, 1, 4000), "Testing insertion of randomly sized huge records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 1, 1, 2), "Testing insertion of randomly sized tiny records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40), "Testing insertion of randomly sized medium records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 66, 1, 80), "Testing insertion of randomly sized large records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 333, 1, 160), "Testing insertion of randomly sized huge records");
 
 	// Test opening and closing of files of files
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
