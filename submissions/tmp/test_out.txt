@@ -1,19 +1,19 @@
-Archive:  project1-woodc1.zip
-   creating: project1-woodc1/codebase/
-  inflating: project1-woodc1/codebase/makefile.inc  
-  inflating: project1-woodc1/codebase/project1-report.pdf  
-   creating: project1-woodc1/codebase/rbf/
-  inflating: project1-woodc1/codebase/rbf/dbgout.cpp  
-  inflating: project1-woodc1/codebase/rbf/dbgout.h  
-  inflating: project1-woodc1/codebase/rbf/makefile  
-  inflating: project1-woodc1/codebase/rbf/pfm.cc  
-  inflating: project1-woodc1/codebase/rbf/pfm.h  
-  inflating: project1-woodc1/codebase/rbf/rbfm.cc  
-  inflating: project1-woodc1/codebase/rbf/rbfm.h  
-  inflating: project1-woodc1/codebase/rbf/rbftest.cc  
-  inflating: project1-woodc1/codebase/rbf/returncodes.cpp  
-  inflating: project1-woodc1/codebase/rbf/returncodes.h  
-  inflating: project1-woodc1/codebase/readme.txt  
+Archive:  project1-1.zip
+   creating: project1-1/codebase/
+  inflating: project1-1/codebase/makefile.inc  
+  inflating: project1-1/codebase/project1-report.pdf  
+   creating: project1-1/codebase/rbf/
+  inflating: project1-1/codebase/rbf/dbgout.cpp  
+  inflating: project1-1/codebase/rbf/dbgout.h  
+  inflating: project1-1/codebase/rbf/makefile  
+  inflating: project1-1/codebase/rbf/pfm.cc  
+  inflating: project1-1/codebase/rbf/pfm.h  
+  inflating: project1-1/codebase/rbf/rbfm.cc  
+  inflating: project1-1/codebase/rbf/rbfm.h  
+  inflating: project1-1/codebase/rbf/rbftest.cc  
+  inflating: project1-1/codebase/rbf/returncodes.cpp  
+  inflating: project1-1/codebase/rbf/returncodes.h  
+  inflating: project1-1/codebase/readme.txt  
 rm rbftest *.a *.o *~
 rm: cannot remove `rbftest': No such file or directory
 rm: cannot remove `*.a': No such file or directory
@@ -24,7 +24,6 @@ g++  -Wall -I"../" -g    -c -o pfm.o pfm.cc
 ar rv librbf.a pfm.o
 ar: creating librbf.a
 a - pfm.o
-make: Warning: File `librbf.a' has modification time 0.00078 s in the future
 g++  -Wall -I"../" -g    -c -o rbfm.o rbfm.cc
 In file included from rbfm.cc:2:
 rbfm.h:36:1: warning: multi-line comment
@@ -40,11 +39,10 @@ g++  -Wall -I"../" -g    -c -o rbftest.o rbftest.cc
 In file included from rbftest.cc:14:
 rbfm.h:36:1: warning: multi-line comment
 make -C "../"/rbf librbf.a
-make[1]: Entering directory `/home/woodc1/classes/cs222/project/project1/project1-woodc1/codebase/rbf'
+make[1]: Entering directory `/home/woodc1/classes/cs222/project/project1/project1-1/codebase/rbf'
 make[1]: Nothing to be done for `librbf.a'.
-make[1]: Leaving directory `/home/woodc1/classes/cs222/project/project1/project1-woodc1/codebase/rbf'
+make[1]: Leaving directory `/home/woodc1/classes/cs222/project/project1/project1-1/codebase/rbf'
 g++   rbftest.o librbf.a "../"/rbf/librbf.a   -o rbftest
-make: warning:  Clock skew detected.  Your build may be incomplete.
 rm dbgout.o
 ****In RBF Test Case 1****
 File test has been created.
