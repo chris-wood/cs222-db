@@ -59,12 +59,12 @@ public:
     bool hasFile() const { return _file != NULL; }
     bool operator== (const FileHandle& that) const { return this->_file == that._file; }
 
-    RC updatePageCount();
     RC unloadFile();
     RC loadFile(const char*, FILE* file);
-    void closeFile() { _file = NULL; }
 
 private:
+    RC updatePageCount();
+
     // Name of the OS file opened
     std::string _filename;
 

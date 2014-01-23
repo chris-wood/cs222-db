@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 
 #include "pfm.h"
 #include "rbfm.h"
@@ -333,6 +334,7 @@ RC testSmallRecords2(FileHandle& fileHandle)
 			if (memcmp(buffersIn[i], buffersOut[i], sizes[i]))
 			{
 				std::cout << "Failed to read correct data of shuffled record[" << i << "]" << std::endl;
+                ret = rc::RECORD_CORRUPT;
 				break;
 			}
 		}
@@ -345,7 +347,293 @@ RC testSmallRecords2(FileHandle& fileHandle)
 		free(buffersOut[i]);
 	}
 
-	return rc::OK;
+    return ret;
+}
+
+RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, int minRecordSize, bool insertForwards)
+{
+    std::vector<char*> buffersIn;
+    std::vector<char*> buffersOut;
+    std::vector<RID> rids;
+    std::vector< Attribute > recordDescriptor;
+    Attribute bigString;
+    bigString.name = "Big String";
+    bigString.type = TypeVarChar;
+    recordDescriptor.push_back(bigString);
+
+    //const int maxRecordSize = PAGE_SIZE - 36;
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size();
+
+    // Allocate memory
+    int seed = 0x7ed55d16;
+    for (int size = minRecordSize, index = 0; size <= maxRecordSize; size += recordSizeDelta, ++index)
+    {
+        rids.push_back(RID());
+        buffersIn.push_back((char*)malloc(size));
+        buffersOut.push_back((char*)malloc(size));
+
+        char* buffer = buffersIn.back();
+
+        recordDescriptor.back().length = size - sizeof(int);
+
+        // First write out the size of the string, then fill it with data
+        memcpy(buffer, &recordDescriptor.back().length, sizeof(int));
+        for (int i=sizeof(int); i<size; ++i)
+        {
+            seed *= (i * 0xfd7046c5) + (i << 24); // not a real hash, do not use for actual hashing!
+            char c = ' ' + seed % 90;
+            buffer[i] = c;
+        }
+    }
+
+    // Do inserts
+    RC ret;
+    RecordBasedFileManager* rbfm = RecordBasedFileManager::instance();
+    if (insertForwards)
+    {
+        for (int size = minRecordSize, index = 0; size <= maxRecordSize; size += recordSizeDelta, ++index)
+        {
+            recordDescriptor.back().length = size - sizeof(int);
+            ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
+        }
+    }
+    else
+    {
+        for (int size = maxRecordSize, index = rids.size() - 1; size >= minRecordSize; size -= recordSizeDelta, --index)
+        {
+            recordDescriptor.back().length = size - sizeof(int);
+            ret = rbfm->insertRecord(fileHandle, recordDescriptor, buffersIn[index], rids[index]);
+        }
+    }
+
+    // Check data was not harmed
+    if (ret == rc::OK)
+    {
+        for (int size = minRecordSize, index = 0; size <= maxRecordSize; size += recordSizeDelta, ++index)
+        {
+            recordDescriptor.back().length = size - sizeof(int);
+            ret = rbfm->readRecord(fileHandle, recordDescriptor, rids[index], buffersOut[index]);
+
+            if (ret == rc::OK && memcmp(buffersIn[index], buffersOut[index], size))
+            {
+                std::cout << "There was an error checking the big string[" << index << "], size=" << size << std::endl;
+                ret = rc::FILE_CORRUPT;
+                break;
+            }
+        }
+    }
+
+    // Clean up memory
+    for (int size = minRecordSize, index = 0; size <= maxRecordSize; size += recordSizeDelta, ++index)
+    {
+        free(buffersIn[index]);
+        free(buffersOut[index]);
+    }
+
+    return ret;
+}
+
+Attribute randomAttribute()
+{
+    Attribute attr;
+    switch(rand() % 3)
+    {
+    case 0:
+        attr.name = "Random-Int";
+        attr.type = TypeInt;
+        attr.length = sizeof(int);
+        break;
+
+    case 1:
+        attr.name = "Random-Real";
+        attr.type = TypeReal;
+        attr.length = sizeof(float);
+        break;
+
+    case 2:
+        attr.name = "Random-VarChar";
+        attr.type = TypeVarChar;
+        attr.length = 1 + rand() % 17;
+        break;
+    }
+
+    return attr;
+}
+
+void mallocRandomValue(Attribute& attr, int& size, void** bufferIn, void** bufferOut)
+{
+    switch(attr.type)
+    {
+    case TypeInt:
+    {
+        size = sizeof(int);
+        *bufferIn = malloc(size);
+        *bufferOut = malloc(size);
+
+        int* val = (int*)(*bufferIn);
+        *val = rand();
+        break;
+    }
+
+    case TypeReal:
+    {
+        size = sizeof(float);
+        *bufferIn = malloc(size);
+        *bufferOut = malloc(size);
+
+        float* val = (float*)(*bufferIn);
+        *val = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        break;
+    }
+
+    case TypeVarChar:
+    {
+        int stringLen = rand() % attr.length;
+        size = sizeof(int) + stringLen;
+        *bufferIn = malloc(size);
+        *bufferOut = malloc(size);
+
+        memcpy(*bufferIn, &stringLen, sizeof(int));
+        char* str = (char*)*bufferIn + sizeof(int);
+        for (int i=0; i<stringLen; ++i)
+        {
+            *str = ' ' + (rand() % 90);
+        }
+        break;
+    }
+    }
+}
+
+RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords, int maxRecords)
+{
+    RC ret;
+    RecordBasedFileManager* rbfm = RecordBasedFileManager::instance();
+
+    std::vector< std::vector< Attribute > > attributeLists;
+    std::vector< std::vector< int > > bufferSizeLists;
+    std::vector< std::vector< void* > > bufferInLists;
+    std::vector< std::vector< void* > > bufferOutLists;
+    std::vector< RID > ridLists;
+
+    // Generate data
+    for (int iteration = 0; iteration < numIterations; ++iteration)
+    {
+        attributeLists.push_back(std::vector< Attribute >());
+        bufferSizeLists.push_back(std::vector< int >());
+        bufferInLists.push_back(std::vector< void* >());
+        bufferOutLists.push_back(std::vector< void* >());
+        ridLists.push_back(RID());
+
+        std::vector< Attribute >& attributeList = attributeLists.back();
+        std::vector< int >& bufferSizes = bufferSizeLists.back();
+        std::vector< void* >& buffersIn = bufferInLists.back();
+        std::vector< void* >& buffersOut = bufferOutLists.back();
+
+        int numInserts = minRecords + (rand() % (maxRecords-minRecords));
+        for (int insert = 0; insert < numInserts; ++insert)
+        {
+            attributeList.push_back(randomAttribute());
+            buffersIn.push_back(NULL);
+            buffersOut.push_back(NULL);
+            bufferSizes.push_back(0);
+
+            mallocRandomValue(attributeList.back(), bufferSizes.back(), &buffersIn.back(), &buffersOut.back());
+        }
+    }
+
+    // Insert records
+    std::vector< void* > unifiedBuffersIn;
+    std::vector< void* > unifiedBuffersOut;
+    std::vector< int > unifiedBufferSizes;
+    for (int iteration = 0; iteration < numIterations; ++iteration)
+    {
+        std::vector< Attribute >& attributeList = attributeLists[iteration];
+        std::vector< void* >& buffersIn = bufferInLists[iteration];
+        std::vector< int >& bufferSizes = bufferSizeLists[iteration];
+        RID& rid = ridLists[iteration];
+
+        // Calculate the size required for the unified record buffer
+        int bufferSize = 0;
+        int numInserts = bufferSizes.size();
+        for (int insert = 0; insert < numInserts; ++insert)
+        {
+            bufferSize += bufferSizes[insert];
+        }
+
+        unifiedBufferSizes.push_back(bufferSize);
+        unifiedBuffersIn.push_back(malloc(bufferSize));
+        unifiedBuffersOut.push_back(malloc(bufferSize));
+
+        // Fill up our unified record buffer
+        int offset = 0;
+        char* bufferIn = (char*)unifiedBuffersIn.back();
+        char* bufferOut = (char*)unifiedBuffersOut.back();
+        for (int insert = 0; insert < numInserts; ++insert)
+        {
+            memset(bufferOut, 0, bufferSizes[insert]);
+            memcpy(bufferIn + offset, buffersIn[insert], bufferSizes[insert]);
+            offset += bufferSizes[insert];
+        }
+
+        // Write out the record
+        ret = rbfm->insertRecord(fileHandle, attributeList, bufferIn, rid);
+        if (ret != rc::OK)
+        {
+            std::cout << "Error writing out record iteration=" << iteration << std::endl;
+            break;
+        }
+    }
+
+    // Read back records
+    if (ret == rc::OK)
+    {
+        for (int iteration = 0; iteration < numIterations; ++iteration)
+        {
+            std::vector< Attribute >& attributeList = attributeLists[iteration];
+            void* bufferOut = unifiedBuffersOut[iteration];
+            RID& rid = ridLists[iteration];
+
+            ret = rbfm->readRecord(fileHandle, attributeList, rid, bufferOut);
+            if (ret != rc::OK)
+            {
+                std::cout << "Error reading in record iteration=" << iteration << std::endl;
+                break;
+            }
+        }
+    }
+
+    // Verify records
+    if (ret == rc::OK)
+    {
+        for (int iteration = 0; iteration < numIterations; ++iteration)
+        {
+            void* bufferIn = unifiedBuffersIn[iteration];
+            void* bufferOut = unifiedBuffersOut[iteration];
+            if (memcmp(bufferIn, bufferOut, unifiedBufferSizes[iteration]))
+            {
+                ret = rc::FILE_CORRUPT;
+                std::cout << "Error verifying read back data iteration=" << iteration << std::endl;
+                break;
+            }
+        }
+    }
+
+    // Free up memory
+    for(int iteration = 0; iteration < numIterations; ++iteration)
+    {
+        free(unifiedBuffersIn[iteration]);
+        free(unifiedBuffersOut[iteration]);
+
+        std::vector< void* >& buffersIn = bufferInLists[iteration];
+        std::vector< void* >& buffersOut = bufferOutLists[iteration];
+        for (size_t insert = 0; insert < buffersIn.size(); ++insert)
+        {
+            free(buffersIn[insert]);
+            free(buffersOut[insert]);
+        }
+    }
+
+    return ret;
 }
 
 void rbfmTest()
@@ -356,11 +644,14 @@ void rbfmTest()
 
 	cout << "RecordBasedFileManager tests" << endl;
 	PagedFileManager *pfm = PagedFileManager::instance();
-    FileHandle handle0, handle1, handle2;
+    FileHandle handle0, handle1, handle2, handle3, handle4, handle5;
 
 	remove("testFile0.db");
 	remove("testFile1.db");
 	remove("testFile2.db");
+    remove("testFile3.db");
+    remove("testFile4.db");
+    remove("testFile5.db");
 
 	// Test creating many very small records
 	TEST_FN_EQ( 0, pfm->createFile("testFile0.db"), "Create testFile0.db");
@@ -371,21 +662,72 @@ void rbfmTest()
 	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
 	TEST_FN_EQ( rc::OK, testSmallRecords2(handle1), "Testing inserting many tiny records in batches");
 
-	// Test creating records with odd sizes
-	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile1.db");
-	//TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle1), "Open testFile1.db and store in handle1");
+    // Test creating large records (close to PAGE_FILE size)
+    TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle2, 1, 9 * PAGE_SIZE / 10, true), "Testing insertion of large records");
 
-	// Test closing/opening the file inbetween every operation
-	//TEST_FN_EQ( 0, pfm->createFile("testFile2.db"), "Create testFile2.db");
-	//TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+    // Test creation of varying sized records that should fill up any freespace lists
+    TEST_FN_EQ( 0, pfm->createFile("testFile3.db"), "Create testFile3.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle3, 257, sizeof(int) + sizeof(char), false), "Testing insertion of varying records");
+
+    // Test creation of a very small record followed by a large record
+    // With our freespace offsets, this is specifically designed to ensure we can insert in a bucket with a page already in it
+    TEST_FN_EQ( 0, pfm->createFile("testFile4.db"), "Create testFile4.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+    TEST_FN_EQ( rc::OK, testMaxSizeRecords(handle4, 3000, sizeof(int) + sizeof(char), true), "Testing insertion of varying records");
+
+    // Test creating randomly sized records
+    TEST_FN_EQ( 0, pfm->createFile("testFile5.db"), "Create testFile5.db");
+    TEST_FN_EQ( 0, pfm->openFile("testFile5.db", handle5), "Open testFile5.db and store in handle5");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 1, 1, 2), "Testing insertion of randomly sized tiny records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40), "Testing insertion of randomly sized medium records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 66, 1, 80), "Testing insertion of randomly sized large records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 333, 1, 160), "Testing insertion of randomly sized huge records");
+
+	// Test opening and closing of files of files
+	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
+    TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close handle3");
+    TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close handle4");
+    TEST_FN_EQ( 0, pfm->closeFile(handle5), "Close handle5");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle1), "Open testFile4.db and store in handle1");
+	TEST_FN_EQ( rc::FILE_HANDLE_ALREADY_INITIALIZED, pfm->openFile("testFile0.db", handle1), "Open testFile0.db and store in already initialized file handle");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle2), "Open testFile4.db and store in handle2");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle3), "Open testFile4.db and store in handle3");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close testFile1.db");
+	TEST_FN_EQ( rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(handle1), "Close testFile0.db again");
+	TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close testFile2.db");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close testFile3.db");
+	TEST_FN_EQ( rc::FILE_COULD_NOT_DELETE, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+	TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close testFile4.db");
+	TEST_FN_EQ( rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(handle4), "Close testFile4.db through uninitialized file handle");
+	TEST_FN_EQ( 0, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
+
+	// Re-open the files to be closed again
+	TEST_FN_EQ( 0, pfm->createFile("testFile4.db"), "Create testFile4.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
+	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
+	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
+	TEST_FN_EQ( 0, pfm->openFile("testFile3.db", handle3), "Open testFile3.db and store in handle3");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
 
 	// Clean up
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
 	TEST_FN_EQ( 0, pfm->closeFile(handle1), "Close handle1");
-	//TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle2), "Close handle2");
+    TEST_FN_EQ( 0, pfm->closeFile(handle3), "Close handle3");
+    TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close handle4");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile0.db"), "Destroy testFile0.db");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile1.db"), "Destroy testFile1.db");
-	//TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile2.db"), "Destroy testFile2.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile3.db"), "Destroy testFile3.db");
+    TEST_FN_EQ( 0, pfm->destroyFile("testFile4.db"), "Destroy testFile4.db");
 
 	cout << "\nRBFM Tests complete: " << numPassed << "/" << numTests << "\n\n" << endl;
 	assert(numPassed == numTests);
@@ -607,7 +949,7 @@ void fhTest()
     TEST_FN_EQ(0, count, "Number of pages correct");
 
     // Write page 1 (error), write page 0 (error), append page, close
-    unsigned char* buffer = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer[PAGE_SIZE];
     for (unsigned i = 0; i < PAGE_SIZE; i++) 
     {
         buffer[i] = i % 256;
@@ -618,7 +960,7 @@ void fhTest()
     TEST_FN_EQ(success, pfm->closeFile(fileHandle), "Close file");
 
     // Open, read page 1 (fail), read page 0, check contents
-    unsigned char* buffer_copy = (unsigned char*)malloc(PAGE_SIZE);
+    unsigned char buffer_copy[PAGE_SIZE];
     memset(buffer_copy, 0, PAGE_SIZE);
     TEST_FN_EQ(success, pfm->openFile(fileName.c_str(), fileHandle), "Open file");
     TEST_FN_EQ(rc::FILE_PAGE_NOT_FOUND, fileHandle.readPage(1, buffer_copy), "Reading from non-existent page");
@@ -1415,8 +1757,8 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
 
 
     RID rid; 
-    void *record = malloc(1000);
-    void *record_copy = malloc(1000);
+    char record[1000];
+    char record_copy[1000];
     int numRecords = 10;
 
     vector<Attribute> recordDescriptor;
@@ -1453,7 +1795,6 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
 
-    free(record);    
     cout << "Test Case 11 Passed!" << endl << endl;
 
     return 0;
@@ -1470,6 +1811,9 @@ void cleanup()
     remove("testFile0.db");
     remove("testFile1.db");
     remove("testFile2.db");
+    remove("testFile3.db");
+    remove("testFile4.db");
+    remove("testFile5.db");
     remove("fh_test");
 }
 
@@ -1479,7 +1823,7 @@ int main()
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance(); // To test the functionality of the record-based file manager
     
     cleanup();
-    
+
     RBFTest_1(pfm);
     RBFTest_2(pfm); 
     RBFTest_3(pfm);
@@ -1502,5 +1846,8 @@ int main()
 
     cleanup();
 
+    // Clean up remaining memory so it doesn't look like we leaked to valgrind
+    delete reinterpret_cast<DeletablePFM*>(PagedFileManager::instance());
+    delete reinterpret_cast<DeletableRBFM*>(RecordBasedFileManager::instance());
     return 0;
 }

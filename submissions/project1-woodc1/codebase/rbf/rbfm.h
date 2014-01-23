@@ -15,20 +15,15 @@ using namespace std;
 #define NUM_FREESPACE_LISTS 11
 
 // Record ID
+// Uniquely identifies the location in the file where the record is stored
 typedef struct
 {
   PageNum pageNum;
   unsigned slotNum;
 } RID;
 
-// Struct for a particular record
-typedef struct 
-{
-  unsigned numFields;
-  void* fields;
-} Record;
-
 // Page index slot entry
+// Data required to find, and copy the exact amount of size required for a record
 typedef struct
 {
   unsigned size; // size is for the entire record, and includes the header information with the offsets and the length of each resp. field
@@ -36,13 +31,27 @@ typedef struct
 } PageIndexSlot;
 
 // Page index (directory)
+// Data required for keeping track of how much room is available on this page, along with basic bookkeeping information
+// The slotNum of an RID will (backwards) index into the list of PageIndexSlots, thus retrieving the size and location of the record
+// /-----------------------------------------\
+// | Page N                                  |
+// | --------------------------------------- |
+// | [Rec size][Rec offsets][Rec data......] |
+// | [Rec size][Rec offsets....][Rec data... |
+// | ............[Rec Size][Rec offsets][Rec |
+// | data.......]                            |
+// |               <free space>              |
+// |                                         |
+// | [PageIndexSlot_K] [PageIndexSlot_K-1]   |
+// | ... [PageIndexSlot_0] [PageIndexHeader] |
+// \-----------------------------------------/
 struct PageIndexHeader
 {
   unsigned pageNumber;
   unsigned freeSpaceOffset;
   unsigned numSlots;
 
-  // Freespace list data
+  // Doubly linked list data for whichever freespace list we are attached to
   unsigned freespaceList;
   PageNum prevPage;
   PageNum nextPage;
@@ -51,9 +60,7 @@ struct PageIndexHeader
 
 // Attribute
 typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;
-
 typedef unsigned AttrLength;
-
 struct Attribute {
     string   name;     // attribute name
     AttrType type;     // attribute type
@@ -71,22 +78,30 @@ typedef enum { EQ_OP = 0,  // =
 } CompOp;
 
 // Page FreeSpace list data
+// The head of a freespace list
 struct FreeSpaceList
 {
-    unsigned short cutoff;
-    PageNum listHead;
+    unsigned short cutoff; // Any pages on this list are garunteed to have >= cutoff free bytes
+    PageNum listHead; // Point to the first page in this list, 0 if list is empty
 };
 
-// PageFile Header (should fit in 1st page)
+// PageFile Header (must fit on page #0)
+// The file header, data which we store on page 0 that allows us to access free pages
 struct PFHeader
 {
-  unsigned headerSize;
-  unsigned pageSize;
-  unsigned version;
-  unsigned numPages;
-  unsigned numFreespaceLists;
+    PFHeader();
+    void init();
+    RC validate();
 
-  FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
+    // Verification that we are using the correct version of the file with constants that are known
+    unsigned headerSize;
+    unsigned pageSize;
+    unsigned version;
+    unsigned numPages;
+    unsigned numFreespaceLists;
+
+    // Lists of pages with free space
+    FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
 };
 
 
@@ -129,10 +144,6 @@ public:
   RC openFile(const string &fileName, FileHandle &fileHandle);
   
   RC closeFile(FileHandle &fileHandle);
-
-//// OUR ADDED METHODs
-  RC validate(PFHeader &header);
-  void init(PFHeader &header);
 
   //  Format of the data passed into the function is the following:
   //  1) data is a concatenation of values of the attributes

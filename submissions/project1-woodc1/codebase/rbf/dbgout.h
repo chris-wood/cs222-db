@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <iostream>
 
-#define DEBUG_ENABLED 1
+#define DEBUG_ENABLED 0
 #define DEFAULT_VERBOSITY LOG_EXTREMEDEBUG
 
 namespace dbg
