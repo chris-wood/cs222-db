@@ -6,14 +6,15 @@ CONFIG -= qt
 DEFINES += REDIRECT_PRINT_RECORD
 
 SOURCES += \
+    ../cs222/src/rbf/rbftest.cc \
     ../cs222/src/rbf/rbfm.cc \
     ../cs222/src/rbf/pfm.cc \
     ../cs222/src/util/returncodes.cc \
     ../cs222/src/util/dbgout.cc \
     ../cs222/src/rm/rm.cc \
-    ../cs222/src/rm/rmtest_1.cc \
-    ../cs222/src/rm/rmtest_2.cc \
-    ../cs222/src/rm/rmtest_extra.cc
+#    ../cs222/src/rm/rmtest_1.cc \
+#    ../cs222/src/rm/rmtest_2.cc \
+#    ../cs222/src/rm/rmtest_extra.cc
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \
