@@ -76,17 +76,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\dbgout.h" />
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h" />
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.h" />
-    <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\returncodes.h" />
+    <ClInclude Include="..\..\cs222\src\rm\rm.h" />
+    <ClInclude Include="..\..\cs222\src\rm\test_util.h" />
+    <ClInclude Include="..\..\cs222\src\util\dbgout.h" />
+    <ClInclude Include="..\..\cs222\src\util\returncodes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\dbgout.cpp" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbftest.cc" />
-    <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\returncodes.cpp" />
+    <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
+    <ClCompile Include="..\..\cs222\src\rm\rmtest_1.cc" />
+    <ClCompile Include="..\..\cs222\src\rm\rmtest_2.cc" />
+    <ClCompile Include="..\..\cs222\src\rm\rmtest_extra.cc" />
+    <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />
+    <ClCompile Include="..\..\cs222\src\util\returncodes.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

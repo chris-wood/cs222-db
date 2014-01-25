@@ -6,8 +6,8 @@
 #include <vector>
 #include <stdint.h>
 
-#include "../rbf/pfm.h"
-#include "dbgout.h"
+#include "pfm.h"
+#include "../util/dbgout.h"
 
 using namespace std;
 

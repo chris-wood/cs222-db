@@ -1,5 +1,5 @@
 #include "pfm.h"
-#include "returncodes.h"
+#include "../util/returncodes.h"
 
 #include <sys/stat.h>
 #include <assert.h>

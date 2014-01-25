@@ -6,16 +6,16 @@ all: librbf.a rbftest
 # lib file dependencies
 librbf.a: librbf.a(pfm.o)
 librbf.a: librbf.a(rbfm.o)
-librbf.a: librbf.a(dbgout.o)
-librbf.a: librbf.a(returncodes.o)
+librbf.a: librbf.a(../util/dbgout.o)
+librbf.a: librbf.a(../util/returncodes.o)
 
 # c file dependencies
-pfm.o: pfm.h returncodes.h dbgout.h
-rbfm.o: rbfm.h returncodes.h dbgout.h
-returncodes.o: returncodes.h
-dbgout.cpp: dbgout.h
+pfm.o: pfm.h ../util/returncodes.h ../util/dbgout.h
+rbfm.o: rbfm.h ../util/returncodes.h ../util/dbgout.h
+../util/returncodes.o: ../util/returncodes.h
+../util/dbgout.o: ../util/dbgout.h
 
-rbftest.o: pfm.h rbfm.h returncodes.h dbgout.h
+rbftest.o: pfm.h rbfm.h ../util/returncodes.h ../util/dbgout.h
 
 # binary dependencies
 rbftest: rbftest.o librbf.a $(CODEROOT)/rbf/librbf.a

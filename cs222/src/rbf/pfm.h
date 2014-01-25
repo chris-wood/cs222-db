@@ -8,7 +8,7 @@
 #include <string>
 #include <stdint.h>
 
-#include "dbgout.h"
+#include "../util/dbgout.h"
 
 // For convenience
 using namespace std;
