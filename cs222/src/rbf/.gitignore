@@ -12,3 +12,5 @@ our_test_5
 testFile0.db
 testFile1.db
 testFile2.db
+*.exe
+*.exe.stackdump
