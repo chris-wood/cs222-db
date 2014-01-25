@@ -115,7 +115,7 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 // The way to use it is like the following:
 //  RBFM_ScanIterator rbfmScanIterator;
 //  rbfm.open(..., rbfmScanIterator);
-//  while (rbfmScanIterator(rid, data) != RBFM_EOF) {
+//  while (rbfmScanIterator.getNextRecord(rid, data) != RBFM_EOF) {
 //    process the data;
 //  }
 //  rbfmScanIterator.close();
