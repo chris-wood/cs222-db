@@ -31,20 +31,23 @@ typedef struct
 } PageIndexSlot;
 
 // Page index (directory)
-// Data required for keeping track of how much room is available on this page, along with basic bookkeeping information
-// The slotNum of an RID will (backwards) index into the list of PageIndexSlots, thus retrieving the size and location of the record
-// /-----------------------------------------\
-// | Page N                                  |
-// | --------------------------------------- |
-// | [Rec size][Rec offsets][Rec data......] |
-// | [Rec size][Rec offsets....][Rec data... |
-// | ............[Rec Size][Rec offsets][Rec |
-// | data.......]                            |
-// |               <free space>              |
-// |                                         |
-// | [PageIndexSlot_K] [PageIndexSlot_K-1]   |
-// | ... [PageIndexSlot_0] [PageIndexHeader] |
-// \-----------------------------------------/
+/*
+Data required for keeping track of how much room is available on this page, along with basic bookkeeping information
+The slotNum of an RID will (backwards) index into the list of PageIndexSlots, thus retrieving the size and location of the record
+/-----------------------------------------\
+| Page N                                  |
+| --------------------------------------- |
+| [Rec size][Rec offsets][Rec data......] |
+| [Rec size][Rec offsets....][Rec data... |
+| ............[Rec Size][Rec offsets][Rec |
+| data.......]                            |
+|               <free space>              |
+|                                         |
+| [PageIndexSlot_K] [PageIndexSlot_K-1]   |
+| ... [PageIndexSlot_0] [PageIndexHeader] |
+\-----------------------------------------/
+*/
+
 struct PageIndexHeader
 {
   unsigned pageNumber;
