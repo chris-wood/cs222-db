@@ -21,6 +21,6 @@ HEADERS += \
     ../cs222/src/rbf/pfm.h \
     ../cs222/src/util/returncodes.h \
     ../cs222/src/util/dbgout.h \
+    ../cs222/src/util/hash.h \
     ../cs222/src/rm/rm.h \
-    ../cs222/src/rm/test_util.h
-
+    ../cs222/src/rm/test_util.h \
