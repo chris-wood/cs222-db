@@ -361,8 +361,8 @@ RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, int minRecord
     bigString.type = TypeVarChar;
     recordDescriptor.push_back(bigString);
 
-    //const int maxRecordSize = PAGE_SIZE - 36;
-    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size();
+    //const int maxRecordSize = PAGE_SIZE - 40;
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size() - sizeof(unsigned);
 
     // Allocate memory
     int seed = 0x7ed55d16;

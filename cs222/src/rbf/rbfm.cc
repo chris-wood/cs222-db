@@ -386,25 +386,30 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
 {
     // Compute the size of the record to be inserted
-    unsigned offsetFieldsSize = sizeof(unsigned) * recordDescriptor.size();
-    unsigned recLength = sizeof(unsigned) * recordDescriptor.size();
-    unsigned offsetIndex = 0;
+    const unsigned recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + sizeof(unsigned);
+    unsigned recLength = recHeaderSize;
+    unsigned headerIndex = 0;
     unsigned dataOffset = 0;
 
     // Allocate an array of offets with N entries, where N is the number of fields as indicated
     // by the recordDescriptor vector. Each entry i in this array points to the address offset,
     // from the base address of the record on disk, where the i-th field is stored. 
-    unsigned* offsets = (unsigned*)malloc(offsetFieldsSize);
-	if (!offsets)
+    unsigned* recHeader = (unsigned*)malloc(recHeaderSize);
+    if (!recHeader)
 	{
 		return rc::OUT_OF_MEMORY;
 	}
+
+    // Write out the number of attributes as part of the header of the record
+    unsigned numAttributes = recordDescriptor.size();
+    memcpy(recHeader, &numAttributes, sizeof(unsigned));
+    ++headerIndex;
 
     // Compute the compact record length and values to be inserted into the offset array
     for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
     {
         // First, store the offset
-        offsets[offsetIndex++] = recLength;
+        recHeader[headerIndex++] = recLength;
 
         // Now bump the length as needed based on the length of the contents
         int count = 0;
@@ -428,7 +433,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
             break;
 
         default:
-            free(offsets);
+            free(recHeader);
             return rc::ATTRIBUTE_INVALID_TYPE;
         }
     }
@@ -438,7 +443,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     RC ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
     if (ret != rc::OK)
     {
-        free(offsets);
+        free(recHeader);
         return ret;
     }
 
@@ -447,7 +452,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     ret = fileHandle.readPage(pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
-		free(offsets);
+        free(recHeader);
 		return ret;
 	}
 
@@ -457,9 +462,9 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
-    memcpy(pageBuffer + header->freeSpaceOffset, offsets, offsetFieldsSize);
-    memcpy(pageBuffer + header->freeSpaceOffset + offsetFieldsSize, data, recLength - offsetFieldsSize);
-    free(offsets);
+    memcpy(pageBuffer + header->freeSpaceOffset, recHeader, recHeaderSize);
+    memcpy(pageBuffer + header->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
+    free(recHeader);
 
     // Create a new index slot entry and prepend it to the list
     PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)));
@@ -513,7 +518,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
     PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
 
     // Copy the contents of the record into the data block - O(1)
-    int fieldOffset = recordDescriptor.size() * sizeof(unsigned);
+    int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + sizeof(unsigned);
     memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
