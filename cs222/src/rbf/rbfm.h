@@ -196,7 +196,7 @@ protected:
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 
-  static PageIndexSlot* getPageIndexSlot(void* pageBuffer, const RID& rid);
+  static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

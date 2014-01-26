@@ -467,7 +467,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     free(recHeader);
 
     // Create a new index slot entry and prepend it to the list
-    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, header->numSlots);
     slotIndex->size = recLength;
     slotIndex->pageOffset = header->freeSpaceOffset;
 
@@ -515,7 +515,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	}
 
     // Find the slot where the record is stored - O(1)
-    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
 	if (slotIndex->size == 0)
 	{
 		return rc::RECORD_DELETED;
@@ -611,7 +611,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
     PageIndexHeader* header = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
 
 	// Find the slot where the record is stored
-    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
 
 	if (slotIndex->size == 0)
 	{
@@ -658,7 +658,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     }
 
 	// Find the slot where the record is stored
-    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
 
 	if (slotIndex->size == 0)
 	{
@@ -862,7 +862,7 @@ RC PFHeader::validate()
     return rc::OK;
 }
 
-PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, const RID& rid)
+PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)
 {
-	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
+	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)));
 }
