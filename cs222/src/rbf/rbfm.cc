@@ -594,7 +594,35 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 
 RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	// Pull the file header in
+    unsigned char headerBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(0, headerBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+	PFHeader* pfHeader = (PFHeader*)headerBuffer;
+
+	// O(N) cost - We are rewriting all pages in this file
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	for (unsigned page = 1; page <= pfHeader->numPages; ++page)
+	{
+		PageIndexHeader* pageHeader = getPageIndexHeader(pageBuffer);
+		pageHeader->numSlots = 0;
+		pageHeader->freeSpaceOffset = 0;
+		pageHeader->pageNumber = page;
+		pageHeader->prevPage = page - 1;
+		pageHeader->nextPage = (page < pfHeader->numPages) ? (page - 1) : 0;
+		pageHeader->freespaceList = pfHeader->numFreespaceLists - 1;
+
+		RC ret = fileHandle.writePage(page, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+
+	return rc::OK;
 }
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
