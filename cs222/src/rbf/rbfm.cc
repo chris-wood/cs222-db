@@ -648,6 +648,79 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
     return rc::OK;
 }
 
+RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+{
+    // Pull the page into memory - O(1)
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNumber, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Read in the page header and recover the number of slots
+    PageIndexHeader header;
+    memcpy(&header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
+
+    // Only proceed if there are actually slots on this page that need to be reordered
+    if (header.numSlots > 0)
+    {
+        // Read in the record offsets
+        PageIndexSlot* offsets = (PageIndexSlot*)malloc(header.numSlots * sizeof(PageIndexSlot));
+        memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), (header.numSlots * sizeof(PageIndexSlot)));
+
+        // Find the first non-empty slot
+        int offsetIndex = -1;
+        for (int i = 0; i < header.numSlots; i++)
+        {
+            if (offsets[header.numSlots - 1 - i].size != 0)
+            {
+                offsetIndex = header.numSlots - 1 - i;
+                break;
+            }
+        }
+
+        // Allocate space for the smaller page and move the first non-empty record to the front
+        unsigned char newBuffer[PAGE_SIZE];
+        memcpy(newBuffer, pageBuffer + offsets[offsetIndex].pageOffset, offsets[offsetIndex].size);        
+        offsets[offsetIndex].pageOffset = 0; 
+        unsigned offset = offsets[offsetIndex].size;
+
+        // Push everything down by looking ahead (walking the offset list in reverse order)
+        while (offsetIndex > 0)
+        {
+            unsigned shift; // = offsets[i - 1].pageOffset - (offset + offsets[i].size);
+            int nextIndex;
+
+            // Short circuit
+            if (offsetIndex == 0)
+            {
+                break;
+            }
+
+            // Find the next non-empty slot to determine the shift difference
+            for (nextIndex = offsetIndex - 1; nextIndex >= 0; nextIndex--)
+            {
+                if (offsets[nextIndex].size != 0)
+                {
+                    shift = offsets[nextIndex].pageOffset - (offset + offsets[offsetIndex].size);
+                    break;
+                }
+            }
+            memcpy(newBuffer + (offset * sizeof(unsigned char)), pageBuffer + offsets[nextIndex].pageOffset, offsets[nextIndex].size);
+            offsets[nextIndex].pageOffset = offset;
+            offset += offsets[nextIndex].size;
+            offsetIndex = nextIndex;
+        }
+
+        // Write the contents of newBuffer to memory
+        memcpy(newBuffer, newBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), (header.numSlots * sizeof(PageIndexSlot)));
+        fileHandle.writePage(pageNumber, (void*)newBuffer);
+    }
+
+    return rc::OK;
+}
+
 PFHeader::PFHeader()
 {
     memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
