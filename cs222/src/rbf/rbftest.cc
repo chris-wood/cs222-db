@@ -505,7 +505,7 @@ void mallocRandomValue(Attribute& attr, int& size, void** bufferIn, void** buffe
     }
 }
 
-RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords, int maxRecords)
+RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords, int maxRecords, bool doDeletes)
 {
     RC ret;
     RecordBasedFileManager* rbfm = RecordBasedFileManager::instance();
@@ -515,6 +515,7 @@ RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords
     std::vector< std::vector< void* > > bufferInLists;
     std::vector< std::vector< void* > > bufferOutLists;
     std::vector< RID > ridLists;
+	std::vector< unsigned > indexes;
 
     // Generate data
     for (int iteration = 0; iteration < numIterations; ++iteration)
@@ -524,6 +525,7 @@ RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords
         bufferInLists.push_back(std::vector< void* >());
         bufferOutLists.push_back(std::vector< void* >());
         ridLists.push_back(RID());
+		indexes.push_back(iteration);
 
         std::vector< Attribute >& attributeList = attributeLists.back();
         std::vector< int >& bufferSizes = bufferSizeLists.back();
@@ -619,6 +621,43 @@ RC testRandomInsertion(FileHandle& fileHandle, int numIterations, int minRecords
         }
     }
 
+	// Delete some records and do rechecks on the rest
+	if (doDeletes)
+	{
+		std::random_shuffle(indexes.begin(), indexes.end());
+
+		// Continually delete half of the records and recheck the rest
+		while(indexes.size() > 3)
+		{
+			for (unsigned numToDelete = 0; numToDelete <= indexes.size()/2; ++numToDelete)
+			{
+				unsigned toDelete = indexes.back(); indexes.pop_back();
+				ret = rbfm->deleteRecord(fileHandle, attributeLists[toDelete], ridLists[toDelete]);
+				if (ret != rc::OK)
+				{
+					std::cout << "Error deleting record=" << toDelete << std::endl;
+					break;
+				}
+			}
+
+			// Recheck remaining recs
+			for (std::vector<unsigned>::const_iterator it = indexes.begin(); it != indexes.end(); ++it)
+			{
+				unsigned index = *it;
+				std::vector< Attribute >& attributeList = attributeLists[index];
+				void* bufferOut = unifiedBuffersOut[index];
+				RID& rid = ridLists[index];
+
+				ret = rbfm->readRecord(fileHandle, attributeList, rid, bufferOut);
+				if (ret != rc::OK)
+				{
+					std::cout << "Error reading in record iteration=" << index << std::endl;
+					break;
+				}
+			}
+		}
+	}
+
     // Free up memory
     for(int iteration = 0; iteration < numIterations; ++iteration)
     {
@@ -682,10 +721,10 @@ void rbfmTest()
     // Test creating randomly sized records
     TEST_FN_EQ( 0, pfm->createFile("testFile5.db"), "Create testFile5.db");
     TEST_FN_EQ( 0, pfm->openFile("testFile5.db", handle5), "Open testFile5.db and store in handle5");
-    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 1, 1, 2), "Testing insertion of randomly sized tiny records");
-    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40), "Testing insertion of randomly sized medium records");
-    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 66, 1, 80), "Testing insertion of randomly sized large records");
-    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 333, 1, 160), "Testing insertion of randomly sized huge records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 1, 1, 2, false), "Testing insertion of randomly sized tiny records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40, false), "Testing insertion of randomly sized medium records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 66, 1, 80, false), "Testing insertion of randomly sized large records");
+    TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 333, 1, 160, false), "Testing insertion of randomly sized huge records");
 
 	// Test opening and closing of files of files
 	TEST_FN_EQ( 0, pfm->closeFile(handle0), "Close handle0");
@@ -710,8 +749,13 @@ void rbfmTest()
 	TEST_FN_EQ( rc::FILE_HANDLE_NOT_INITIALIZED, pfm->closeFile(handle4), "Close testFile4.db through uninitialized file handle");
 	TEST_FN_EQ( 0, pfm->destroyFile("testFile4.db"), "Delete testFile4.db with open handles");
 
-	// Re-open the files to be closed again
+	// Test inserting and deleting records
 	TEST_FN_EQ( 0, pfm->createFile("testFile4.db"), "Create testFile4.db");
+	TEST_FN_EQ( 0, pfm->openFile("testFile4.db", handle4), "Open testFile4.db and store in handle4");
+	TEST_FN_EQ( rc::OK, testRandomInsertion(handle4, 20, 1, 40, true), "Testing insertion and deletion of records");
+	TEST_FN_EQ( 0, pfm->closeFile(handle4), "Close handle4");
+
+	// Re-open the files to be closed again
 	TEST_FN_EQ( 0, pfm->openFile("testFile0.db", handle0), "Open testFile0.db and store in handle0");
 	TEST_FN_EQ( 0, pfm->openFile("testFile1.db", handle1), "Open testFile1.db and store in handle1");
 	TEST_FN_EQ( 0, pfm->openFile("testFile2.db", handle2), "Open testFile2.db and store in handle2");
@@ -1949,7 +1993,7 @@ int main()
 
     // Our tests
     RBFTest_11(rbfm, rids, sizes);
-    rbfmTestReadAttribute(rbfm, rids, sizes);
+    //rbfmTestReadAttribute(rbfm, rids, sizes);
 	pfmTest();
     fhTest();
 	rbfmTest();
