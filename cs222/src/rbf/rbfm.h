@@ -159,11 +159,6 @@ public:
   // This method will be mainly used for debugging/testing
   RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
 
-/**************************************************************************************************************************************************************
-***************************************************************************************************************************************************************
-IMPORTANT, PLEASE READ: All methods below this comment (other than the constructor and destructor) are NOT required to be implemented for part 1 of the project
-***************************************************************************************************************************************************************
-***************************************************************************************************************************************************************/
   RC deleteRecords(FileHandle &fileHandle);
 
   RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
@@ -200,6 +195,8 @@ protected:
   RC readHeader(FileHandle &fileHandle, PFHeader* header);
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
+
+  static PageIndexSlot* getPageIndexSlot(void* pageBuffer, const RID& rid);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

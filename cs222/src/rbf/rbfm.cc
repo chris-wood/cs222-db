@@ -467,7 +467,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     free(recHeader);
 
     // Create a new index slot entry and prepend it to the list
-    PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)));
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
     slotIndex->size = recLength;
     slotIndex->pageOffset = header->freeSpaceOffset;
 
@@ -515,7 +515,11 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	}
 
     // Find the slot where the record is stored - O(1)
-    PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+	if (slotIndex->size == 0)
+	{
+		return rc::RECORD_DELETED;
+	}
 
     // Copy the contents of the record into the data block - O(1)
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + sizeof(unsigned);
@@ -586,6 +590,82 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
     out << ")" << endl;
 
     return rc::OK;
+}
+
+RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
+{
+	// Read the page of data RID points to
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+	// Recover the index header structure
+    PageIndexHeader* header = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+
+	// Find the slot where the record is stored
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+
+	if (slotIndex->size == 0)
+	{
+		// TODO: Should this be an error, deleting an already deleted record? Or do we allow it and skip the operation (like a free(NULL))
+		return rc::OK;
+	}
+
+	// If this is the last record on the page being deleted, merge the freespace with the main pool
+	if (rid.slotNum + 1 == header->numSlots)
+	{
+		// Update the header to merge the freespace pool with this deleted record
+		header->freeSpaceOffset -= slotIndex->size;
+		header->numSlots -= 1;
+
+		// Zero out the slot data to leave a clean slate for the next one
+		memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
+		slotIndex->pageOffset = 0;
+		slotIndex->size = 0;
+	}
+	else
+	{
+		// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
+		memset(pageBuffer + slotIndex->pageOffset, 0xDEADBEEF, slotIndex->size);
+
+		// Mark the slot as 'free' -- leave the pageOffset in order to facilitate later calls to reorganizePage()
+		slotIndex->size = 0;
+	}
+
+	// Write back the new page
+	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+
+	return ret;
+}
+
+// Assume the rid does not change after update
+RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
+{
+	// Read the page of data RID points to
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+	// Find the slot where the record is stored
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid);
+
+	if (slotIndex->size == 0)
+	{
+		return rc::RECORD_DELETED;
+	}
+
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
@@ -671,7 +751,7 @@ RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescrip
 
         // Find the first non-empty slot
         int offsetIndex = -1;
-        for (int i = 0; i < header.numSlots; i++)
+        for (unsigned i = 0; i < header.numSlots; i++)
         {
             if (offsets[header.numSlots - 1 - i].size != 0)
             {
@@ -780,4 +860,9 @@ RC PFHeader::validate()
         return rc::HEADER_FREESPACE_LISTS_MISMATCH;
  
     return rc::OK;
+}
+
+PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, const RID& rid)
+{
+	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
 }
