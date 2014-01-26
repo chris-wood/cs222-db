@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <cassert>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -1800,6 +1801,114 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     return 0;
 }
 
+RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes)
+{
+	RC rc = rc::OK;
+    string fileName = "test_5";
+
+    // Create a file named "our_test_4"
+    rc = rbfm->createFile(fileName.c_str());
+    // assert(rc == success);
+
+    if(FileExists(fileName.c_str()))
+    {
+        cout << "File " << fileName << " has been created." << endl;
+    }
+    else
+    {
+        cout << "Failed to create file!" << endl;
+        cout << "Test Case 9 Failed!" << endl << endl;
+        return -1;
+    }
+
+    // Open the file "our_test_4"
+    FileHandle fileHandle;
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
+    assert(rc == success);
+
+    RID rid; 
+    char record[1000];
+    char record_copy[1000];
+    int numRecords = 10;
+
+    vector<Attribute> recordDescriptor;
+    createLargeRecordDescriptor(recordDescriptor);
+
+    for(unsigned i = 0; i < recordDescriptor.size(); i++)
+    {
+        cout << "Attribute Name: " << recordDescriptor[i].name << endl;
+        cout << "Attribute Type: " << (AttrType)recordDescriptor[i].type << endl;
+        cout << "Attribute Length: " << recordDescriptor[i].length << endl << endl;
+    }
+
+    // Insert 2000 records into file
+    for(int i = 0; i < numRecords; i++)
+    {
+        // Test insert Record
+        int size = 0;
+        memset(record, 0, 1000);
+        memset(record_copy, 0, 1000);
+        prepareLargeRecord(i, record, &size);
+
+        // Write, read, and then immediately compare the two
+        rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+        assert(rc == success);
+        rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, record_copy);
+        assert(rc == success);
+        assert(memcmp(record, record_copy, size) == 0);
+        rbfm->printRecord(recordDescriptor, record_copy);
+
+        // Walk each attribute and extract/compare the expected value
+        for (int j = 0; j < numRecords * 3; j += 3) // each tuple has three attributes, and we're only getting the strings here
+        {
+        	const char* tempBuffer = (char*)malloc(i + 1);
+        	stringstream out;
+        	out << j;
+        	string attrName = "attr" + out.str();
+			rbfm->readAttribute(fileHandle, recordDescriptor, rid, attrName, (void*)tempBuffer);
+        	cout << "read (" << j << "): " << tempBuffer << endl;
+
+        	// Rebuild the expected string
+        	char text = i % 26 + 97;
+        	int count = i % 50 + 1;
+        	char* charBuf = (char*)malloc(count);
+        	for (int k = 0; k < count; k++)
+        	{
+        		memcpy((char*)charBuf + k, &text, 1);
+        	}
+        	assert(strcmp(tempBuffer, charBuf) == 0);
+        }
+
+        // Walk the ints & floats now and compare equality
+        for (int j = 0; j < numRecords * 3; j += 3)
+        {
+        	unsigned intVal = 0;
+        	float floatVal = 0.0;
+        	stringstream out1;
+        	out1 << (j+1);
+        	string attrName = "attr" + out1.str();
+        	rbfm->readAttribute(fileHandle, recordDescriptor, rid, attrName, &intVal);
+        	cout << "read (" << (j+1) << "): " << intVal << endl;
+        	assert(intVal == i);
+
+        	stringstream out2;
+        	out2 << (j+2);
+        	attrName = "attr" + out2.str();
+        	rbfm->readAttribute(fileHandle, recordDescriptor, rid, attrName, &floatVal);
+        	cout << "read (" << (j+2) << "): " << floatVal << endl;
+        	assert(floatVal == (i+1));
+        }
+
+        rids.push_back(rid);
+        sizes.push_back(size);        
+    }
+    // Close the file "test_4"
+    rc = rbfm->closeFile(fileHandle);
+    assert(rc == success);
+
+	return rc;
+}
+
 void cleanup()
 {
 	remove("test");
@@ -1840,6 +1949,7 @@ int main()
 
     // Our tests
     RBFTest_11(rbfm, rids, sizes);
+    rbfmTestReadAttribute(rbfm, rids, sizes);
 	pfmTest();
     fhTest();
 	rbfmTest();

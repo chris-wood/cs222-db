@@ -588,6 +588,66 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
     return rc::OK;
 }
 
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+{
+    // Pull the page into memory - O(1)
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Find the attribute index sought after by the caller
+    int attrIndex = 1; // offset by 1 to start to skip over the #attributes slot in the record header
+    Attribute attr;
+    for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
+    {
+        if (itr->name == attributeName)
+        {
+            attr = *itr;
+            break;
+        }
+        attrIndex++;
+    }
+
+    // Find the slot where the record is stored - O(1)
+    PageIndexSlot* slotIndex = (PageIndexSlot*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)));
+
+    // Copy the contents of the record into the data block - O(1)
+    unsigned char* tempBuffer = (unsigned char*)malloc(slotIndex->size);
+    memcpy(tempBuffer, pageBuffer + slotIndex->pageOffset, slotIndex->size);
+
+    // Determine the offset of the attribute sought after
+    unsigned offset = 0;
+    memcpy(&offset, tempBuffer + (attrIndex * sizeof(unsigned)), sizeof(unsigned));
+
+    // Now read the data into the caller's buffer
+    switch (attr.type)
+    {
+        case TypeInt:
+        case TypeReal:
+            memcpy(data, tempBuffer + offset, sizeof(unsigned));
+            break;
+        case TypeVarChar:
+            int dataLen = 0;
+            memcpy(&dataLen, tempBuffer + offset, sizeof(unsigned));
+            memcpy(data, tempBuffer + offset + sizeof(unsigned), dataLen);
+            break;
+    }
+
+    // Free up the memory
+    free(tempBuffer);
+
+    dbg::out << dbg::LOG_EXTREMEDEBUG;
+    dbg::out << "RecordBasedFileManager::readAttribute: RID = (" << rid.pageNum << ", " << rid.slotNum << ")\n";;
+    dbg::out << "RecordBasedFileManager::readAttribute: Reading from: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n";;
+    dbg::out << "RecordBasedFileManager::readAttribute: Offset: " << slotIndex->pageOffset << "\n";
+    dbg::out << "RecordBasedFileManager::readAttribute: Size: " << slotIndex->size << "\n";
+
+    return rc::OK;
+}
+
 PFHeader::PFHeader()
 {
     memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
