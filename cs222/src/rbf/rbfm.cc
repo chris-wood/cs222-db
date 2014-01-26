@@ -154,7 +154,7 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     {
         // Create the blank index structure on each page (at the end)
         // Note: there are no slots yet, so there are no slotOffsets prepended to this struct on disk
-        PageIndexHeader* index = (PageIndexHeader*)(newPages + PAGE_SIZE - sizeof(PageIndexHeader));
+        PageIndexHeader* index = getPageIndexHeader(newPages);
         index->freeSpaceOffset = 0;
         index->numSlots = 0;
         index->pageNumber = fileHandle.getNumberOfPages();
@@ -180,7 +180,7 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             }
 
             // Update the prev pointer of the previous head to be our page number
-            PageIndexHeader* previousListHead = (PageIndexHeader*)(listSwapBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+            PageIndexHeader* previousListHead = getPageIndexHeader(listSwapBuffer);
             previousListHead->prevPage = pageNum;
             ret = fileHandle.writePage(previousListHead->pageNumber, listSwapBuffer);
             if (ret != rc::OK)
@@ -278,7 +278,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         }
 
         // Update the prev pointer of the next page to our prev pointer
-        PageIndexHeader* nextPageHeader = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+        PageIndexHeader* nextPageHeader = getPageIndexHeader(pageBuffer);
         nextPageHeader->prevPage = pageHeader.prevPage;
         ret = fileHandle.writePage(nextPageHeader->pageNumber, pageBuffer);
         if (ret != rc::OK)
@@ -301,7 +301,7 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
         }
 
         // Update the prev pointer of the previous head to be our page number
-        PageIndexHeader* listFirstPageHeader = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+        PageIndexHeader* listFirstPageHeader = getPageIndexHeader(pageBuffer);
         listFirstPageHeader->prevPage = pageHeader.pageNumber;
         ret = fileHandle.writePage(listFirstPageHeader->pageNumber, pageBuffer);
         if (ret != rc::OK)
@@ -457,7 +457,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	}
 
     // Recover the index header structure
-    PageIndexHeader* header = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+    PageIndexHeader* header = getPageIndexHeader(pageBuffer);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
 
@@ -608,7 +608,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
     }
 
 	// Recover the index header structure
-    PageIndexHeader* header = (PageIndexHeader*)(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+    PageIndexHeader* header = getPageIndexHeader(pageBuffer);
 
 	// Find the slot where the record is stored
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
@@ -865,4 +865,9 @@ RC PFHeader::validate()
 PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)
 {
 	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)));
+}
+
+PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
+{
+	return (PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
 }
