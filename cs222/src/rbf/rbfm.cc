@@ -759,7 +759,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
     return rc::OK;
 }
 
-RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
@@ -832,6 +832,11 @@ RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescrip
     return rc::OK;
 }
 
+RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttribute, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
+{
+
+}
+
 PFHeader::PFHeader()
 {
     memset(freespaceLists, 0, sizeof(FreeSpaceList) * NUM_FREESPACE_LISTS);
@@ -891,6 +896,32 @@ RC PFHeader::validate()
         return rc::HEADER_FREESPACE_LISTS_MISMATCH;
  
     return rc::OK;
+}
+
+bool RecordBasedFileManager::equalsInt(void* a, void* b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+	return *(int*)a == *(int*)b;
+}
+
+bool RecordBasedFileManager::equalsReal(void* a, void* b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+	return *(float*)a == *(float*)b;
+}
+
+bool RecordBasedFileManager::equalsVarChar(void* a, void* b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	// Check lengths are equal before even testing values (we don't want to be reading off the end of a smaller buffer)
+	if (*(unsigned*)a != *(unsigned*)b)
+		return false;
+
+	return (memcmp(a, b, *(unsigned*)a) == 0);
 }
 
 PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)

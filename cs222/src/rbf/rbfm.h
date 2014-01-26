@@ -196,6 +196,9 @@ protected:
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 
+  static bool equalsInt(void* a, void* b);
+  static bool equalsReal(void* a, void* b);
+  static bool equalsVarChar(void* a, void* b);
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
 
