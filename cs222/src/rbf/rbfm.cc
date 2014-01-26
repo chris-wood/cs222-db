@@ -643,6 +643,9 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	// Write back the new page
 	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
 
+	// If need be, fix the freespace lists
+	movePageToCorrectFreeSpaceList(fileHandle, *header);
+
 	return ret;
 }
 
