@@ -138,9 +138,9 @@ public:
 	RC init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator);
 
 private:
-	static bool equalsInt(void* a, void* b);
-	static bool equalsReal(void* a, void* b);
-	static bool equalsVarChar(void* a, void* b);
+	static bool compareInt(CompOp op, void* a, void* b);
+	static bool compareReal(CompOp op, void* a, void* b);
+	static bool compareVarChar(CompOp op, void* a, void* b);
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
 	void nextRecord(unsigned numSlots);

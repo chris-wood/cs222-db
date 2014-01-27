@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 #include <new>
 
 #ifdef REDIRECT_PRINT_RECORD
@@ -960,16 +961,16 @@ bool RBFM_ScanIterator::recordMatchesValue(char* record)
 	unsigned attributeDataOffset = offsets[_conditionAttributeIndex];
 	void* attributeData = record + attributeDataOffset;
 
-	switch(_comparasionOp)
+	switch(_conditionAttributeType)
 	{
 	case TypeInt:
-		return equalsInt(record, attributeData);
+		return compareInt(_comparasionOp, record, attributeData);
 
 	case TypeReal:
-		return equalsReal(record, attributeData);
+		return compareReal(_comparasionOp, record, attributeData);
 
 	case TypeVarChar:
-		return equalsVarChar(record, attributeData);
+		return compareVarChar(_comparasionOp, record, attributeData);
 	}
 
 	return false;
@@ -1087,30 +1088,66 @@ RC RBFM_ScanIterator::allocateValue(AttrType attributeType, const void* value)
 	return rc::OK;
 }
 
-bool RBFM_ScanIterator::equalsInt(void* a, void* b)
+bool RBFM_ScanIterator::compareInt(CompOp op, void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
-	return *(int*)a == *(int*)b;
+
+	switch(op)
+	{
+	case CompOp::EQ_OP:		return *(int*)a == *(int*)b;
+	case CompOp::NE_OP:		return *(int*)a != *(int*)b;
+	case CompOp::GE_OP:		return *(int*)a >= *(int*)b;
+	case CompOp::GT_OP:		return *(int*)a >  *(int*)b;
+	case CompOp::LE_OP:		return *(int*)a <= *(int*)b;
+	case CompOp::LT_OP:		return *(int*)a <  *(int*)b;
+	case CompOp::NO_OP:
+	default:
+		return true;
+	}
 }
 
-bool RBFM_ScanIterator::equalsReal(void* a, void* b)
+bool RBFM_ScanIterator::compareReal(CompOp op, void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
-	return *(float*)a == *(float*)b;
+
+	switch(op)
+	{
+	case CompOp::EQ_OP:		return *(float*)a == *(float*)b;
+	case CompOp::NE_OP:		return *(float*)a != *(float*)b;
+	case CompOp::GE_OP:		return *(float*)a >= *(float*)b;
+	case CompOp::GT_OP:		return *(float*)a >  *(float*)b;
+	case CompOp::LE_OP:		return *(float*)a <= *(float*)b;
+	case CompOp::LT_OP:		return *(float*)a <  *(float*)b;
+	case CompOp::NO_OP:
+	default:
+		return true;
+	}
 }
 
-bool RBFM_ScanIterator::equalsVarChar(void* a, void* b)
+bool RBFM_ScanIterator::compareVarChar(CompOp op, void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
 
-	// Check lengths are equal before even testing values (we don't want to be reading off the end of a smaller buffer)
-	if (*(unsigned*)a != *(unsigned*)b)
-		return false;
+	unsigned lenA = *(unsigned*)a;
+	unsigned lenB = *(unsigned*)b;
+	char* strA = (char*)a + sizeof(unsigned);
+	char* strB = (char*)b + sizeof(unsigned);
 
-	return (memcmp(a, b, *(unsigned*)a) == 0);
+	switch(op)
+	{
+	case CompOp::EQ_OP:		return (lenA == lenB && (strncmp(strA, strB, lenA) == 0));
+	case CompOp::NE_OP:		return (lenA != lenB || (strncmp(strA, strB, lenA) != 0));
+	case CompOp::GE_OP:		return (                (strncmp(strA, strB, lenA) >= 0));
+	case CompOp::GT_OP:		return (                (strncmp(strA, strB, lenA) >  0));
+	case CompOp::LE_OP:		return (                (strncmp(strA, strB, lenA) <= 0));
+	case CompOp::LT_OP:		return (                (strncmp(strA, strB, lenA) <  0));
+	case CompOp::NO_OP:
+	default:
+		return true;
+	}
 }
 
 unsigned Attribute::sizeInBytes(AttrType type, const void* value)
