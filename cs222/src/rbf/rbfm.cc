@@ -922,7 +922,8 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 	_nextRid.pageNum = 1;
 	_nextRid.slotNum = 0;
 	_comparasionOp = compOp;
-	allocateValue(recordDescriptor[_conditionAttributeIndex], value);
+	_conditionAttributeType = recordDescriptor[_conditionAttributeIndex].type;
+	allocateValue(_conditionAttributeType, value);
 
 	_returnAttributeIndices.clear();
 	_returnAttributeTypes.clear();
@@ -950,6 +951,28 @@ void RBFM_ScanIterator::nextRecord(unsigned numSlots)
 		_nextRid.pageNum++;
 		_nextRid.slotNum = 0;
 	}
+}
+
+bool RBFM_ScanIterator::recordMatchesValue(char* record)
+{
+	// Find the offsets so we can find the attribute value
+	unsigned* offsets = (unsigned*)(record + sizeof(unsigned));
+	unsigned attributeDataOffset = offsets[_conditionAttributeIndex];
+	void* attributeData = record + attributeDataOffset;
+
+	switch(_comparasionOp)
+	{
+	case TypeInt:
+		return equalsInt(record, attributeData);
+
+	case TypeReal:
+		return equalsReal(record, attributeData);
+
+	case TypeVarChar:
+		return equalsVarChar(record, attributeData);
+	}
+
+	return false;
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
@@ -996,6 +1019,13 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 			// TODO: Follow tombstone
 		}
 
+		// Compare record with user's data, skip if it doesn't match
+		if (!recordMatchesValue(pageBuffer + slot->pageOffset))
+		{
+			nextRecord(pageHeader->numSlots);
+			continue;
+		}
+
 		// Copy over the record to the user's buffer
 		copyRecord((char*)data, pageBuffer + slot->pageOffset, *numAttributes);
 
@@ -1028,17 +1058,19 @@ void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned numA
 
 RC RBFM_ScanIterator::close()
 {
+	// TODO: What's this supposed to do?
+
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC RBFM_ScanIterator::allocateValue(const Attribute& attribute, const void* value)
+RC RBFM_ScanIterator::allocateValue(AttrType attributeType, const void* value)
 {
 	if(_comparasionValue)
 	{
 		free(_comparasionValue);
 	}
 
-	unsigned attributeSize = Attribute::sizeInBytes(attribute.type, value);
+	unsigned attributeSize = Attribute::sizeInBytes(attributeType, value);
 	if (attributeSize == 0)
 	{
 		return rc::ATTRIBUTE_INVALID_TYPE;

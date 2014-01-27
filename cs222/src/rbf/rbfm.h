@@ -144,14 +144,16 @@ private:
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
 	void nextRecord(unsigned numSlots);
-	RC allocateValue(const Attribute& attribute, const void* value);
+	RC allocateValue(AttrType attributeType, const void* value);
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
+	bool recordMatchesValue(char* record);
 
 	FileHandle* _fileHandle;
 	RID _nextRid;
 
 	CompOp _comparasionOp;
 	void* _comparasionValue;
+	AttrType _conditionAttributeType;
 	unsigned _conditionAttributeIndex;
 	std::vector<unsigned> _returnAttributeIndices;
 	std::vector<AttrType> _returnAttributeTypes;
