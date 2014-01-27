@@ -414,7 +414,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
         // Now bump the length as needed based on the length of the contents
         int count = 0;
         const Attribute& attr = *itr;
-		unsigned attrSize = attr.sizeInBytes((char*)data + dataOffset);
+		unsigned attrSize = Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
 		if (attrSize == 0)
 		{
 			return rc::ATTRIBUTE_INVALID_TYPE;
@@ -925,6 +925,7 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 	allocateValue(recordDescriptor[_conditionAttributeIndex], value);
 
 	_returnAttributeIndices.clear();
+	_returnAttributeTypes.clear();
 	for (vector<string>::const_iterator it = attributeNames.begin(); it != attributeNames.end(); ++it)
 	{
 		unsigned index;
@@ -935,6 +936,7 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 		}
 
 		_returnAttributeIndices.push_back(index);
+		_returnAttributeTypes.push_back( recordDescriptor[index].type );
 	}
 
 	return rc::OK;
@@ -961,7 +963,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	}
 
 	// Read in the page with the next record
-	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	char pageBuffer[PAGE_SIZE] = {0};
 	RC ret = _fileHandle->readPage(_nextRid.pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
@@ -995,7 +997,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		}
 
 		// Copy over the record to the user's buffer
-		memcpy(data, pageBuffer + slot->pageOffset + sizeof(unsigned) * (*numAttributes + 1), slot->size);
+		copyRecord((char*)data, pageBuffer + slot->pageOffset, *numAttributes);
 
 		// Advance RID once more and exit
 		nextRecord(pageHeader->numSlots);
@@ -1003,6 +1005,25 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	}
 
 	return rc::OK;
+}
+
+void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned numAttributes)
+{
+	// The offset array is just after the number of attributes
+	unsigned* offsets = (unsigned*)((char*)record + sizeof(unsigned));
+	unsigned dataOffset = 0;
+
+	// Iterate through all of the columns we actually want to copy for the user
+	for (unsigned i=0; i<_returnAttributeIndices.size(); ++i)
+	{
+		unsigned attributeIndex = _returnAttributeIndices[i];
+		unsigned recordOffset = offsets[attributeIndex];
+		unsigned attributeSize = Attribute::sizeInBytes(_returnAttributeTypes[i], record + recordOffset);
+
+		// Copy the data and then move forward in the user's buffer
+		memcpy(data + dataOffset, record + recordOffset, attributeSize);
+		dataOffset += attributeSize;
+	}
 }
 
 RC RBFM_ScanIterator::close()
@@ -1017,7 +1038,7 @@ RC RBFM_ScanIterator::allocateValue(const Attribute& attribute, const void* valu
 		free(_comparasionValue);
 	}
 
-	unsigned attributeSize = attribute.sizeInBytes(value);
+	unsigned attributeSize = Attribute::sizeInBytes(attribute.type, value);
 	if (attributeSize == 0)
 	{
 		return rc::ATTRIBUTE_INVALID_TYPE;
@@ -1060,7 +1081,7 @@ bool RBFM_ScanIterator::equalsVarChar(void* a, void* b)
 	return (memcmp(a, b, *(unsigned*)a) == 0);
 }
 
-unsigned Attribute::sizeInBytes(const void* value) const
+unsigned Attribute::sizeInBytes(AttrType type, const void* value)
 {
     switch(type)
     {

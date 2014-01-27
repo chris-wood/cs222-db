@@ -69,7 +69,7 @@ struct Attribute {
     AttrType type;     // attribute type
     AttrLength length; // attribute length
 
-	unsigned sizeInBytes(const void* value) const;
+	static unsigned sizeInBytes(AttrType type, const void* value);
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)
@@ -145,6 +145,7 @@ private:
 
 	void nextRecord(unsigned numSlots);
 	RC allocateValue(const Attribute& attribute, const void* value);
+	void copyRecord(char* data, const char* record, unsigned numAttributes);
 
 	FileHandle* _fileHandle;
 	RID _nextRid;
@@ -153,6 +154,7 @@ private:
 	void* _comparasionValue;
 	unsigned _conditionAttributeIndex;
 	std::vector<unsigned> _returnAttributeIndices;
+	std::vector<AttrType> _returnAttributeTypes;
 };
 
 
