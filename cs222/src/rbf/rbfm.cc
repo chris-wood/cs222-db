@@ -413,7 +413,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
         recHeader[headerIndex++] = recLength;
 
         // Now bump the length as needed based on the length of the contents
-        int count = 0;
         const Attribute& attr = *itr;
 		unsigned attrSize = Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
 		if (attrSize == 0)
@@ -1095,13 +1094,13 @@ bool RBFM_ScanIterator::compareInt(CompOp op, void* a, void* b)
 
 	switch(op)
 	{
-	case CompOp::EQ_OP:		return *(int*)a == *(int*)b;
-	case CompOp::NE_OP:		return *(int*)a != *(int*)b;
-	case CompOp::GE_OP:		return *(int*)a >= *(int*)b;
-	case CompOp::GT_OP:		return *(int*)a >  *(int*)b;
-	case CompOp::LE_OP:		return *(int*)a <= *(int*)b;
-	case CompOp::LT_OP:		return *(int*)a <  *(int*)b;
-	case CompOp::NO_OP:
+	case EQ_OP:		return *(int*)a == *(int*)b;
+	case NE_OP:		return *(int*)a != *(int*)b;
+	case GE_OP:		return *(int*)a >= *(int*)b;
+	case GT_OP:		return *(int*)a >  *(int*)b;
+	case LE_OP:		return *(int*)a <= *(int*)b;
+	case LT_OP:		return *(int*)a <  *(int*)b;
+	case NO_OP:
 	default:
 		return true;
 	}
@@ -1114,13 +1113,13 @@ bool RBFM_ScanIterator::compareReal(CompOp op, void* a, void* b)
 
 	switch(op)
 	{
-	case CompOp::EQ_OP:		return *(float*)a == *(float*)b;
-	case CompOp::NE_OP:		return *(float*)a != *(float*)b;
-	case CompOp::GE_OP:		return *(float*)a >= *(float*)b;
-	case CompOp::GT_OP:		return *(float*)a >  *(float*)b;
-	case CompOp::LE_OP:		return *(float*)a <= *(float*)b;
-	case CompOp::LT_OP:		return *(float*)a <  *(float*)b;
-	case CompOp::NO_OP:
+	case EQ_OP:		return *(float*)a == *(float*)b;
+	case NE_OP:		return *(float*)a != *(float*)b;
+	case GE_OP:		return *(float*)a >= *(float*)b;
+	case GT_OP:		return *(float*)a >  *(float*)b;
+	case LE_OP:		return *(float*)a <= *(float*)b;
+	case LT_OP:		return *(float*)a <  *(float*)b;
+	case NO_OP:
 	default:
 		return true;
 	}
@@ -1138,13 +1137,13 @@ bool RBFM_ScanIterator::compareVarChar(CompOp op, void* a, void* b)
 
 	switch(op)
 	{
-	case CompOp::EQ_OP:		return (lenA == lenB && (strncmp(strA, strB, lenA) == 0));
-	case CompOp::NE_OP:		return (lenA != lenB || (strncmp(strA, strB, lenA) != 0));
-	case CompOp::GE_OP:		return (                (strncmp(strA, strB, lenA) >= 0));
-	case CompOp::GT_OP:		return (                (strncmp(strA, strB, lenA) >  0));
-	case CompOp::LE_OP:		return (                (strncmp(strA, strB, lenA) <= 0));
-	case CompOp::LT_OP:		return (                (strncmp(strA, strB, lenA) <  0));
-	case CompOp::NO_OP:
+	case EQ_OP:		return (lenA == lenB && (strncmp(strA, strB, lenA) == 0));
+	case NE_OP:		return (lenA != lenB || (strncmp(strA, strB, lenA) != 0));
+	case GE_OP:		return (                (strncmp(strA, strB, lenA) >= 0));
+	case GT_OP:		return (                (strncmp(strA, strB, lenA) >  0));
+	case LE_OP:		return (                (strncmp(strA, strB, lenA) <= 0));
+	case LT_OP:		return (                (strncmp(strA, strB, lenA) <  0));
+	case NO_OP:
 	default:
 		return true;
 	}
