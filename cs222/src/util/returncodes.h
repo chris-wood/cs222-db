@@ -37,6 +37,7 @@ namespace rc
         HEADER_SIZE_TOO_LARGE,
 
         ATTRIBUTE_INVALID_TYPE,
+		ATTRIBUTE_NOT_FOUND,
 		OUT_OF_MEMORY
     };
 

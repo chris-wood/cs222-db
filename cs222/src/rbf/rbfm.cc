@@ -413,29 +413,15 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
         // Now bump the length as needed based on the length of the contents
         int count = 0;
-        Attribute attr = *itr;
-        switch(attr.type)
-        {
-        case TypeInt:
-            recLength += sizeof(int);
-            dataOffset += sizeof(int);
-            break;
+        const Attribute& attr = *itr;
+		unsigned attrSize = attr.sizeInBytes((char*)data + dataOffset);
+		if (attrSize == 0)
+		{
+			return rc::ATTRIBUTE_INVALID_TYPE;
+		}
 
-        case TypeReal:
-            recLength += sizeof(float);
-            dataOffset += sizeof(float);
-            break;
-
-        case TypeVarChar:
-            memcpy(&count, (char*)data + dataOffset, sizeof(int)); 
-            dataOffset += sizeof(int) + count * sizeof(char);
-            recLength += sizeof(int) + count * sizeof(char);
-            break;
-
-        default:
-            free(recHeader);
-            return rc::ATTRIBUTE_INVALID_TYPE;
-        }
+		recLength += attrSize;
+		dataOffset += attrSize;
     }
 
     // Find the first page(s) with enough free space to hold this record
@@ -832,9 +818,9 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     return rc::OK;
 }
 
-RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttribute, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
+RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
 {
-
+	return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames, rbfm_ScanIterator);
 }
 
 PFHeader::PFHeader()
@@ -898,21 +884,95 @@ RC PFHeader::validate()
     return rc::OK;
 }
 
-bool RecordBasedFileManager::equalsInt(void* a, void* b)
+PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)
+{
+	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)));
+}
+
+PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
+{
+	return (PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+}
+
+RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index)
+{
+	// Linearly search through the attributes to match up the name
+	index = 0;
+	for(vector<Attribute>::const_iterator it = recordDescriptor.begin(); it != recordDescriptor.end(); ++it, ++index)
+	{
+		if (it->name == conditionAttribute)
+		{
+			return rc::OK;
+		}
+	}
+
+	return rc::ATTRIBUTE_NOT_FOUND;
+}
+
+RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
+{
+	RC ret= findAttributeByName(recordDescriptor, conditionAttributeString, _conditionAttributeIndex);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Save data we will need for future comparasion operations
+	_comparasionOp = compOp;
+	allocateValue(recordDescriptor[_conditionAttributeIndex], value);
+
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RBFM_ScanIterator::close()
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+bool RBFM_ScanIterator::hasNextRecord()
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RBFM_ScanIterator::allocateValue(const Attribute& attribute, const void* value)
+{
+	if(_comparasionValue)
+	{
+		free(_comparasionValue);
+	}
+
+	unsigned attributeSize = attribute.sizeInBytes(value);
+	_comparasionValue = malloc(attributeSize);
+	if (!_comparasionValue)
+	{
+		return rc::OUT_OF_MEMORY;
+	}
+
+	memcpy(_comparasionValue, value, attributeSize);
+
+	return rc::OK;
+}
+
+bool RBFM_ScanIterator::equalsInt(void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
 	return *(int*)a == *(int*)b;
 }
 
-bool RecordBasedFileManager::equalsReal(void* a, void* b)
+bool RBFM_ScanIterator::equalsReal(void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
 	return *(float*)a == *(float*)b;
 }
 
-bool RecordBasedFileManager::equalsVarChar(void* a, void* b)
+bool RBFM_ScanIterator::equalsVarChar(void* a, void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
@@ -924,12 +984,20 @@ bool RecordBasedFileManager::equalsVarChar(void* a, void* b)
 	return (memcmp(a, b, *(unsigned*)a) == 0);
 }
 
-PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)
+unsigned Attribute::sizeInBytes(const void* value) const
 {
-	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)));
-}
+    switch(type)
+    {
+    case TypeInt:
+		return sizeof(int);
 
-PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
-{
-	return (PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+    case TypeReal:
+        return sizeof(float);
+
+    case TypeVarChar:
+		return ( *(unsigned*)value );
+
+    default:
+        return 0;
+    }
 }

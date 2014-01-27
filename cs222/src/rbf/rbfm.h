@@ -68,6 +68,8 @@ struct Attribute {
     string   name;     // attribute name
     AttrType type;     // attribute type
     AttrLength length; // attribute length
+
+	unsigned sizeInBytes(const void* value) const;
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)
@@ -126,12 +128,29 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {}
-  ~RBFM_ScanIterator() {}
+	RBFM_ScanIterator() : _comparasionValue(NULL) {}
+	~RBFM_ScanIterator() {}
 
-  // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID & /*rid*/, void * /*data*/) { return RBFM_EOF; }
-  RC close() { return -1; }
+	// "data" follows the same format as RecordBasedFileManager::insertRecord()
+	RC getNextRecord(RID& rid, void* data);
+	RC close();
+	
+	RC init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator);
+	
+
+private:
+	static bool equalsInt(void* a, void* b);
+	static bool equalsReal(void* a, void* b);
+	static bool equalsVarChar(void* a, void* b);
+	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
+
+	bool hasNextRecord();
+	RC allocateValue(const Attribute& attribute, const void* value);
+
+	CompOp _comparasionOp;
+	void* _comparasionValue;
+	unsigned _conditionAttributeIndex;
+	std::vector<unsigned> _returnAttributeIndices;
 };
 
 
@@ -196,9 +215,6 @@ protected:
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
 
-  static bool equalsInt(void* a, void* b);
-  static bool equalsReal(void* a, void* b);
-  static bool equalsVarChar(void* a, void* b);
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
 
