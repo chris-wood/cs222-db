@@ -512,9 +512,6 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 		return rc::RECORD_DELETED;
 	}
 
-    // for reorganizePage() debug
-    // cout << "(" << rid.pageNum << "," << rid.slotNum << ") slot index offset = " << slotIndex->pageOffset << endl;
-
     // Copy the contents of the record into the data block - O(1)
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + (2 * sizeof(unsigned));
     memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
@@ -656,6 +653,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	else
 	{
 		// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
+        // @Tamir - good call. :-)
 		memset(pageBuffer + slotIndex->pageOffset, 0xDEADBEEF, slotIndex->size);
 
 		// Mark the slot as 'free' -- leave the pageOffset in order to facilitate later calls to reorganizePage()
@@ -684,7 +682,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 	// Find the slot where the record is stored
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
-
 	if (slotIndex->size == 0)
 	{
 		return rc::RECORD_DELETED;
@@ -770,37 +767,32 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     // Only proceed if there are actually slots on this page that need to be reordered
     if (header.numSlots > 0)
     {
-        cout << "the page has non-empty slots - proceed" << endl;
+        unsigned reallocatedSpace = 0;
 
         // Read in the record offsets
         PageIndexSlot* offsets = (PageIndexSlot*)malloc(header.numSlots * sizeof(PageIndexSlot));
         memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), (header.numSlots * sizeof(PageIndexSlot)));
 
-        for (unsigned i = 0; i < header.numSlots; i++)
-        {
-            cout << "slot " << (header.numSlots - 1 - i) << " empty? " << (offsets[header.numSlots - 1 - i].size == 0) << endl;
-        }
-
         // Find the first non-empty slot
         int offsetIndex = -1;
-        for (unsigned i = 0; i < header.numSlots; i++)
+        for (int i = header.numSlots - 1; i >= 0; i--)
         {
-            if (offsets[header.numSlots - 1 - i].size != 0)
+            if (offsets[i].size != 0)
             {
-                offsetIndex = header.numSlots - 1 - i;
+                offsetIndex = i;
                 break;
             }
         }
 
         // Allocate space for the smaller page and move the first non-empty record to the front
-        unsigned char newBuffer[PAGE_SIZE];
-        memcpy(newBuffer, pageBuffer + offsets[offsetIndex].pageOffset, offsets[offsetIndex].size);        
-        offsets[offsetIndex].pageOffset = 0; 
-        unsigned offset = offsets[offsetIndex].size;
+        unsigned char newBuffer[PAGE_SIZE] = {0};
 
-        cout << "moved slot " << (header.numSlots - 1 - offsetIndex) << " to the start of the file" << endl;
-        cout << "size   = " << offsets[offsetIndex].size << endl;
-        cout << "offset = " << offset << endl;
+        // Shift the record down by computing its size
+        unsigned offset = 0;
+        memcpy(newBuffer + offset, pageBuffer + offsets[offsetIndex].pageOffset, offsets[offsetIndex].size); 
+        offset += offsets[offsetIndex].size; 
+        reallocatedSpace += offsets[offsetIndex].pageOffset;
+        offsets[offsetIndex].pageOffset = 0; // we just moved to the start of the page
 
         // Push everything down by looking ahead (walking the offset list in reverse order)
         while (offsetIndex > 0)
@@ -811,31 +803,47 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
                 break;
             }
 
-            //// TODO: part of the problem is that the size calculation is invalid
-
             // Find the next non-empty slot to determine the shift difference
-            unsigned shift; 
             int nextIndex;
             for (nextIndex = offsetIndex - 1; nextIndex >= 0; nextIndex--)
             {
                 if (offsets[nextIndex].size != 0)
                 {
-                    shift = offsets[nextIndex].pageOffset - offset;
-                    cout << "shifting slot " << (header.numSlots - 1 - nextIndex) << " by " << shift << endl;
+                    reallocatedSpace += offsets[nextIndex].pageOffset - offset;
                     break;
                 }
             }
-            memcpy(newBuffer + (offset * sizeof(unsigned char)), pageBuffer + offsets[nextIndex].pageOffset, offsets[nextIndex].size);
+
+            // Update the record's offset based on the previous entry's size and then calculate our own size
+            unsigned pageOffset = offsets[nextIndex].pageOffset;
             offsets[nextIndex].pageOffset = offset;
-            // cout << "old offset = " << offset << endl;
-            offset += offsets[nextIndex].size;
-            cout << "new offset = " << offset << endl;
+
+            // Shift to the front
+            memcpy(newBuffer + offset, pageBuffer + pageOffset, offsets[nextIndex].size); 
+            offset += offsets[nextIndex].size; 
+
+            // Proceed to look at the next candidate record to shift
             offsetIndex = nextIndex;
         }
 
-        // Write the contents of newBuffer to memory
-        memcpy(newBuffer, newBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), (header.numSlots * sizeof(PageIndexSlot)));
-        fileHandle.writePage(pageNumber, (void*)newBuffer);
+        // Update the freespace offset for future insertions
+        header.freeSpaceOffset -= reallocatedSpace;
+        movePageToCorrectFreeSpaceList(fileHandle, header);
+
+        // Update the slot entries in the new page
+        memcpy(newBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), offsets, (header.numSlots * sizeof(PageIndexSlot)));
+        memcpy(newBuffer + PAGE_SIZE - sizeof(PageIndexHeader), &header, sizeof(PageIndexHeader));
+
+        // Push the changes to disk
+        ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+    }
+    else
+    {
+        return rc::PAGE_CANNOT_BE_ORGANIZED;   
     }
 
     return rc::OK;
@@ -844,6 +852,16 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
 {
 	return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames, rbfm_ScanIterator);
+}
+
+unsigned RecordBasedFileManager::calcRecordSize(unsigned char* recordBuffer)
+{
+    unsigned numFields = 0;
+    memcpy(&numFields, recordBuffer, sizeof(unsigned));
+    unsigned recStart, recEnd;
+    memcpy(&recStart, recordBuffer + sizeof(unsigned), sizeof(unsigned));
+    memcpy(&recEnd, recordBuffer + sizeof(unsigned) + (numFields * sizeof(unsigned)), sizeof(unsigned));
+    return (recEnd - recStart + (numFields * sizeof(unsigned)) + (2 * sizeof(unsigned))); 
 }
 
 PFHeader::PFHeader()

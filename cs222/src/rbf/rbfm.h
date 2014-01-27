@@ -222,6 +222,7 @@ protected:
   RC readHeader(FileHandle &fileHandle, PFHeader* header);
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
+  unsigned calcRecordSize(unsigned char* recordBuffer);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

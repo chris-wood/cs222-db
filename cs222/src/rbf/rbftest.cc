@@ -36,6 +36,122 @@ bool FileExists(string fileName)
 #define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
 #define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
 
+#define REORGANIZE_MIN_SKIP 2
+#define REORGANIZE_MAX_SKIP 3
+
+// Function to prepare the data in the correct form to be inserted/read
+void prepareRecord(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *recordSize)
+{
+    int offset = 0;
+    
+    memcpy((char *)buffer + offset, &nameLength, sizeof(int));
+    offset += sizeof(int);    
+    memcpy((char *)buffer + offset, name.c_str(), nameLength);
+    offset += nameLength;
+    
+    memcpy((char *)buffer + offset, &age, sizeof(int));
+    offset += sizeof(int);
+    
+    memcpy((char *)buffer + offset, &height, sizeof(float));
+    offset += sizeof(float);
+    
+    memcpy((char *)buffer + offset, &salary, sizeof(int));
+    offset += sizeof(int);
+    
+    *recordSize = offset;
+}
+
+void prepareLargeRecord(const int index, void *buffer, int *size)
+{
+    int offset = 0;
+    
+    // compute the count
+    int count = index % 50 + 1;
+
+    // compute the letter
+    char text = index % 26 + 97;
+
+    for(int i = 0; i < 10; i++)
+    {
+        memcpy((char *)buffer + offset, &count, sizeof(int));
+        offset += sizeof(int);
+
+        for(int j = 0; j < count; j++)
+        {
+            memcpy((char *)buffer + offset, &text, 1);
+            offset += 1;
+        }
+   
+        // compute the integer 
+        memcpy((char *)buffer + offset, &index, sizeof(int));
+        offset += sizeof(int);
+   
+        // compute the floating number
+        float real = (float)(index + 1); 
+        memcpy((char *)buffer + offset, &real, sizeof(float));
+        offset += sizeof(float);
+    }
+    *size = offset; 
+}
+
+void createRecordDescriptor(vector<Attribute> &recordDescriptor) {
+
+    Attribute attr;
+    attr.name = "EmpName";
+    attr.type = TypeVarChar;
+    attr.length = (AttrLength)30;
+    recordDescriptor.push_back(attr);
+
+    attr.name = "Age";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+
+    attr.name = "Height";
+    attr.type = TypeReal;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+
+    attr.name = "Salary";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+
+}
+
+void createLargeRecordDescriptor(vector<Attribute> &recordDescriptor)
+{
+    int index = 0;
+    char *suffix = (char *)malloc(10);
+    for(int i = 0; i < 10; i++)
+    {
+        Attribute attr;
+        sprintf(suffix, "%d", index);
+        attr.name = "attr";
+        attr.name += suffix;
+        attr.type = TypeVarChar;
+        attr.length = (AttrLength)50;
+        recordDescriptor.push_back(attr);
+        index++;
+
+        sprintf(suffix, "%d", index);
+        attr.name = "attr";
+        attr.name += suffix;
+        attr.type = TypeInt;
+        attr.length = (AttrLength)4;
+        recordDescriptor.push_back(attr);
+        index++;
+
+        sprintf(suffix, "%d", index);
+        attr.name = "attr";
+        attr.name += suffix;
+        attr.type = TypeReal;
+        attr.length = (AttrLength)4;
+        recordDescriptor.push_back(attr);
+        index++;
+    }
+    free(suffix);
+}
 
 // Super duper hacky way to access protected destructors !!
 class DeletablePFM : public PagedFileManager { public: ~DeletablePFM() { } };
@@ -1067,121 +1183,6 @@ void fhTest()
     assert(numPassed == numTests);
 }
 
-
-// Function to prepare the data in the correct form to be inserted/read
-void prepareRecord(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *recordSize)
-{
-    int offset = 0;
-    
-    memcpy((char *)buffer + offset, &nameLength, sizeof(int));
-    offset += sizeof(int);    
-    memcpy((char *)buffer + offset, name.c_str(), nameLength);
-    offset += nameLength;
-    
-    memcpy((char *)buffer + offset, &age, sizeof(int));
-    offset += sizeof(int);
-    
-    memcpy((char *)buffer + offset, &height, sizeof(float));
-    offset += sizeof(float);
-    
-    memcpy((char *)buffer + offset, &salary, sizeof(int));
-    offset += sizeof(int);
-    
-    *recordSize = offset;
-}
-
-void prepareLargeRecord(const int index, void *buffer, int *size)
-{
-    int offset = 0;
-    
-    // compute the count
-    int count = index % 50 + 1;
-
-    // compute the letter
-    char text = index % 26 + 97;
-
-    for(int i = 0; i < 10; i++)
-    {
-        memcpy((char *)buffer + offset, &count, sizeof(int));
-        offset += sizeof(int);
-
-        for(int j = 0; j < count; j++)
-        {
-            memcpy((char *)buffer + offset, &text, 1);
-            offset += 1;
-        }
-   
-        // compute the integer 
-        memcpy((char *)buffer + offset, &index, sizeof(int));
-        offset += sizeof(int);
-   
-        // compute the floating number
-        float real = (float)(index + 1); 
-        memcpy((char *)buffer + offset, &real, sizeof(float));
-        offset += sizeof(float);
-    }
-    *size = offset; 
-}
-
-void createRecordDescriptor(vector<Attribute> &recordDescriptor) {
-
-    Attribute attr;
-    attr.name = "EmpName";
-    attr.type = TypeVarChar;
-    attr.length = (AttrLength)30;
-    recordDescriptor.push_back(attr);
-
-    attr.name = "Age";
-    attr.type = TypeInt;
-    attr.length = (AttrLength)4;
-    recordDescriptor.push_back(attr);
-
-    attr.name = "Height";
-    attr.type = TypeReal;
-    attr.length = (AttrLength)4;
-    recordDescriptor.push_back(attr);
-
-    attr.name = "Salary";
-    attr.type = TypeInt;
-    attr.length = (AttrLength)4;
-    recordDescriptor.push_back(attr);
-
-}
-
-void createLargeRecordDescriptor(vector<Attribute> &recordDescriptor)
-{
-    int index = 0;
-    char *suffix = (char *)malloc(10);
-    for(int i = 0; i < 10; i++)
-    {
-        Attribute attr;
-        sprintf(suffix, "%d", index);
-        attr.name = "attr";
-        attr.name += suffix;
-        attr.type = TypeVarChar;
-        attr.length = (AttrLength)50;
-        recordDescriptor.push_back(attr);
-        index++;
-
-        sprintf(suffix, "%d", index);
-        attr.name = "attr";
-        attr.name += suffix;
-        attr.type = TypeInt;
-        attr.length = (AttrLength)4;
-        recordDescriptor.push_back(attr);
-        index++;
-
-        sprintf(suffix, "%d", index);
-        attr.name = "attr";
-        attr.name += suffix;
-        attr.type = TypeReal;
-        attr.length = (AttrLength)4;
-        recordDescriptor.push_back(attr);
-        index++;
-    }
-    free(suffix);
-}
-
 int RBFTest_1(PagedFileManager *pfm)
 {
     // Functions Tested:
@@ -1847,11 +1848,11 @@ int RBFTest_11(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
 RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes)
 {
 	RC rc = rc::OK;
-    string fileName = "test_5";
+    string fileName = "rbfmTestReadAttribute_file";
 
-    // Create a file named "our_test_4"
+    // Create a file named "rbfmTestReadAttribute_file"
     rc = rbfm->createFile(fileName.c_str());
-    // assert(rc == success);
+    assert(rc == success);
 
     if(FileExists(fileName.c_str()))
     {
@@ -1860,11 +1861,11 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
     else
     {
         cout << "Failed to create file!" << endl;
-        cout << "Test Case 9 Failed!" << endl << endl;
+        cout << "Test Case rbfmTestReadAttribute Failed!" << endl << endl;
         return -1;
     }
 
-    // Open the file "our_test_4"
+    // Open the file "rbfmTestReadAttribute_file"
     FileHandle fileHandle;
     rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
@@ -1877,7 +1878,7 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
 
-    // Insert 2000 records into file
+    // Insert 'numRecords' records into file
     for(int i = 0; i < numRecords; i++)
     {
         // Test insert Record
@@ -1945,13 +1946,17 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
 	return rc;
 }
 
-RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes)
+RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, int skip)
 {
 	RC rc = rc::OK;
-    string fileName = "test_5";
+    string fileName = "rbfmTestReorganizePage_file";
+
+    vector<RID> rids;
+    vector<int> sizes;
 
     // Create a file named "our_test_4"
     rc = rbfm->createFile(fileName.c_str());
+    assert(rc == rc::OK);
 
     if(FileExists(fileName.c_str()))
     {
@@ -1960,7 +1965,7 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     else
     {
         cout << "Failed to create file!" << endl;
-        cout << "Test Case 9 Failed!" << endl << endl;
+        cout << "Test Case Failed!" << endl << endl;
         return -1;
     }
 
@@ -2022,8 +2027,9 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     	pageRIDIndexes[rid.pageNum].push_back(i);
     }
 
-    // Delete every 5th record
-    for (int i = 0; i < numRecords; i += 5)
+    // Skip across and delete some records
+    skip = 5;
+    for (int i = 0; i < numRecords; i += skip)
     {
     	rbfm->deleteRecord(fileHandle, recordDescriptor, rids[i]);
     }
@@ -2034,7 +2040,7 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     	for (unsigned int pageRidIndex = 0; pageRidIndex < pageRIDs[pageNum].size(); pageRidIndex++)
     	{
     		int ridIndex = (pageRIDIndexes[pageNum])[pageRidIndex];
-    		if (ridIndex % 5 != 0)
+    		if (ridIndex % skip != 0)
     		{
     			memset(record, 0, 1000);
 				cout << "(pre-reorganize) Reading record index: " << ridIndex << endl;
@@ -2045,11 +2051,14 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     	}
     }
 
+    cout << "Now performing reorganization" << endl;
+
     // Walk every page and do some reallocation
-    for (PageNum page = 0; page < fileHandle.getNumberOfPages(); page++)
+    for (PageNum page = 1; page < fileHandle.getNumberOfPages(); page++)
     {
     	cout << "Reorganizing page: " << page << endl;
-    	rbfm->reorganizePage(fileHandle, recordDescriptor, page);
+    	rc = rbfm->reorganizePage(fileHandle, recordDescriptor, page);
+    	assert(rc == rc::OK || rc == rc::PAGE_CANNOT_BE_ORGANIZED);
     }
 
     // Now check the contents again
@@ -2058,7 +2067,7 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     	for (unsigned int pageRidIndex = 0; pageRidIndex < pageRIDs[pageNum].size(); pageRidIndex++)
     	{
     		int ridIndex = (pageRIDIndexes[pageNum])[pageRidIndex];
-    		if (ridIndex % 5 != 0)
+    		if (ridIndex % skip != 0)
     		{
     			memset(record, 0, 1000);
 				cout << "(post-reorganize) Reading record index: " << ridIndex << endl;
@@ -2069,12 +2078,15 @@ RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vecto
     	}
     }
 
-    // Close the file "test_4"
+    // Close & delete the file "test_4"
     rc = rbfm->closeFile(fileHandle);
+    assert(rc == success);
+    rc = rbfm->destroyFile(fileName.c_str());
     assert(rc == success);
 
 	return rc;
 }
+
 
 void cleanup()
 {
@@ -2091,6 +2103,8 @@ void cleanup()
     remove("testFile4.db");
     remove("testFile5.db");
     remove("fh_test");
+    remove("rbfmTestReadAttribute_file");
+    remove("rbfmTestReorganizePage_file");
 }
 
 int main()
@@ -2115,10 +2129,15 @@ int main()
     // RBFTest_10(rbfm, rids, sizes);
 
     // Our tests
-    // RBFTest_11(rbfm, rids, sizes);
-    // rbfmTestReadAttribute(rbfm, rids, sizes);
-    // rbfmTestReorganizePage(rbfm, rids, sizes);
-	// pfmTest();
+    RBFTest_11(rbfm, rids, sizes);
+    rbfmTestReadAttribute(rbfm, rids, sizes);
+
+    // Test the reorganizePage method with varying gaps on each page
+	for (int i = REORGANIZE_MIN_SKIP; i <= REORGANIZE_MAX_SKIP; i++)
+    {
+    	rbfmTestReorganizePage(rbfm, i);
+    }
+	pfmTest();
     fhTest();
 	rbfmTest();
 
