@@ -918,23 +918,94 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 	}
 
 	// Save data we will need for future comparasion operations
+	_fileHandle = &fileHandle;
+	_nextRid.pageNum = 1;
+	_nextRid.slotNum = 0;
 	_comparasionOp = compOp;
 	allocateValue(recordDescriptor[_conditionAttributeIndex], value);
 
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	_returnAttributeIndices.clear();
+	for (vector<string>::const_iterator it = attributeNames.begin(); it != attributeNames.end(); ++it)
+	{
+		unsigned index;
+		ret = findAttributeByName(recordDescriptor, *it, index);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		_returnAttributeIndices.push_back(index);
+	}
+
+	return rc::OK;
+}
+
+void RBFM_ScanIterator::nextRecord(unsigned numSlots)
+{
+	_nextRid.slotNum++;
+	if (_nextRid.slotNum >= numSlots)
+	{
+		_nextRid.pageNum++;
+		_nextRid.slotNum = 0;
+	}
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	unsigned numPages = _fileHandle->getNumberOfPages();
+
+	// Early exit if our next record is on a non-existant page
+	if (_nextRid.pageNum >= numPages)
+	{
+		return RBFM_EOF;
+	}
+
+	// Read in the page with the next record
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = _fileHandle->readPage(_nextRid.pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	PageIndexHeader* pageHeader = RecordBasedFileManager::getPageIndexHeader(pageBuffer);
+
+	// Early exit if our next slot is non-existant
+	if (_nextRid.slotNum >= pageHeader->numSlots)
+	{
+		return RBFM_EOF;
+	}
+
+	while(_nextRid.pageNum < numPages)
+	{
+		// Attempt to read in the next record
+		PageIndexSlot* slot = RecordBasedFileManager::getPageIndexSlot(pageBuffer, _nextRid.slotNum);
+		if (slot->size == 0)
+		{
+			// This record was deleted, skip it
+			nextRecord(pageHeader->numSlots);
+			continue;
+		}
+
+		// Make sure we're not dealing with a tombstone
+		unsigned* numAttributes = (unsigned*)(pageBuffer + slot->pageOffset);
+		if (*numAttributes == 0)
+		{
+			// TODO: Follow tombstone
+		}
+
+		// Copy over the record to the user's buffer
+		memcpy(data, pageBuffer + slot->pageOffset + sizeof(unsigned) * (*numAttributes + 1), slot->size);
+
+		// Advance RID once more and exit
+		nextRecord(pageHeader->numSlots);
+		break;
+	}
+
+	return rc::OK;
 }
 
 RC RBFM_ScanIterator::close()
-{
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
-}
-
-bool RBFM_ScanIterator::hasNextRecord()
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
@@ -947,6 +1018,11 @@ RC RBFM_ScanIterator::allocateValue(const Attribute& attribute, const void* valu
 	}
 
 	unsigned attributeSize = attribute.sizeInBytes(value);
+	if (attributeSize == 0)
+	{
+		return rc::ATTRIBUTE_INVALID_TYPE;
+	}
+
 	_comparasionValue = malloc(attributeSize);
 	if (!_comparasionValue)
 	{
@@ -995,7 +1071,7 @@ unsigned Attribute::sizeInBytes(const void* value) const
         return sizeof(float);
 
     case TypeVarChar:
-		return ( *(unsigned*)value );
+		return sizeof(unsigned) + sizeof(char) * ( *(unsigned*)value );
 
     default:
         return 0;

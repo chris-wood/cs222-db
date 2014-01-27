@@ -129,14 +129,13 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 class RBFM_ScanIterator {
 public:
 	RBFM_ScanIterator() : _comparasionValue(NULL) {}
-	~RBFM_ScanIterator() {}
+	~RBFM_ScanIterator() { if (_comparasionValue) { free(_comparasionValue); } }
 
 	// "data" follows the same format as RecordBasedFileManager::insertRecord()
 	RC getNextRecord(RID& rid, void* data);
 	RC close();
 	
 	RC init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator);
-	
 
 private:
 	static bool equalsInt(void* a, void* b);
@@ -144,8 +143,11 @@ private:
 	static bool equalsVarChar(void* a, void* b);
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
-	bool hasNextRecord();
+	void nextRecord(unsigned numSlots);
 	RC allocateValue(const Attribute& attribute, const void* value);
+
+	FileHandle* _fileHandle;
+	RID _nextRid;
 
 	CompOp _comparasionOp;
 	void* _comparasionValue;
@@ -204,6 +206,8 @@ public:
 
   RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
 
+  static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
+  static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
 
 protected:
   RecordBasedFileManager();
@@ -214,9 +218,6 @@ protected:
   RC readHeader(FileHandle &fileHandle, PFHeader* header);
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
-
-  static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
-  static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
 
 private:
   static RecordBasedFileManager *_rbf_manager;
