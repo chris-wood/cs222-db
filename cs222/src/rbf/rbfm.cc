@@ -387,7 +387,9 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
 {
     // Compute the size of the record to be inserted
-    const unsigned recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + sizeof(unsigned);
+    // The header includes a field storing the number of attributes on disk, one offset field for each attribute, 
+    // and then a final offset field to point to the end of the record (to enable easy size calculations)
+    const unsigned recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + (2 * sizeof(unsigned));
     unsigned recLength = recHeaderSize;
     unsigned headerIndex = 0;
     unsigned dataOffset = 0;
@@ -423,6 +425,9 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 		recLength += attrSize;
 		dataOffset += attrSize;
     }
+
+    // Drop in the pointer (offset) to the end of the record
+    recHeader[headerIndex++] = dataOffset;
 
     // Find the first page(s) with enough free space to hold this record
     PageNum pageNum;
@@ -507,8 +512,11 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 		return rc::RECORD_DELETED;
 	}
 
+    // for reorganizePage() debug
+    // cout << "(" << rid.pageNum << "," << rid.slotNum << ") slot index offset = " << slotIndex->pageOffset << endl;
+
     // Copy the contents of the record into the data block - O(1)
-    int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + sizeof(unsigned);
+    int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + (2 * sizeof(unsigned));
     memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
@@ -762,9 +770,16 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     // Only proceed if there are actually slots on this page that need to be reordered
     if (header.numSlots > 0)
     {
+        cout << "the page has non-empty slots - proceed" << endl;
+
         // Read in the record offsets
         PageIndexSlot* offsets = (PageIndexSlot*)malloc(header.numSlots * sizeof(PageIndexSlot));
         memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), (header.numSlots * sizeof(PageIndexSlot)));
+
+        for (unsigned i = 0; i < header.numSlots; i++)
+        {
+            cout << "slot " << (header.numSlots - 1 - i) << " empty? " << (offsets[header.numSlots - 1 - i].size == 0) << endl;
+        }
 
         // Find the first non-empty slot
         int offsetIndex = -1;
@@ -783,30 +798,38 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
         offsets[offsetIndex].pageOffset = 0; 
         unsigned offset = offsets[offsetIndex].size;
 
+        cout << "moved slot " << (header.numSlots - 1 - offsetIndex) << " to the start of the file" << endl;
+        cout << "size   = " << offsets[offsetIndex].size << endl;
+        cout << "offset = " << offset << endl;
+
         // Push everything down by looking ahead (walking the offset list in reverse order)
         while (offsetIndex > 0)
         {
-            unsigned shift; // = offsets[i - 1].pageOffset - (offset + offsets[i].size);
-            int nextIndex;
-
             // Short circuit
             if (offsetIndex == 0)
             {
                 break;
             }
 
+            //// TODO: part of the problem is that the size calculation is invalid
+
             // Find the next non-empty slot to determine the shift difference
+            unsigned shift; 
+            int nextIndex;
             for (nextIndex = offsetIndex - 1; nextIndex >= 0; nextIndex--)
             {
                 if (offsets[nextIndex].size != 0)
                 {
-                    shift = offsets[nextIndex].pageOffset - (offset + offsets[offsetIndex].size);
+                    shift = offsets[nextIndex].pageOffset - offset;
+                    cout << "shifting slot " << (header.numSlots - 1 - nextIndex) << " by " << shift << endl;
                     break;
                 }
             }
             memcpy(newBuffer + (offset * sizeof(unsigned char)), pageBuffer + offsets[nextIndex].pageOffset, offsets[nextIndex].size);
             offsets[nextIndex].pageOffset = offset;
+            // cout << "old offset = " << offset << endl;
             offset += offsets[nextIndex].size;
+            cout << "new offset = " << offset << endl;
             offsetIndex = nextIndex;
         }
 

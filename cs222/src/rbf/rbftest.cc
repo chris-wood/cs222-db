@@ -362,8 +362,7 @@ RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, int minRecord
     bigString.type = TypeVarChar;
     recordDescriptor.push_back(bigString);
 
-    //const int maxRecordSize = PAGE_SIZE - 40;
-    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size() - sizeof(unsigned);
+    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size() - sizeof(unsigned) - sizeof(unsigned);
 
     // Allocate memory
     int seed = 0x7ed55d16;
@@ -1878,13 +1877,6 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
 
-    for(unsigned i = 0; i < recordDescriptor.size(); i++)
-    {
-        cout << "Attribute Name: " << recordDescriptor[i].name << endl;
-        cout << "Attribute Type: " << (AttrType)recordDescriptor[i].type << endl;
-        cout << "Attribute Length: " << recordDescriptor[i].length << endl << endl;
-    }
-
     // Insert 2000 records into file
     for(int i = 0; i < numRecords; i++)
     {
@@ -1953,6 +1945,137 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
 	return rc;
 }
 
+RC rbfmTestReorganizePage(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &sizes)
+{
+	RC rc = rc::OK;
+    string fileName = "test_5";
+
+    // Create a file named "our_test_4"
+    rc = rbfm->createFile(fileName.c_str());
+
+    if(FileExists(fileName.c_str()))
+    {
+        cout << "File " << fileName << " has been created." << endl;
+    }
+    else
+    {
+        cout << "Failed to create file!" << endl;
+        cout << "Test Case 9 Failed!" << endl << endl;
+        return -1;
+    }
+
+    // Open the file "our_test_4"
+    FileHandle fileHandle;
+    rc = rbfm->openFile(fileName.c_str(), fileHandle);
+    assert(rc == success);
+
+    RID rid; 
+    char record[1000];
+    char record_copy[1000];
+    int numRecords = 50;
+
+    vector<Attribute> recordDescriptor;
+    createLargeRecordDescriptor(recordDescriptor);
+
+    // Store references to records inserted so that they can be easily checked later
+    vector<char*> ridContentList;
+
+    // Insert some records into the file
+    for(int i = 0; i < numRecords; i++)
+    {
+        // Test insert Record
+        int size = 0;
+        memset(record, 0, 1000);
+        memset(record_copy, 0, 1000);
+        prepareLargeRecord(i, record, &size);
+
+        // Allocate space on the content list
+        ridContentList.push_back((char*)malloc(1000));
+
+        // Write, read, and then immediately compare the two
+        rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+        assert(rc == success);
+        rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, record_copy);
+        assert(rc == success);
+        assert(memcmp(record, record_copy, size) == 0);
+        memcpy(ridContentList[i], record, size);
+
+        // Record the RIDs
+        rids.push_back(rid);
+        sizes.push_back(size);        
+    }
+
+    // Create and populate a vector of vectors that maps page numbers to all RIDs on that page
+    vector< vector<RID> > pageRIDs;
+    vector< vector<int> > pageRIDIndexes;
+    for (PageNum page = 0; page < fileHandle.getNumberOfPages(); page++)
+    {
+    	vector<RID> tmp;
+    	pageRIDs.push_back(tmp);
+    	vector<int> tmpIndexes;
+    	pageRIDIndexes.push_back(tmpIndexes);
+    }
+    for (unsigned int i = 0; i < rids.size(); i++)
+    {
+    	RID rid = rids[i];
+    	pageRIDs[rid.pageNum].push_back(rid);
+    	pageRIDIndexes[rid.pageNum].push_back(i);
+    }
+
+    // Delete every 5th record
+    for (int i = 0; i < numRecords; i += 5)
+    {
+    	rbfm->deleteRecord(fileHandle, recordDescriptor, rids[i]);
+    }
+
+    // Double-check deletion
+    for (unsigned int pageNum = 0; pageNum < pageRIDs.size(); pageNum++)
+    {
+    	for (unsigned int pageRidIndex = 0; pageRidIndex < pageRIDs[pageNum].size(); pageRidIndex++)
+    	{
+    		int ridIndex = (pageRIDIndexes[pageNum])[pageRidIndex];
+    		if (ridIndex % 5 != 0)
+    		{
+    			memset(record, 0, 1000);
+				cout << "(pre-reorganize) Reading record index: " << ridIndex << endl;
+				rc = rbfm->readRecord(fileHandle, recordDescriptor, (pageRIDs[pageNum])[pageRidIndex], record);
+				assert(rc == success);
+		    	assert(memcmp(record, ridContentList[ridIndex], sizes[ridIndex]) == 0);
+    		}
+    	}
+    }
+
+    // Walk every page and do some reallocation
+    for (PageNum page = 0; page < fileHandle.getNumberOfPages(); page++)
+    {
+    	cout << "Reorganizing page: " << page << endl;
+    	rbfm->reorganizePage(fileHandle, recordDescriptor, page);
+    }
+
+    // Now check the contents again
+    for (unsigned int pageNum = 0; pageNum < pageRIDs.size(); pageNum++)
+    {
+    	for (unsigned int pageRidIndex = 0; pageRidIndex < pageRIDs[pageNum].size(); pageRidIndex++)
+    	{
+    		int ridIndex = (pageRIDIndexes[pageNum])[pageRidIndex];
+    		if (ridIndex % 5 != 0)
+    		{
+    			memset(record, 0, 1000);
+				cout << "(post-reorganize) Reading record index: " << ridIndex << endl;
+				rc = rbfm->readRecord(fileHandle, recordDescriptor, (pageRIDs[pageNum])[pageRidIndex], record);
+				assert(rc == success);
+		    	assert(memcmp(record, ridContentList[ridIndex], sizes[ridIndex]) == 0);
+    		}
+    	}
+    }
+
+    // Close the file "test_4"
+    rc = rbfm->closeFile(fileHandle);
+    assert(rc == success);
+
+	return rc;
+}
+
 void cleanup()
 {
 	remove("test");
@@ -1988,13 +2111,14 @@ int main()
     
     vector<RID> rids;
     vector<int> sizes;
-    RBFTest_9(rbfm, rids, sizes);
-    RBFTest_10(rbfm, rids, sizes);
+    // RBFTest_9(rbfm, rids, sizes);
+    // RBFTest_10(rbfm, rids, sizes);
 
     // Our tests
-    RBFTest_11(rbfm, rids, sizes);
-    //rbfmTestReadAttribute(rbfm, rids, sizes);
-	pfmTest();
+    // RBFTest_11(rbfm, rids, sizes);
+    // rbfmTestReadAttribute(rbfm, rids, sizes);
+    // rbfmTestReorganizePage(rbfm, rids, sizes);
+	// pfmTest();
     fhTest();
 	rbfmTest();
 
