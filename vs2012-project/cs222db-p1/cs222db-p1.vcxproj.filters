@@ -59,9 +59,6 @@
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc">
       <Filter>Source Files\rbf</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbftest.cc">
-      <Filter>Source Files\rbf</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc">
       <Filter>Source Files\util</Filter>
     </ClCompile>
@@ -72,12 +69,6 @@
       <Filter>Source Files\rm</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cs222\src\rm\rmtest_1.cc">
-      <Filter>Source Files\rm</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cs222\src\rm\rmtest_2.cc">
-      <Filter>Source Files\rm</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cs222\src\rm\rmtest_extra.cc">
       <Filter>Source Files\rm</Filter>
     </ClCompile>
   </ItemGroup>

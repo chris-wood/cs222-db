@@ -6,8 +6,10 @@
 #include <fstream>
 #include <iostream>
 #include <cassert>
+#ifndef WIN32
 #include <sys/time.h>
 #include <sys/resource.h>
+#endif
 #include <set>
 #include "rm.h"
 
@@ -18,10 +20,12 @@ const int success = 0;
 
 void memProfile()
 {
+#ifndef WIN32
     int who = RUSAGE_SELF;
     struct rusage usage;
     getrusage(who,&usage);
     cout<<usage.ru_maxrss<<"KB"<<endl;
+#endif
 }
 
 // Function to prepare the data in the correct form to be inserted/read/updated

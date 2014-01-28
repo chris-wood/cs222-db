@@ -292,7 +292,7 @@ void secA_15(const string &tableName) {
     
     RID rid;    
     int tupleSize = 0;
-    int numTuples = 500;
+    const int numTuples = 500;
     void *tuple;
     void *returnedData = malloc(100);
     int ageVal = 25;

@@ -324,7 +324,7 @@ void secA_7(const string &tableName)
    
     RID rid; 
     int tupleSize = 0;
-    int numTuples = 5;
+    const int numTuples = 5;
     void *tuple;
     void *returnedData = malloc(100);
 
@@ -395,7 +395,7 @@ void secA_8_A(const string &tableName)
 
     RID rid;    
     int tupleSize = 0;
-    int numTuples = 100;
+    const int numTuples = 100;
     void *tuple;
     void *returnedData = malloc(100);
 
@@ -462,22 +462,22 @@ void Tests()
     secA_0("tbl_employee");
 
     // Insert/Read Tuple
-    secA_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
+    secA_1("tbl_employee", 6, "Peters", 24, 170.1f, 5000);
 
     // Delete Tuple
-    secA_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
+    secA_2("tbl_employee", 6, "Victor", 22, 180.2f, 6000);
 
     // Update Tuple
-    secA_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
+    secA_3("tbl_employee", 6, "Thomas", 28, 187.3f, 4000);
 
     // Read Attributes
-    secA_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+    secA_4("tbl_employee", 6, "Veekay", 27, 171.4f, 9000);
 
     // Delete Tuples
-    secA_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
+    secA_5("tbl_employee", 6, "Dillon", 29, 172.5f, 7000);
 
     // Delete Table
-    secA_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
+    secA_6("tbl_employee", 6, "Martin", 26, 173.6f, 8000);
    
     memProfile();
  
