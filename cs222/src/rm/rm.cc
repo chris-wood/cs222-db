@@ -192,7 +192,24 @@ RC RelationManager::scan(const string &tableName,
 		return ret;
 	}
 
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	return _rbfm->scan(
+		table, 
+		recordDescriptor, 
+		conditionAttribute, 
+		compOp, 
+		value, 
+		attributeNames, 
+		rm_ScanIterator.iter);
+}
+
+RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
+{
+	return iter.getNextRecord(rid, data);
+}
+
+RC RM_ScanIterator::close()
+{
+	return iter.close();
 }
 
 // Extra credit
