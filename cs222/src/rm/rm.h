@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "../rbf/rbfm.h"
 
@@ -79,11 +80,17 @@ public:
 
 
 protected:
-  RelationManager();
-  ~RelationManager();
+	  RelationManager();
+	  ~RelationManager();
 
 private:
-  static RelationManager *_rm;
+	FileHandle& loadTable(const std::string& tableName, RC& ret);
+	RC loadColumnAttributes(FileHandle& fileHandle, std::vector<Attribute>& recordDescriptor);
+
+	RecordBasedFileManager* _rbfm;
+	std::map<std::string, FileHandle> _openFiles;
+
+	static RelationManager *_rm;
 };
 
 #endif
