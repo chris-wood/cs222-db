@@ -1,5 +1,6 @@
 #include "rm.h"
 #include "../util/returncodes.h"
+#include <assert.h>
 
 RelationManager* RelationManager::_rm = 0;
 
@@ -12,13 +13,28 @@ RelationManager* RelationManager::instance()
 }
 
 RelationManager::RelationManager()
+	: _rmFilename("RM_SYS_TABLE.db")
 {
 	_rbfm = RecordBasedFileManager::instance();
+	assert(_rbfm);
+
+	// Create file, we assume if this fails, file already exists
+	_rbfm->createFile(_rmFilename);
+
+	RC ret = _rbfm->openFile(_rmFilename, _rmFile);
+	assert(ret == rc::OK);
+
+	_openFiles[_rmFilename] = _rmFile;
 }
 
 RelationManager::~RelationManager()
 {
 	_rm = NULL;
+
+	for (std::map<std::string, FileHandle>::iterator it = _openFiles.begin(); it != _openFiles.end(); ++it)
+	{
+		_rbfm->closeFile((*it).second);
+	}
 }
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)

@@ -89,6 +89,9 @@ private:
 	FileHandle& loadTable(const std::string& tableName, RC& ret);
 	RC loadColumnAttributes(FileHandle& fileHandle, std::vector<Attribute>& recordDescriptor);
 
+	const std::string _rmFilename;
+	FileHandle _rmFile;
+
 	RecordBasedFileManager* _rbfm;
 	std::map<std::string, FileHandle> _openFiles;
 
