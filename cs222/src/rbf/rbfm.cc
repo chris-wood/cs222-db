@@ -513,6 +513,19 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	{
 		return rc::RECORD_DELETED;
 	}
+    else if (slotIndex->nextPage > 0) // check to see if we moved to a different page
+    {
+        unsigned char tempPageBuffer[PAGE_SIZE] = {0};
+        while (slotIndex->nextPage != 0) // walk the forward pointers
+        {
+            ret = fileHandle.readPage(slotIndex->nextPage, tempPageBuffer);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
+            slotIndex = getPageIndexSlot(tempPageBuffer, slotIndex->nextSlot);
+        }
+    }
 
     // Copy the contents of the record into the data block - O(1)
     int fieldOffset = recordDescriptor.size() * sizeof(unsigned) + (2 * sizeof(unsigned));
