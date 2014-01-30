@@ -28,6 +28,8 @@ typedef struct
 {
   unsigned size; // size is for the entire record, and includes the header information with the offsets and the length of each resp. field
   unsigned pageOffset;
+  PageNum nextPage;
+  unsigned nextSlot;
 } PageIndexSlot;
 
 // Page index (directory)
