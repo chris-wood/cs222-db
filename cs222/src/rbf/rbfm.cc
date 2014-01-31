@@ -695,23 +695,90 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         return ret;
     }
 
-    // Pull all record slot entries into memory
-    PageIndexHeader header;
-    memcpy(&header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
-    PageIndexSlot** slots = (PageIndexSlot**)malloc(header.numSlots * sizeof(PageIndexSlot*));
-    unsigned nextRecordOffset = PAGE_SIZE;
-    for (unsigned slotNum = 0; slotNum < header.numSlots; slotNum++)
+    // Chain of RIDs that represents the tombstones on disk
+    vector<RID> rids;
+    vector<unsigned> adjacentFreeSpace;
+    rids.push_back(rid);
+
+    // Read in the header of this page to determine the currently available free space
+    PageIndexHeader* realHeader = getPageIndexHeader(pageBuffer);
+    if (rid.slotNum == realHeader->numSlots - 1)
     {
-        slots[slotNum] = getPageIndexSlot(pageBuffer, slotNum);
+        PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
+        adjacentFreeSpace.push_back(slotIndex->pageOffset - realHeader->freeSpaceOffset);
+    }
+    else
+    {
+        PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
+        PageIndexSlot* nextSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum + 1);
+        adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - slotIndex->pageOffset);
     }
 
+    // Find the slot where the record is stored - O(1)
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
+    if (slotIndex->size == 0)
+    {
+        return rc::RECORD_DELETED;
+    }
+    else if (slotIndex->nextPage > 0) // check to see if we moved to a different page
+    {
+        unsigned char tempPageBuffer[PAGE_SIZE] = {0};
+        while (slotIndex->nextPage != 0) // walk the forward pointers
+        {
+            // Append to the tombstone chain
+            RID newRID;
+            newRID.pageNum = slotIndex->nextPage;
+            newRID.slotNum = slotIndex->nextSlot;
+            rids.push_back(newRID);
+
+            // Pull the new page into memory
+            ret = fileHandle.readPage(newRID.pageNum, tempPageBuffer);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
+            slotIndex = getPageIndexSlot(tempPageBuffer, slotIndex->nextSlot);
+
+            // Update the adjacency information
+            realHeader = getPageIndexHeader(tempPageBuffer);
+            if (newRID.pageNum == realHeader->numSlots - 1)
+            {
+                PageIndexSlot* slotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
+                adjacentFreeSpace.push_back(slotIndex->pageOffset - realHeader->freeSpaceOffset);
+            }
+            else
+            {
+                PageIndexSlot* slotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
+                PageIndexSlot* nextSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum + 1);
+                adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - slotIndex->pageOffset);
+            }
+        }
+    }
+
+    // Extract the exact location of the record
+    PageNum realPage = rids[rids.size() - 1].pageNum;
+    unsigned realSlotNum = rids[rids.size() - 1].slotNum;
+
+    // With the correct page, now re-read everything into memory
+    // Read the page of data RID points to
+    memset(pageBuffer, 0, PAGE_SIZE);
+    ret = fileHandle.readPage(realPage, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Pull the target slot into memory
+    PageIndexSlot* realSlot = getPageIndexSlot(pageBuffer, realSlotNum);
+
     // Ensure that the record was not previously deleted
-    if (slots[rid.slotNum]->size == 0)
+    if (realSlot->size == 0)
     {
         return rc::RECORD_DELETED;
     }
 
-    ///// TODO: move this common code (between insertion) to a private method
+    //////////////////////////////////////////////////////////////////////////////////////////
+    ///// TODO: move this common code (record setup, between insertion) to a private method
 
     // Compute the size of the record to be inserted
     // The header includes a field storing the number of attributes on disk, one offset field for each attribute, 
@@ -756,21 +823,51 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     // Drop in the pointer (offset) to the end of the record
     recHeader[headerIndex++] = dataOffset;
 
-    // Shrinking or expanding?
-    if (slots[rid.slotNum]->size < recLength)
+    ///// END RECORD CALCULATION/FORMAT, BEGIN PLACEMENT
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+    // Walk the tombstone chain and see if we can fit in any of these slots
+    unsigned ti = 0;
+    for (; ti < adjacentFreeSpace.size(); ti++)
     {
+        if (recLength <= adjacentFreeSpace[ti])
+        {
+            break;
+        }
+    }
+
+    // Put it on one of the previously allocated tombstones
+    if (ti < adjacentFreeSpace.size())
+    {
+        PageNum placePage = rids[ti].pageNum;
+        unsigned placeSlotNum = rids[ti].slotNum;
+
+        // Read the page into memory
+        ret = fileHandle.readPage(placePage, pageBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        // Pull out the index slot
+        PageIndexHeader* placeHeader = getPageIndexHeader(pageBuffer);
+        PageIndexSlot* placeSlot = getPageIndexSlot(pageBuffer, placeSlotNum);
+
         // Write the offsets array and data to disk
-        memcpy(pageBuffer + slots[rid.slotNum]->pageOffset, recHeader, recHeaderSize);
-        memcpy(pageBuffer + slots[rid.slotNum]->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
+        memcpy(pageBuffer + placeSlot->pageOffset, recHeader, recHeaderSize);
+        memcpy(pageBuffer + placeSlot->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
         free(recHeader);
 
         dbg::out << dbg::LOG_EXTREMEDEBUG;
-        dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << rid.pageNum << ", " << header.numSlots << ")\n";
+        dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << placeSlot << ", " << placeHeader->numSlots << ")\n";
         dbg::out << "RecordBasedFileManager::updateRecord: Size of data: " << recLength << "\n";
 
-        // Update the header information
+        // Update the slot information
         // NOTE: we don't maintain the current available size...
-        slots[rid.slotNum]->size = recLength;
+        placeSlot->size = recLength;
+        placeSlot->nextPage = 0;
+        placeSlot->nextSlot = 0;
+        writePageIndexSlot(pageBuffer, placeSlotNum, placeSlot);
 
         // Update the position of this page in the freespace lists, if necessary
         // ret = movePageToCorrectFreeSpaceList(fileHandle, header);
@@ -780,142 +877,139 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         // }
 
         // Write the new page information to disk
-        ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+        ret = fileHandle.writePage(placePage, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
         }
+
+        // Now walk the remaining tombstones and set them to deleted
+        for (; ti < adjacentFreeSpace.size(); ti++)
+        {
+            PageNum delPage = rids[ti].pageNum;
+            unsigned delSlotNum = rids[ti].slotNum;
+
+            // Read the page into memory
+            ret = fileHandle.readPage(delPage, pageBuffer);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
+
+            // Update the slot to mark the now tombstone as deleted so it will be squashed during reorganizePage
+            PageIndexSlot* delSlot = getPageIndexSlot(pageBuffer, delSlotNum);
+            delSlot->size = 0;
+            delSlot->nextPage = 0;
+            delSlot->nextSlot = 0;
+            writePageIndexSlot(pageBuffer, delSlotNum, delSlot);
+
+            // Question: do we need to update free space on this header?
+
+            // Write the new page information to disk
+            ret = fileHandle.writePage(delPage, pageBuffer);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
+        }
     }
-    else 
+    else // overflow onto new page somewhere and continue the tombstone chain
     {
-        // Find the next adjacent record to see if we can still squeeze in the space
-        unsigned adjacentRecord = 0;
-        for (unsigned slotNum = 1; slotNum < header.numSlots; slotNum++)
+        PageNum oldPage = rids[rids.size() - 1].pageNum;
+        unsigned oldSlotNum = rids[rids.size() - 1].slotNum;
+
+        // Read the page into memory
+        ret = fileHandle.readPage(oldPage, pageBuffer);
+        if (ret != rc::OK)
         {
-            if (slotNum != rid.slotNum && 
-                slots[rid.slotNum]->pageOffset < slots[slotNum]->pageOffset && 
-                slots[slotNum]->pageOffset < slots[adjacentRecord]->pageOffset)
-            {
-                nextRecordOffset = slots[slotNum]->pageOffset;
-                adjacentRecord = slotNum;
-            }
+            return ret;
         }
 
-        // See if we can squeeze in our updated record into space between these two records
-        if ((slots[adjacentRecord]->pageOffset - slots[rid.slotNum]->pageOffset) <= recLength)
+        // Pull out the index slot and header
+        PageIndexSlot* oldSlot = getPageIndexSlot(pageBuffer, oldSlotNum);
+        PageIndexHeader* oldHeader = getPageIndexHeader(pageBuffer);
+
+        // Find the first page(s) with enough free space to hold this record
+        PageNum newPageNum;
+        RC ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), newPageNum);
+        if (ret != rc::OK)
         {
-            // Write the offsets array and data to disk
-            memcpy(pageBuffer + slots[rid.slotNum]->pageOffset, recHeader, recHeaderSize);
-            memcpy(pageBuffer + slots[rid.slotNum]->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
             free(recHeader);
-
-            dbg::out << dbg::LOG_EXTREMEDEBUG;
-            dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << rid.pageNum << ", " << header.numSlots << ")\n";
-            dbg::out << "RecordBasedFileManager::updateRecord: Size of data: " << recLength << "\n";
-
-            // Update the header information
-            // NOTE: we don't maintain the current available size...
-            slots[rid.slotNum]->size = recLength;
-
-            // Update the position of this page in the freespace lists, if necessary
-            // ret = movePageToCorrectFreeSpaceList(fileHandle, header);
-            // if (ret != rc::OK)
-            // {
-            //     return ret;
-            // }
-
-            // Write the new page information to disk
-            ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+            return ret;
         }
-        else // Can't fit it here, we need to move to a new page
+
+        // Read in the designated page
+        unsigned char newPageBuffer[PAGE_SIZE] = {0};
+        ret = fileHandle.readPage(newPageNum, newPageBuffer);
+        if (ret != rc::OK)
         {
-            // Find the first page(s) with enough free space to hold this record
-            PageNum newPageNum;
-            RC ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), newPageNum);
-            if (ret != rc::OK)
-            {
-                free(recHeader);
-                return ret;
-            }
-
-            // Read in the designated page
-            unsigned char newPageBuffer[PAGE_SIZE] = {0};
-            ret = fileHandle.readPage(newPageNum, newPageBuffer);
-            if (ret != rc::OK)
-            {
-                free(recHeader);
-                return ret;
-            }
-
-            // Recover the index header structure
-            PageIndexHeader* newHeader = getPageIndexHeader(newPageBuffer);
-
-            dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::updateRecord: header.freeSpaceOffset = " << newHeader->freeSpaceOffset << "\n";
-
-            // Write the offsets array and data to disk
-            memcpy(newPageBuffer + newHeader->freeSpaceOffset, recHeader, recHeaderSize);
-            memcpy(newPageBuffer + newHeader->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
             free(recHeader);
+            return ret;
+        }
 
-            // Create a new index slot entry and prepend it to the list
-            PageIndexSlot* slotIndex = getPageIndexSlot(newPageBuffer, newHeader->numSlots);
-            slotIndex->size = recLength;
-            slotIndex->pageOffset = 0;
-            slotIndex->nextPage = 0; // NULL
-            slotIndex->nextSlot = 0; // NULL
+        // Recover the index header structure
+        PageIndexHeader* newHeader = getPageIndexHeader(newPageBuffer);
 
-            dbg::out << dbg::LOG_EXTREMEDEBUG;
-            dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << newPageNum << ", " << newHeader->numSlots << ")\n";
-            dbg::out << "RecordBasedFileManager::updateRecord: Writing to: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((newHeader->numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
-            dbg::out << "RecordBasedFileManager::updateRecord: Offset: " << slotIndex->pageOffset << "\n";
-            dbg::out << "RecordBasedFileManager::updateRecord: Size of data: " << recLength << "\n";
-            dbg::out << "RecordBasedFileManager::updateRecord: Header free after record: " << (newHeader->freeSpaceOffset + recLength) << "\n";
+        dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::updateRecord: header.freeSpaceOffset = " << newHeader->freeSpaceOffset << "\n";
 
-            // Update the new page's header information
-            newHeader->numSlots++;
-            newHeader->freeSpaceOffset += recLength;
+        // Write the offsets array and data to the buffer
+        memcpy(newPageBuffer + newHeader->freeSpaceOffset, recHeader, recHeaderSize);
+        memcpy(newPageBuffer + newHeader->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
+        free(recHeader);
 
-            // Update the position of this page in the freespace lists, if necessary
-            ret = movePageToCorrectFreeSpaceList(fileHandle, *newHeader);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+        // Create a new index slot entry and prepend it to the list
+        PageIndexSlot* slotIndex = getPageIndexSlot(newPageBuffer, newHeader->numSlots);
+        slotIndex->size = recLength;
+        slotIndex->pageOffset = 0;
+        slotIndex->nextPage = 0; // NULL
+        slotIndex->nextSlot = 0; // NULL
+        writePageIndexSlot(newPageBuffer, newHeader->numSlots, slotIndex);
 
-            // Write the new page information to disk
-            ret = fileHandle.writePage(newPageNum, newPageBuffer);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+        dbg::out << dbg::LOG_EXTREMEDEBUG;
+        dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << newPageNum << ", " << newHeader->numSlots << ")\n";
+        dbg::out << "RecordBasedFileManager::updateRecord: Writing to: " << PAGE_SIZE - sizeof(PageIndexHeader) - ((newHeader->numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
+        dbg::out << "RecordBasedFileManager::updateRecord: Offset: " << slotIndex->pageOffset << "\n";
+        dbg::out << "RecordBasedFileManager::updateRecord: Size of data: " << recLength << "\n";
+        dbg::out << "RecordBasedFileManager::updateRecord: Header free after record: " << (newHeader->freeSpaceOffset + recLength) << "\n";
 
-            // Update the current page with a forward pointer and more free space
-            slots[rid.slotNum]->pageOffset = PAGE_SIZE;
-            slots[rid.slotNum]->nextPage = newPageNum;
-            slots[rid.slotNum]->nextSlot = newHeader->numSlots - 1;
+        // Update the new page's header information
+        newHeader->numSlots++;
+        newHeader->freeSpaceOffset += recLength;
+        memcpy(newPageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), newHeader, sizeof(PageIndexHeader));
 
-            // Update the position of this page in the freespace lists, if necessary
-            ret = movePageToCorrectFreeSpaceList(fileHandle, header);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+        // Update the position of this page in the freespace lists, if necessary
+        ret = movePageToCorrectFreeSpaceList(fileHandle, *newHeader);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
-            // Write the new page information to disk
-            memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), &header, sizeof(PageIndexHeader));
-            for (unsigned offset = 0; offset < header.numSlots; offset++)
-            {
-                memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((offset + 1) * sizeof(PageIndexSlot)), slots[offset], sizeof(PageIndexSlot));
-            }
-            ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+        // Write the new page information to disk
+        ret = fileHandle.writePage(newPageNum, newPageBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        // Update the current page with a forward pointer and more free space
+        oldSlot->pageOffset = PAGE_SIZE;
+        oldSlot->nextPage = newPageNum;
+        oldSlot->nextSlot = newHeader->numSlots - 1;
+        writePageIndexSlot(pageBuffer, oldSlotNum, oldSlot);
+
+        // Update the position of this page in the freespace lists, if necessary
+        ret = movePageToCorrectFreeSpaceList(fileHandle, *oldHeader);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        // Write the updated page & header information, for the old page, to disk
+        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), oldHeader, sizeof(PageIndexHeader));
+        ret = fileHandle.writePage(oldPage, pageBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
         }
     }
 
@@ -1160,6 +1254,11 @@ RC PFHeader::validate()
 PageIndexSlot* RecordBasedFileManager::getPageIndexSlot(void* pageBuffer, unsigned slotNum)
 {
 	return (PageIndexSlot*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)));
+}
+
+void RecordBasedFileManager::writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot)
+{
+    memcpy((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - ((slotNum + 1) * sizeof(PageIndexSlot)), slot, sizeof(PageIndexSlot));   
 }
 
 PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)

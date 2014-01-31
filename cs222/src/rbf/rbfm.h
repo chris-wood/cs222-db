@@ -213,6 +213,7 @@ public:
   RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
 
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
+  static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
 
 protected:
