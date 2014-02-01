@@ -34,6 +34,8 @@ namespace rc
         case RECORD_SIZE_INVALID:                   return "RECORD_SIZE_INVALID";
         case ATTRIBUTE_INVALID_TYPE:                return "ATTRIBUTE_INVALID_TYPE";
 		case ATTRIBUTE_NOT_FOUND:					return "ATTRIBUTE_NOT_FOUND";
+		case ATTRIBUTE_NAME_TOO_LONG:				return "ATTRIBUTE_NAME_TOO_LONG";
+		case ATTRIBUTE_COUNT_MISMATCH:				return "ATTRIBUTE_COUNT_MISMATCH";
 		case TABLE_NOT_FOUND:						return "TABLE_NOT_FOUND";
 		case TABLE_ALREADY_CREATED:					return "TABLE_ALREADY_CREATED";
 		case TABLE_NAME_TOO_LONG:					return "TABLE_NAME_TOO_LONG";

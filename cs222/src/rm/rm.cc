@@ -34,6 +34,18 @@ RelationManager::RelationManager()
 	attr.type = TypeVarChar;
 	attr.length = MAX_TABLENAME_SIZE;
 	_systemTableRecordDescriptor.push_back(attr);
+
+	// Columns of the attribute list
+	attr.type = TypeInt;
+	attr.length = sizeof(int);
+	attr.name = "NextAttributeRID_page";		_systemTableAttributeRecordDescriptor.push_back(attr);
+	attr.name = "NextAttributeRID_slot";		_systemTableAttributeRecordDescriptor.push_back(attr);
+	attr.name = "Type";							_systemTableAttributeRecordDescriptor.push_back(attr);
+	attr.name = "Length";						_systemTableAttributeRecordDescriptor.push_back(attr);
+	attr.name = "TableName";
+	attr.type = TypeVarChar;
+	attr.length = MAX_ATTRIBUTENAME_SIZE;
+	_systemTableAttributeRecordDescriptor.push_back(attr);
 	
 	// Generate the system table which will hold data about all other created tables
 	createTable(SYSTEM_TABLE_NAME, _systemTableRecordDescriptor);
@@ -89,10 +101,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 	// Insert table metadata into the system table
 	TableMetadataRow newRow;
-	newRow.next.pageNum = 0;
-	newRow.next.slotNum = 0;
-	newRow.prev.pageNum = prevLastRID.pageNum;
-	newRow.prev.slotNum = prevLastRID.slotNum;
+	newRow.nextRow.pageNum = 0;
+	newRow.nextRow.slotNum = 0;
+	newRow.firstAttribute.pageNum = 0;
+	newRow.firstAttribute.slotNum = 0;
 	newRow.numAttributes = attrs.size();
 	newRow.owner = ((tableName == SYSTEM_TABLE_NAME) ? TableOwnerSystem : TableOwnerUser); // TODO: Better way of doing this
 
@@ -111,6 +123,44 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		return ret;
 	}
 
+	// Insert the column attributes (we iterate backwards se we can populate the 'next' pointers with the previsouly written RID. this saves us having to go back and update the next pointer RIDs after one pass)
+	RID attributeRID;
+	attributeRID.pageNum = 0;
+	attributeRID.slotNum = 0;
+
+	for (vector<Attribute>::const_reverse_iterator it = attrs.rbegin(); it != attrs.rend(); ++it)
+	{
+		const Attribute& attr = *it;
+
+		// Allocate space for the RID that points to the next attribute, the attribute type, the attribute size, and the attribute name
+		AttributeRecord attrRec;
+		attrRec.type = attr.type;
+		attrRec.length = attr.length;
+		attrRec.nextAttribute.pageNum = attributeRID.pageNum;
+		attrRec.nextAttribute.slotNum = attributeRID.slotNum;
+
+		int nameLen = attr.name.length();
+		if (nameLen >= MAX_ATTRIBUTENAME_SIZE)
+		{
+			return rc::ATTRIBUTE_NAME_TOO_LONG;
+		}
+
+		memcpy(attrRec.name, &nameLen, sizeof(int));
+		memcpy(attrRec.name + sizeof(int), attr.name.c_str(), nameLen);
+
+		// Write out the record with the attribute data
+		ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, &attrRec, attributeRID);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+
+	// Update the row data with the pointer to its first attribute
+	newRow.firstAttribute.pageNum = attributeRID.pageNum;
+	newRow.firstAttribute.slotNum = attributeRID.slotNum;
+	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
+
 	// If there was a previous row, we need to update its next pointer
 	if (prevLastRID.pageNum > 0)
 	{
@@ -121,8 +171,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 			return ret;
 		}
 
-		prevRow.next.pageNum = _lastTableRID.pageNum;
-		prevRow.next.slotNum = _lastTableRID.slotNum;
+		prevRow.nextRow.pageNum = _lastTableRID.pageNum;
+		prevRow.nextRow.slotNum = _lastTableRID.slotNum;
 
 		ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &prevRow, prevLastRID);
 		if (ret != rc::OK)
@@ -136,7 +186,84 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 RC RelationManager::loadTableMetadata()
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	RC ret = rc::OK;
+	RID currentRID;
+	TableMetadataRow currentRow;
+
+	// Load in the 1st record, which should have our system table row info
+	currentRID.pageNum = 1;
+	currentRID.slotNum = 0;
+	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Since we already know everything about the system table, move onto the next pointer for the actual user tables
+	currentRID.pageNum = currentRow.nextRow.pageNum;
+	currentRID.slotNum = currentRow.nextRow.slotNum;
+
+	while (currentRID.pageNum > 0)
+	{
+		// Read in the next row metadata
+		memset(&currentRow, 0, sizeof(currentRow));
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Read in the column information for this row
+		std::vector<Attribute> recordDescriptor;
+		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, recordDescriptor);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+
+	return rc::OK;
+}
+
+RC RelationManager::loadTableColumnMetadata(int numAttributes, RID firstAttributeRID, std::vector<Attribute>& recordDescriptor)
+{
+	RC ret = rc::OK;
+	int readAttributes = 0;
+	RID currentRID = firstAttributeRID;
+
+	AttributeRecord attrRec;
+	while (currentRID.pageNum > 0)
+	{
+		// Null out data structure so we will have a null terminated string
+		memset(&attrRec, 0, sizeof(attrRec));
+
+		// Read in the attribute record
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, firstAttributeRID, &attrRec);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Copy over the data into a regular attribute and add this attribute to the recordDescriptor 
+		Attribute attr;
+		attr.length = attrRec.length;
+		attr.type = attrRec.type;
+		attr.name = std::string(attrRec.name);
+		recordDescriptor.push_back(attr);
+
+		// Move on to the next attribute
+		currentRID.pageNum = attrRec.nextAttribute.pageNum;
+		currentRID.slotNum = attrRec.nextAttribute.slotNum;
+
+		++readAttributes;
+	}
+
+	if (readAttributes != numAttributes)
+	{
+		return rc::ATTRIBUTE_COUNT_MISMATCH;
+	}
+
+	return rc::OK;
 }
 
 RC RelationManager::deleteTable(const string &tableName)

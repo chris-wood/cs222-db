@@ -9,6 +9,7 @@
 #include "../rbf/rbfm.h"
 
 #define MAX_TABLENAME_SIZE 1024
+#define MAX_ATTRIBUTENAME_SIZE 1024
 
 using namespace std;
 
@@ -24,15 +25,25 @@ struct TableMetadataRow
 
 	int owner;
 	int numAttributes;
-	RID next;
-	RID prev;
-	char tableName[MAX_TABLENAME_SIZE];
+	RID nextRow;
+	RID firstAttribute;
+	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 
 struct TableMetaData
 {
 	FileHandle fileHandle;
 	std::vector<Attribute> recordDescriptor;
+};
+
+struct AttributeRecord
+{
+	AttributeRecord() { memset(this, 0, sizeof(*this)); }
+
+	RID nextAttribute;
+	AttrType type;
+	AttrLength length;
+	char name[MAX_ATTRIBUTENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 
 # define RM_EOF (-1)  // end of a scan operator
@@ -111,11 +122,13 @@ protected:
 
 private:
 	RC loadTableMetadata();
+	RC loadTableColumnMetadata(int numAttributes, RID firstAttributeRID, std::vector<Attribute>& recordDescriptor);
 
 	RecordBasedFileManager* _rbfm;
 	std::map<std::string, TableMetaData> _catalog;
 
 	std::vector<Attribute> _systemTableRecordDescriptor;
+	std::vector<Attribute> _systemTableAttributeRecordDescriptor;
 	RID _lastTableRID;
 
 	static RelationManager *_rm;
