@@ -2,6 +2,7 @@
 #include "../util/returncodes.h"
 #include <assert.h>
 
+// TODO: We should have 2 system tables at least, right now everything is shoved into the one
 #define SYSTEM_TABLE_NAME "RM_SYS_TABLE.db"
 
 RelationManager* RelationManager::_rm = 0;
