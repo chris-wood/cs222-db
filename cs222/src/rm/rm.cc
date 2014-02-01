@@ -214,8 +214,7 @@ RC RelationManager::loadTableMetadata()
 		}
 
 		// Read in the column information for this row
-		std::vector<Attribute> recordDescriptor;
-		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, recordDescriptor);
+		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, _catalog[std::string(currentRow.tableName)].recordDescriptor);
 		if (ret != rc::OK)
 		{
 			return ret;
