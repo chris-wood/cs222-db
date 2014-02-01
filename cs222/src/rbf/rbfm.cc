@@ -1167,6 +1167,11 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     return rc::OK;
 }
 
+RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
 RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
 {
 	return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames, rbfm_ScanIterator);

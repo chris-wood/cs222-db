@@ -8,8 +8,29 @@
 
 #include "../rbf/rbfm.h"
 
+#define MAX_TABLENAME_SIZE 1024
+
 using namespace std;
 
+enum TableOwner
+{
+	TableOwnerSystem = 0,
+	TableOwnerUser = 1,
+};
+
+struct TableMetadataRow
+{
+	int owner;
+	int numAttributes;
+	RID next;
+	char tableName[MAX_TABLENAME_SIZE];
+};
+
+struct TableMetaData
+{
+	FileHandle fileHandle;
+	std::vector<Attribute> recordDescriptor;
+};
 
 # define RM_EOF (-1)  // end of a scan operator
 
@@ -86,14 +107,14 @@ protected:
 	  ~RelationManager();
 
 private:
-	FileHandle& loadTable(const std::string& tableName, RC& ret);
+	RC loadTable(const std::string& tableName);
 	RC loadColumnAttributes(FileHandle& fileHandle, std::vector<Attribute>& recordDescriptor);
 
-	const std::string _rmFilename;
-	FileHandle _rmFile;
-
 	RecordBasedFileManager* _rbfm;
-	std::map<std::string, FileHandle> _openFiles;
+	std::map<std::string, TableMetaData> _catalog;
+
+	std::vector<Attribute> _systemTableRecordDescriptor;
+	RID _lastTableRID;
 
 	static RelationManager *_rm;
 };
