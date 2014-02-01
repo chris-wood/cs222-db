@@ -20,9 +20,12 @@ enum TableOwner
 
 struct TableMetadataRow
 {
+	TableMetadataRow() { memset(this, 0, sizeof(*this)); }
+
 	int owner;
 	int numAttributes;
 	RID next;
+	RID prev;
 	char tableName[MAX_TABLENAME_SIZE];
 };
 
@@ -107,8 +110,7 @@ protected:
 	  ~RelationManager();
 
 private:
-	RC loadTable(const std::string& tableName);
-	RC loadColumnAttributes(FileHandle& fileHandle, std::vector<Attribute>& recordDescriptor);
+	RC loadTableMetadata();
 
 	RecordBasedFileManager* _rbfm;
 	std::map<std::string, TableMetaData> _catalog;

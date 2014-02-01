@@ -19,35 +19,28 @@ RelationManager::RelationManager()
 {
 	_rbfm = RecordBasedFileManager::instance();
 	assert(_rbfm);
-	Attribute attr;
 
+	// Columns of the system table
+	Attribute attr;
 	attr.type = TypeInt;
 	attr.length = sizeof(int);
-
-	attr.name = "Owner";
-	_systemTableRecordDescriptor.push_back(attr);
-
-	attr.name = "NumAttributes";
-	_systemTableRecordDescriptor.push_back(attr);
-
-	attr.name = "RecordDescriptorRID_page";
-	_systemTableRecordDescriptor.push_back(attr);
-
-	attr.name = "RecordDescriptorRID_slot";
-	_systemTableRecordDescriptor.push_back(attr);
-
-	attr.name = "NextRowRID_page";
-	_systemTableRecordDescriptor.push_back(attr);
-
-	attr.name = "NextRowRID_slot";
-	_systemTableRecordDescriptor.push_back(attr);
-
+	attr.name = "Owner";						_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "NumAttributes";				_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "RecordDescriptorRID_page";		_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "RecordDescriptorRID_slot";		_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "NextRowRID_page";				_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "NextRowRID_slot";				_systemTableRecordDescriptor.push_back(attr);
 	attr.name = "TableName";
 	attr.type = TypeVarChar;
 	attr.length = MAX_TABLENAME_SIZE;
 	_systemTableRecordDescriptor.push_back(attr);
-
+	
+	// Generate the system table which will hold data about all other created tables
 	createTable(SYSTEM_TABLE_NAME, _systemTableRecordDescriptor);
+
+	// Read in data about already known tables
+	RC ret = loadTableMetadata();
+	assert(ret == rc::OK);
 }
 
 RelationManager::~RelationManager()
@@ -63,18 +56,22 @@ RelationManager::~RelationManager()
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
 {
 	RC ret = rc::OK;
+
+	// If table exists in our catalog, it has been created and we know about it already
 	if (_catalog.find(tableName) != _catalog.end())
 	{
 		return rc::TABLE_ALREADY_CREATED;
 	}
 
+	// Delete any existing table to create a fresh one
+	_rbfm->destroyFile(tableName);
 	ret = _rbfm->createFile(tableName);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	// Save a file handle to the table
+	// Save a file handle for the table
 	_catalog[tableName] = TableMetaData();
 	ret = _rbfm->openFile(tableName, _catalog[tableName].fileHandle);
 	if (ret != rc::OK)
@@ -88,13 +85,16 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		_catalog[tableName].recordDescriptor.push_back(*it);
 	}
 
+	RID prevLastRID = _lastTableRID;
+
 	// Insert table metadata into the system table
-	TableMetadataRow tableMetadataRow;
-	memset(&tableMetadataRow, 0, sizeof(tableMetadataRow));
-	tableMetadataRow.next.pageNum = 0;
-	tableMetadataRow.next.slotNum = 0;
-	tableMetadataRow.numAttributes = attrs.size();
-	tableMetadataRow.owner = tableName == SYSTEM_TABLE_NAME ? TableOwnerSystem : TableOwnerUser;
+	TableMetadataRow newRow;
+	newRow.next.pageNum = 0;
+	newRow.next.slotNum = 0;
+	newRow.prev.pageNum = prevLastRID.pageNum;
+	newRow.prev.slotNum = prevLastRID.slotNum;
+	newRow.numAttributes = attrs.size();
+	newRow.owner = ((tableName == SYSTEM_TABLE_NAME) ? TableOwnerSystem : TableOwnerUser); // TODO: Better way of doing this
 
 	int tableNameLen = tableName.size();
 	if (tableNameLen >= MAX_TABLENAME_SIZE)
@@ -102,23 +102,39 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		return rc::TABLE_NAME_TOO_LONG;
 	}
 	
-	memcpy(tableMetadataRow.tableName, &tableNameLen, sizeof(int));
-	memcpy(tableMetadataRow.tableName + sizeof(int), tableName.c_str(), tableNameLen);
+	memcpy(newRow.tableName, &tableNameLen, sizeof(int));
+	memcpy(newRow.tableName + sizeof(int), tableName.c_str(), tableNameLen);
 
-	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &tableMetadataRow, _lastTableRID);
+	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	// TODO:
-	// If there was a metadata row already, update the next pointer for it
-	// TODO:
+	// If there was a previous row, we need to update its next pointer
+	if (prevLastRID.pageNum > 0)
+	{
+		TableMetadataRow prevRow;
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, prevLastRID, &prevRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		prevRow.next.pageNum = _lastTableRID.pageNum;
+		prevRow.next.slotNum = _lastTableRID.slotNum;
+
+		ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &prevRow, prevLastRID);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
 
     return rc::OK;
 }
 
-RC RelationManager::loadTable(const std::string& tableName)
+RC RelationManager::loadTableMetadata()
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
@@ -142,29 +158,25 @@ RC RelationManager::deleteTable(const string &tableName)
 	{
 		return ret;
 	}
+
+	// TODO: Delete the row from the system table
 	
 	return rc::OK;
 }
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
-	RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
+	attrs.clear();
+
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
+	for (vector<Attribute>::const_iterator it = tableData.recordDescriptor.begin(); it != tableData.recordDescriptor.end(); ++it)
 	{
-		return ret;
+		attrs.push_back(*it);
 	}
 
 	return rc::OK;
@@ -172,168 +184,79 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->insertRecord(tableData.fileHandle, recordDescriptor, data, rid);
+	return _rbfm->insertRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
 }
 
 RC RelationManager::deleteTuples(const string &tableName)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	return _rbfm->deleteRecords(tableData.fileHandle);
 }
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->deleteRecord(tableData.fileHandle, recordDescriptor, rid);
+	return _rbfm->deleteRecord(tableData.fileHandle, tableData.recordDescriptor, rid);
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->updateRecord(tableData.fileHandle, recordDescriptor, data, rid);
+	return _rbfm->updateRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
 }
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->readRecord(tableData.fileHandle, recordDescriptor, rid, data);
+	return _rbfm->readRecord(tableData.fileHandle, tableData.recordDescriptor, rid, data);
 }
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->readAttribute(tableData.fileHandle, recordDescriptor, rid, attributeName, data);
+	return _rbfm->readAttribute(tableData.fileHandle, tableData.recordDescriptor, rid, attributeName, data);
 }
 
 RC RelationManager::reorganizePage(const string &tableName, const unsigned pageNumber)
 {
-    RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->reorganizePage(tableData.fileHandle, recordDescriptor, pageNumber);
+	return _rbfm->reorganizePage(tableData.fileHandle, tableData.recordDescriptor, pageNumber);
 }
 
 RC RelationManager::scan(const string &tableName,
@@ -343,28 +266,15 @@ RC RelationManager::scan(const string &tableName,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
-	RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	return _rbfm->scan(
 		tableData.fileHandle, 
-		recordDescriptor, 
+		tableData.recordDescriptor, 
 		conditionAttribute, 
 		compOp, 
 		value, 
@@ -385,24 +295,12 @@ RC RM_ScanIterator::close()
 // Extra credit
 RC RelationManager::dropAttribute(const string &tableName, const string &attributeName)
 {
-	RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
 
 	// TODO: Write me
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
@@ -411,24 +309,12 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 // Extra credit
 RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 {
-	RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
 
 	// TODO: Write me
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
@@ -437,29 +323,11 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 // Extra credit
 RC RelationManager::reorganizeTable(const string &tableName)
 {
-	RC ret = loadTable(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	std::vector<Attribute> recordDescriptor;
 	TableMetaData& tableData = _catalog[tableName];
-	ret = loadColumnAttributes(tableData.fileHandle, recordDescriptor);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	return _rbfm->reorganizeFile(tableData.fileHandle, recordDescriptor);
-}
-
-RC RelationManager::loadColumnAttributes(FileHandle& fileHandle, std::vector<Attribute>& recordDescriptor)
-{
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	return _rbfm->reorganizeFile(tableData.fileHandle, tableData.recordDescriptor);
 }
