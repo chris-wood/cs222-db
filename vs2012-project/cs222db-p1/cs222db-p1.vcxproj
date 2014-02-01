@@ -86,8 +86,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
+    <ClCompile Include="..\..\cs222\src\rm\combined_tests.cc" />
     <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
-    <ClCompile Include="..\..\cs222\src\rm\rmtest_1.cc" />
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />
     <ClCompile Include="..\..\cs222\src\util\returncodes.cc" />
   </ItemGroup>
