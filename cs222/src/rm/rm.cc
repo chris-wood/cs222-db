@@ -367,6 +367,9 @@ RC RelationManager::deleteTable(const string &tableName)
 	// Finally, update our in-memory representation of the catalog
 	_catalog.erase(it);
 	_lastTableRID = prevRID;
+
+	// Free up memory
+	free(prevRow);
 	
 	return rc::OK;
 }
