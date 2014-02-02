@@ -2182,9 +2182,14 @@ RC rbfmTestUdpateRecord(RecordBasedFileManager *rbfm, int skip)
 	    rc = rbfm->updateRecord(fileHandle, recordDescriptor, record, rids[i]);
 	    assert(rc == success);
 
+	    cout << "UPDATED: " << i << endl;
+
 	    // Read it back in and compare
 	    memset(record_copy, 0, PAGE_SIZE / 2);
+	    cout << "it should be: " << rids[i].pageNum << ", " << rids[i].slotNum << endl;
 	    rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record_copy);
+	    cout << "read: " << i << endl;
+	    rbfm->printRecord(recordDescriptor, record_copy);
 	    assert(rc == success);
 	    assert(memcmp(record, record_copy, offset) == 0);
     }

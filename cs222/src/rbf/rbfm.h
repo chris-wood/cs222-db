@@ -14,6 +14,9 @@ using namespace std;
 #define CURRENT_PF_VERSION 1
 #define NUM_FREESPACE_LISTS 11
 
+// The temporary threshold used to determine when we should reorganize pages
+#define REORG_THRESHOLD (PAGE_SIZE / 2)
+
 // Record ID
 // Uniquely identifies the location in the file where the record is stored
 typedef struct
@@ -55,6 +58,7 @@ struct PageIndexHeader
   unsigned pageNumber;
   unsigned freeSpaceOffset;
   unsigned numSlots;
+  unsigned gapSize;
 
   // Doubly linked list data for whichever freespace list we are attached to
   unsigned freespaceList;
