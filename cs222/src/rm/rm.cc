@@ -286,7 +286,87 @@ RC RelationManager::deleteTable(const string &tableName)
 		return ret;
 	}
 
-	// TODO: Delete the row from the system table
+	// Search for the specified table in the system catalog
+	RID currentRID;
+	RID prevRID;
+	currentRID.pageNum = 1;
+	currentRID.slotNum = 0;
+	TableMetadataRow* prevRow = (TableMetadataRow*)malloc(sizeof(TableMetadataRow));
+	TableMetadataRow currentRow;
+	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Extract the name
+	int tableNameLen = 0;
+	memcpy(&tableNameLen, currentRow.tableName, sizeof(int));
+	char candTableName[MAX_TABLENAME_SIZE];
+	memcpy(candTableName, currentRow.tableName + sizeof(int), tableNameLen);
+
+	// Since we already know everything about the system table, move onto the next pointer for the actual user tables
+	prevRID.pageNum = currentRID.pageNum;
+	prevRID.slotNum = currentRID.slotNum;
+	memcpy(prevRow, &currentRow, sizeof(TableMetadataRow));
+	currentRID.pageNum = currentRow.nextRow.pageNum;
+	currentRID.slotNum = currentRow.nextRow.slotNum;
+
+	// Walk the list of tables in the catalog until we find the one we're looking for
+	unsigned tableIndex = 0;
+	while (strncmp(tableName.c_str(), candTableName, tableName.length()) != 0)
+	{
+		// Onward!
+		tableIndex++;
+		prevRID.pageNum = currentRID.pageNum;
+		prevRID.slotNum = currentRID.slotNum;
+		memcpy(prevRow, &currentRow, sizeof(TableMetadataRow));
+
+		// Read in the next row metadata
+		memset(&currentRow, 0, sizeof(currentRow));
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Extract the table name for the new table
+		tableNameLen = 0;
+		memcpy(&tableNameLen, currentRow.tableName, sizeof(int));
+		memset(candTableName, 0, MAX_TABLENAME_SIZE);
+		memcpy(candTableName, currentRow.tableName + sizeof(int), tableNameLen);
+	}
+
+	// Hook up the pointer of the previous table to point to the new one
+	if (tableIndex == (_catalog.size() - 1)) // Case 1: at the end of the table chain
+	{
+		RID nullRid;
+		nullRid.pageNum = 0; // Mark end of chain
+		nullRid.slotNum = 0; // Mark end of chain
+		prevRow->nextRow = nullRid;
+	}
+	else // Case 2: somewhere in the middle of the table chain, potentially at the start
+	{
+		prevRow->nextRow = currentRow.nextRow;
+	}
+
+	// Write the previous entry to disk
+	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, prevRow, prevRID);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Now delete the old table record
+	ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Finally, update our in-memory representation of the catalog
+	_catalog.erase(it);
+	_lastTableRID = prevRID;
 	
 	return rc::OK;
 }
