@@ -1362,13 +1362,14 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		return ret;
 	}
 
-	PageIndexHeader* pageHeader = RecordBasedFileManager::getPageIndexHeader(pageBuffer);
+    // Pull in the header preemptively
+    PageIndexHeader* pageHeader = RecordBasedFileManager::getPageIndexHeader(pageBuffer);
 
-	// Early exit if our next slot is non-existant
-	if (_nextRid.slotNum >= pageHeader->numSlots)
-	{
-		return RBFM_EOF;
-	}
+    // Early exit if our next slot is non-existant
+    if (_nextRid.slotNum >= pageHeader->numSlots)
+    {
+        return RBFM_EOF;
+    }
 
 	while(_nextRid.pageNum < numPages)
 	{
@@ -1381,12 +1382,21 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 			continue;
 		}
 
-		// Make sure we're not dealing with a tombstone
-		unsigned* numAttributes = (unsigned*)(pageBuffer + slot->pageOffset);
-		if (*numAttributes == 0)
-		{
-			// TODO: Follow tombstone
-		}
+        // Pull up the next record, walking the tombstone chain if necessary
+        if (slot->nextPage > 0) // check to see if we moved to a different page
+        {
+            unsigned char tempPageBuffer[PAGE_SIZE] = {0};
+            while (slot->nextPage != 0) // walk the forward pointers
+            {
+                ret = _fileHandle->readPage(slot->nextPage, tempPageBuffer);
+                if (ret != rc::OK)
+                {
+                    return ret;
+                }
+                slot = RecordBasedFileManager::getPageIndexSlot(tempPageBuffer, slot->nextSlot);
+                memcpy(pageBuffer, tempPageBuffer, PAGE_SIZE);
+            }
+        }
 
 		// Compare record with user's data, skip if it doesn't match
 		if (!recordMatchesValue(pageBuffer + slot->pageOffset))
@@ -1396,6 +1406,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		}
 
 		// Copy over the record to the user's buffer
+        unsigned* numAttributes = (unsigned*)(pageBuffer + slot->pageOffset);
 		copyRecord((char*)data, pageBuffer + slot->pageOffset, *numAttributes);
 
 		// Advance RID once more and exit
