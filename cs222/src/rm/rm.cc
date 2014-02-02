@@ -102,6 +102,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 	// Insert table metadata into the system table
 	TableMetadataRow newRow;
+	newRow.prevRow = prevLastRID;
 	newRow.nextRow.pageNum = 0;
 	newRow.nextRow.slotNum = 0;
 	newRow.firstAttribute.pageNum = 0;
@@ -123,6 +124,9 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	{
 		return ret;
 	}
+
+	// Store the RID of this row in the in-memory catalog for easy access
+	_catalog[tableName].rowRID = _lastTableRID;
 
 	// Insert the column attributes (we iterate backwards se we can populate the 'next' pointers with the previsouly written RID. this saves us having to go back and update the next pointer RIDs after one pass)
 	RID attributeRID;
@@ -157,9 +161,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		}
 	}
 
-	// Update the row data with the pointer to its first attribute
-	newRow.firstAttribute.pageNum = attributeRID.pageNum;
-	newRow.firstAttribute.slotNum = attributeRID.slotNum;
+	// Update the row data with the pointer to its first attribute and store the RID so we have an easy way to delete later on
+	newRow.firstAttribute = attributeRID;
 	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
 
 	// If there was a previous row, we need to update its next pointer
@@ -194,6 +197,7 @@ RC RelationManager::loadTableMetadata()
 	// Load in the 1st record, which should have our system table row info
 	currentRID.pageNum = 1;
 	currentRID.slotNum = 0;
+	_catalog[SYSTEM_TABLE_NAME].rowRID = currentRID;
 	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
 	if (ret != rc::OK)
 	{
@@ -215,11 +219,18 @@ RC RelationManager::loadTableMetadata()
 		}
 
 		// Read in the column information for this row
-		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, _catalog[std::string(currentRow.tableName)].recordDescriptor);
+		const std::string tableName(currentRow.tableName);
+		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, _catalog[tableName].recordDescriptor);
 		if (ret != rc::OK)
 		{
 			return ret;
 		}
+
+		// Store the RID in our in-memory catalog for easy access
+		_catalog[tableName].rowRID = currentRID;
+
+		// Advance to the next row to read in more table data
+		currentRID = currentRow.nextRow;
 	}
 
 	return rc::OK;
@@ -286,79 +297,61 @@ RC RelationManager::deleteTable(const string &tableName)
 		return ret;
 	}
 
-	// Search for the specified table in the system catalog
-	RID currentRID;
-	RID prevRID;
-	currentRID.pageNum = 1;
-	currentRID.slotNum = 0;
-	TableMetadataRow* prevRow = (TableMetadataRow*)malloc(sizeof(TableMetadataRow));
+	// Load in the row that is to be deleted
+	TableMetaData& tableMetaData = it->second;
 	TableMetadataRow currentRow;
-	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	// Extract the name
-	int tableNameLen = 0;
-	memcpy(&tableNameLen, currentRow.tableName, sizeof(int));
-	char candTableName[MAX_TABLENAME_SIZE];
-	memcpy(candTableName, currentRow.tableName + sizeof(int), tableNameLen);
-
-	// Since we already know everything about the system table, move onto the next pointer for the actual user tables
-	prevRID.pageNum = currentRID.pageNum;
-	prevRID.slotNum = currentRID.slotNum;
-	memcpy(prevRow, &currentRow, sizeof(TableMetadataRow));
-	currentRID.pageNum = currentRow.nextRow.pageNum;
-	currentRID.slotNum = currentRow.nextRow.slotNum;
-
-	// Walk the list of tables in the catalog until we find the one we're looking for
-	unsigned tableIndex = 0;
-	while (strncmp(tableName.c_str(), candTableName, tableName.length()) != 0)
+	// Load in the previous row, we will need to update its next pointer
+	if (currentRow.prevRow.pageNum > 0)
 	{
-		// Onward!
-		tableIndex++;
-		prevRID.pageNum = currentRID.pageNum;
-		prevRID.slotNum = currentRID.slotNum;
-		memcpy(prevRow, &currentRow, sizeof(TableMetadataRow));
-
-		// Read in the next row metadata
-		memset(&currentRow, 0, sizeof(currentRow));
-		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
+		TableMetadataRow prevRow;
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRow.prevRow, &prevRow);
 		if (ret != rc::OK)
 		{
 			return ret;
 		}
 
-		// Extract the table name for the new table
-		tableNameLen = 0;
-		memcpy(&tableNameLen, currentRow.tableName, sizeof(int));
-		memset(candTableName, 0, MAX_TABLENAME_SIZE);
-		memcpy(candTableName, currentRow.tableName + sizeof(int), tableNameLen);
+		// Previous row will point to whatever our next row is
+		prevRow.nextRow = currentRow.nextRow;
+		ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &prevRow, currentRow.prevRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 	}
 
-	// Hook up the pointer of the previous table to point to the new one
-	if (tableIndex == (_catalog.size() - 1)) // Case 1: at the end of the table chain
+	// Load in the next row, we will need to update its prev pointer
+	if (currentRow.nextRow.pageNum > 0)
 	{
-		RID nullRid;
-		nullRid.pageNum = 0; // Mark end of chain
-		nullRid.slotNum = 0; // Mark end of chain
-		prevRow->nextRow = nullRid;
-	}
-	else // Case 2: somewhere in the middle of the table chain, potentially at the start
-	{
-		prevRow->nextRow = currentRow.nextRow;
+		TableMetadataRow nextRow;
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRow.nextRow, &nextRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Next row will point to whatever our previous row was
+		nextRow.prevRow = currentRow.prevRow;
+		ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &nextRow, currentRow.nextRow);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 	}
 
-	// Write the previous entry to disk
-	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, prevRow, prevRID);
-	if (ret != rc::OK)
+	// If this row was the last one, update our lastTableRID
+	if (it->second.rowRID.pageNum == _lastTableRID.pageNum && it->second.rowRID.slotNum == _lastTableRID.slotNum)
 	{
-		return ret;
+		_lastTableRID = currentRow.prevRow;
 	}
-
-	// Now delete the old table record
-	ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, currentRID);
+	
+	// Now delete the old table record from disk
+	ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -366,11 +359,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 	// Finally, update our in-memory representation of the catalog
 	_catalog.erase(it);
-	_lastTableRID = prevRID;
 
-	// Free up memory
-	free(prevRow);
-	
 	return rc::OK;
 }
 

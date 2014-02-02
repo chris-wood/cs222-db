@@ -26,6 +26,7 @@ struct TableMetadataRow
 	int owner;
 	int numAttributes;
 	RID nextRow;
+	RID prevRow;
 	RID firstAttribute;
 	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
@@ -34,6 +35,7 @@ struct TableMetaData
 {
 	FileHandle fileHandle;
 	std::vector<Attribute> recordDescriptor;
+	RID rowRID;
 };
 
 struct AttributeRecord
