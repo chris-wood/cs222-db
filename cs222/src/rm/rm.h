@@ -11,6 +11,7 @@
 #define MAX_TABLENAME_SIZE 1024
 #define MAX_ATTRIBUTENAME_SIZE 1024
 
+#include <cstring>
 using namespace std;
 
 enum TableOwner
