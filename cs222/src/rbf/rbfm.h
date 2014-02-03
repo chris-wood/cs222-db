@@ -134,7 +134,7 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 
 class RBFM_ScanIterator {
 public:
-	RBFM_ScanIterator() : _comparasionValue(NULL) {}
+	RBFM_ScanIterator() : _fileHandle(NULL), _comparasionValue(NULL), _conditionAttributeIndex(-1) {}
 	~RBFM_ScanIterator() { if (_comparasionValue) { free(_comparasionValue); } }
 
 	// "data" follows the same format as RecordBasedFileManager::insertRecord()

@@ -486,7 +486,7 @@ void secA_8_A(const string &tableName)
     return;
 }
 
-void Tests_2()
+void Tests_1()
 {
     // GetAttributes
     secA_0("tbl_employee");
@@ -876,7 +876,7 @@ void secA_15(const string &tableName) {
 }
 
 
-void Tests_1()
+void Tests_2()
 {
     // Simple Scan
     secA_8_B("tbl_employee3");

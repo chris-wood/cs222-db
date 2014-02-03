@@ -1324,10 +1324,16 @@ RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescrip
 
 RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
 {
-	RC ret= findAttributeByName(recordDescriptor, conditionAttributeString, _conditionAttributeIndex);
-	if (ret != rc::OK)
+	RC ret = rc::OK;
+	
+	// We only care about the condition attribute if we are actually comparing things
+	if (compOp != NO_OP)
 	{
-		return ret;
+		findAttributeByName(recordDescriptor, conditionAttributeString, _conditionAttributeIndex);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 	}
 
 	// Save data we will need for future comparasion operations
@@ -1335,8 +1341,12 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 	_nextRid.pageNum = 1;
 	_nextRid.slotNum = 0;
 	_comparasionOp = compOp;
-	_conditionAttributeType = recordDescriptor[_conditionAttributeIndex].type;
-	allocateValue(_conditionAttributeType, value);
+
+	if (compOp != NO_OP)
+	{
+		_conditionAttributeType = recordDescriptor[_conditionAttributeIndex].type;
+		allocateValue(_conditionAttributeType, value);
+	}
 
 	_returnAttributeIndices.clear();
 	_returnAttributeTypes.clear();
@@ -1358,6 +1368,7 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 
 void RBFM_ScanIterator::nextRecord(unsigned numSlots)
 {
+	// TODO: Handle tombstones
 	_nextRid.slotNum++;
 	if (_nextRid.slotNum >= numSlots)
 	{
@@ -1368,6 +1379,11 @@ void RBFM_ScanIterator::nextRecord(unsigned numSlots)
 
 bool RBFM_ScanIterator::recordMatchesValue(char* record)
 {
+	if (_comparasionOp == NO_OP)
+	{
+		return true;
+	}
+
 	// Find the offsets so we can find the attribute value
 	unsigned* offsets = (unsigned*)(record + sizeof(unsigned));
 	unsigned attributeDataOffset = offsets[_conditionAttributeIndex];
