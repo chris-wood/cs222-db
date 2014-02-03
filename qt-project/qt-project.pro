@@ -6,7 +6,6 @@ CONFIG -= qt
 DEFINES += REDIRECT_PRINT_RECORD
 
 SOURCES += \
-    ../cs222/src/rbf/rbftest.cc \
     ../cs222/src/rbf/rbfm.cc \
     ../cs222/src/rbf/pfm.cc \
     ../cs222/src/util/returncodes.cc \
@@ -15,6 +14,7 @@ SOURCES += \
 #    ../cs222/src/rm/rmtest_1.cc \
 #    ../cs222/src/rm/rmtest_2.cc \
 #    ../cs222/src/rm/rmtest_extra.cc
+    ../cs222/src/rm/combined_tests.cc
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \
