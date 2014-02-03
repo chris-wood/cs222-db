@@ -372,11 +372,15 @@ void secA_7(const string &tableName)
         tuples.push_back((char *)tuple);
         sizes[i] = tupleSize;
         rids[i] = rid;
+        if (i > 0) {
+            // Since we are inserting 5 tiny tuples into an empty table where the page size is 4kb, all the 5 tuples should be on the first page. 
+            assert(rids[i - 1].pageNum == rids[i].pageNum);
+        }
         cout << rid.pageNum << endl;
     }
     cout << "After Insertion!" << endl;
     
-    int pageid = 0; // Depends on which page the tuples are
+    int pageid = rid.pageNum;
     rc = rm->reorganizePage(tableName, pageid);
     assert(rc == success);
 
@@ -482,28 +486,28 @@ void secA_8_A(const string &tableName)
     return;
 }
 
-void Tests_1()
+void Tests_2()
 {
     // GetAttributes
     secA_0("tbl_employee");
 
     // Insert/Read Tuple
-    secA_1("tbl_employee", 6, "Peters", 24, 170.1f, 5000);
+    secA_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
 
     // Delete Tuple
-    secA_2("tbl_employee", 6, "Victor", 22, 180.2f, 6000);
+    secA_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
 
     // Update Tuple
-    secA_3("tbl_employee", 6, "Thomas", 28, 187.3f, 4000);
+    secA_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
 
     // Read Attributes
-    secA_4("tbl_employee", 6, "Veekay", 27, 171.4f, 9000);
+    secA_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
 
     // Delete Tuples
-    secA_5("tbl_employee", 6, "Dillon", 29, 172.5f, 7000);
+    secA_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
 
     // Delete Table
-    secA_6("tbl_employee", 6, "Martin", 26, 173.6f, 8000);
+    secA_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
    
     memProfile();
  
@@ -528,7 +532,7 @@ void secA_8_B(const string &tableName)
     cout << "****In Test Case 8_B****" << endl;
 
     RID rid;    
-    int numTuples = 100;
+    const int numTuples = 100;
     void *returnedData = malloc(100);
 
     set<int> ages; 
@@ -582,7 +586,7 @@ void secA_9(const string &tableName, vector<RID> &rids, vector<int> &sizes)
 
     RID rid; 
     void *tuple = malloc(1000);
-    int numTuples = 2000;
+    const int numTuples = 2000;
 
     // GetAttributes
     vector<Attribute> attrs;
@@ -622,7 +626,7 @@ void secA_10(const string &tableName, const vector<RID> &rids, const vector<int>
     // 1. read tuple
     cout << "****In Test case 10****" << endl;
 
-    int numTuples = 2000;
+    const int numTuples = 2000;
     void *tuple = malloc(1000);
     void *returnedData = malloc(1000);
 
@@ -872,13 +876,13 @@ void secA_15(const string &tableName) {
 }
 
 
-void Tests_2()
+void Tests_1()
 {
     // Simple Scan
     secA_8_B("tbl_employee3");
 
     memProfile();
-	
+    
     // Pressure Test
     createLargeTable("tbl_employee4");
 
@@ -911,4 +915,3 @@ void Tests_2()
     memProfile();
     return;
 }
-
