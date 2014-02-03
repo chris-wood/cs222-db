@@ -292,7 +292,7 @@ void secA_15(const string &tableName) {
     
     RID rid;    
     int tupleSize = 0;
-    const int numTuples = 500;
+    int numTuples = 500;
     void *tuple;
     void *returnedData = malloc(100);
     int ageVal = 25;
@@ -357,7 +357,7 @@ void Tests()
     secA_8_B("tbl_employee3");
 
     memProfile();
-	
+    
     // Pressure Test
     createLargeTable("tbl_employee4");
 
