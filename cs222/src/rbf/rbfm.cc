@@ -770,14 +770,15 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     PageIndexHeader* realHeader = getPageIndexHeader(pageBuffer);
     if (rid.slotNum == realHeader->numSlots - 1)
     {
-        PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
-        adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - slotIndex->pageOffset);
+        PageIndexSlot* newSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
+        // adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
+        adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
     }
     else
     {
-        PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
+        PageIndexSlot* newSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
         PageIndexSlot* nextSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum + 1);
-        adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - slotIndex->pageOffset);
+        adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - newSlotIndex->pageOffset);
     }
 
     // Find the slot where the record is stored - O(1)
@@ -807,16 +808,17 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
             // Update the adjacency information
             realHeader = getPageIndexHeader(tempPageBuffer);
-            if (newRID.pageNum == realHeader->numSlots - 1)
+            if (newRID.slotNum == realHeader->numSlots - 1)
             {
-                PageIndexSlot* slotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
-                adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - slotIndex->pageOffset);
+                PageIndexSlot* newSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
+                // adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
+                adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
             }
             else
             {
-                PageIndexSlot* slotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
+                PageIndexSlot* newSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
                 PageIndexSlot* nextSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum + 1);
-                adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - slotIndex->pageOffset);
+                adjacentFreeSpace.push_back(nextSlotIndex->pageOffset - newSlotIndex->pageOffset);
             }
         }
     }
