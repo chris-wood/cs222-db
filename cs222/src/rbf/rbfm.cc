@@ -772,7 +772,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     {
         PageIndexSlot* newSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
         adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
-        // adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
     }
     else
     {
@@ -1079,7 +1078,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         }
 
         // Update the current page with a forward pointer and more free space
-        oldSlot->size = recLength;
+        oldSlot->size = 0; // tombstones have a size of "0"
         oldSlot->nextPage = newPageNum;
         oldSlot->nextSlot = newHeader->numSlots - 1;
         writePageIndexSlot(pageBuffer, oldSlotNum, oldSlot);
