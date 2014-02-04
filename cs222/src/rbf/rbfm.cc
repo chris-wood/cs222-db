@@ -673,8 +673,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	else
 	{
 		// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
-        // @Tamir - good call. :-)
-		memset(pageBuffer + slotIndex->pageOffset, 0xDEADBEEF, slotIndex->size);
+		memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
 
 		// Mark the slot as 'free' -- leave the pageOffset in order to facilitate later calls to reorganizePage()
 		slotIndex->size = 0;
@@ -1369,7 +1368,6 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 
 void RBFM_ScanIterator::nextRecord(unsigned numSlots)
 {
-	// TODO: Handle tombstones
 	_nextRid.slotNum++;
 	if (_nextRid.slotNum >= numSlots)
 	{
@@ -1414,7 +1412,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	{
 		return RBFM_EOF;
 	}
-
+	
 	// Read in the page with the next record
 	char pageBuffer[PAGE_SIZE] = {0};
 	PageNum loadedPage = _nextRid.pageNum;
@@ -1424,7 +1422,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		return ret;
 	}
 
-    // Pull in the header preemptively
+	// Pull in the header preemptively
     PageIndexHeader* pageHeader = RecordBasedFileManager::getPageIndexHeader(pageBuffer);
 
     // Early exit if our next slot is non-existant
@@ -1466,6 +1464,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
                 {
                     return ret;
                 }
+
                 slot = RecordBasedFileManager::getPageIndexSlot(tempPageBuffer, slot->nextSlot);
                 memcpy(pageBuffer, tempPageBuffer, PAGE_SIZE);
             }
@@ -1484,7 +1483,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 
 		// Advance RID once more and exit
 		nextRecord(pageHeader->numSlots);
-		break;
+		return rc::OK;
 	}
 
 	return RBFM_EOF;
