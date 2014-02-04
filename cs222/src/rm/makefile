@@ -12,7 +12,7 @@ librm.a: librm.a(../util/dbgout.o)
 rm.o: rm.h ../util/dbgout.h ../util/returncodes.h
 rmtest_1.o: rm.h test_util.h ../util/dbgout.h ../util/returncodes.h
 rmtest_2.o: rm.h test_util.h ../util/dbgout.h ../util/returncodes.h
-rmtest_extra.o: rm.h../util/dbgout.h ../util/returncodes.h
+rmtest_extra.o: rm.h ../util/dbgout.h ../util/returncodes.h
 combined_tests.o: rm.h test_util.h ../util/dbgout.h ../util/returncodes.h
 
 # binary dependencies
