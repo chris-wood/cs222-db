@@ -929,6 +929,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         PageIndexSlot* placeSlot = getPageIndexSlot(pageBuffer, placeSlotNum);
 
         // Write the offsets array and data to disk
+        assert(placeSlot->pageOffset + recLength < (PAGE_SIZE - sizeof(PageIndexHeader) - (placeHeader->numSlots * sizeof(PageIndexSlot))));
         memcpy(pageBuffer + placeSlot->pageOffset, recHeader, recHeaderSize);
         memcpy(pageBuffer + placeSlot->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
         free(recHeader);
@@ -1031,6 +1032,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::updateRecord: header.freeSpaceOffset = " << newHeader->freeSpaceOffset << "\n";
 
         // Write the offsets array and data to the buffer
+        assert(newHeader->freeSpaceOffset + recLength < (PAGE_SIZE - sizeof(PageIndexHeader) - (newHeader->numSlots * sizeof(PageIndexSlot))));
         memcpy(newPageBuffer + newHeader->freeSpaceOffset, recHeader, recHeaderSize);
         memcpy(newPageBuffer + newHeader->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
         free(recHeader);
