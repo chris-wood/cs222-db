@@ -693,20 +693,20 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	// If it exists, walk the tombstone chain and delete all records along the way
     if (slotIndex->nextPage > 0)
 	{
-		RID newRID = rid;
+		RID newRID, oldRID = rid;
         while (slotIndex->nextPage > 0) // walk the forward pointers
         {
-			// Delete the current record
-			ret = deleteRid(fileHandle, newRID, slotIndex, header, pageBuffer);
-			if (ret != rc::OK)
-			{
-				return ret;
-			}
-
 			// Look ahead to the next record to visit
 			newRID.pageNum = slotIndex->nextPage;
 			newRID.slotNum = slotIndex->nextSlot;
 
+			// Delete the current record
+			ret = deleteRid(fileHandle, oldRID, slotIndex, header, pageBuffer);
+			if (ret != rc::OK)
+			{
+				return ret;
+			}
+			
             // Pull the new page into memory
             ret = fileHandle.readPage(newRID.pageNum, pageBuffer);
             if (ret != rc::OK)
@@ -714,6 +714,8 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
                 return ret;
             }
             slotIndex = getPageIndexSlot(pageBuffer, slotIndex->nextSlot);
+
+			oldRID = newRID;
         }
 	}
 	else

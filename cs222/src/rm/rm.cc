@@ -164,6 +164,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	// Update the row data with the pointer to its first attribute and store the RID so we have an easy way to delete later on
 	newRow.firstAttribute = attributeRID;
 	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// If there was a previous row, we need to update its next pointer
 	if (prevLastRID.pageNum > 0)
