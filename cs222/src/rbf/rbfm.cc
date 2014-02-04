@@ -259,8 +259,21 @@ RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageI
     // Update prevPage to point to our nextPage
     if (pageHeader.prevPage > 0)
     {
-        // We only ever insert into the head of the list, this case should never happen
-        return rc::HEADER_FREESPACE_LISTS_CORRUPT;
+        // Read in the next page
+        ret = fileHandle.readPage(pageHeader.prevPage, pageBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        // Update the prev pointer of the next page to our prev pointer
+        PageIndexHeader* prevPageHeader = getPageIndexHeader(pageBuffer);
+        prevPageHeader->nextPage = pageHeader.nextPage;
+        ret = fileHandle.writePage(prevPageHeader->pageNumber, pageBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     else
     {
@@ -373,6 +386,10 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     if(ret == rc::OK)
     {
         ret = fileHandle.readPage(0, buffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
         memcpy(header, buffer, sizeof(PFHeader));
     }
 
@@ -645,6 +662,7 @@ RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
 		// Update the header to merge the freespace pool with this deleted record
 		header->freeSpaceOffset -= slotIndex->size;
 		header->numSlots -= 1;
+        memcpy(pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), header, sizeof(PageIndexHeader));
 
 		// Zero out all of slotIndex
 		slotIndex->pageOffset = 0;
@@ -687,8 +705,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	if (slotIndex->size == 0 && slotIndex->nextPage == 0)
 	{
 		// TODO: Should this be an error, deleting an already deleted record? Or do we allow it and skip the operation (like a free(NULL))
-		// return rc::RECORD_DELETED;
-		return rc::OK;
+		return rc::RECORD_DELETED;
 	}
 
 	// If it exists, walk the tombstone chain and delete all records along the way
