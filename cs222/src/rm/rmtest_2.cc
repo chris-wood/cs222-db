@@ -228,7 +228,8 @@ void secA_13(const string &tableName)
     int j = 0;
     void *returnedData = malloc(1000);
 
-    while(rmsi.getNextTuple(rid, returnedData) != RM_EOF)
+    rc = rmsi.getNextTuple(rid, returnedData);
+    while(rc != RM_EOF)
     {
         if(j % 200 == 0)
         {
@@ -255,6 +256,7 @@ void secA_13(const string &tableName)
         }
         j++;
         memset(returnedData, 0, 1000);
+        rc = rmsi.getNextTuple(rid, returnedData);
     }
     rmsi.close();
     cout << "Total number of tuples: " << j << endl << endl;

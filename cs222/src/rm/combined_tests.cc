@@ -715,7 +715,9 @@ void secA_12(const string &tableName, const vector<RID> &rids)
     // Delete the first 1000 tuples
     for(int i = 0; i < 1000; i++)
     {
+        cout << "deleting rid: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
         rc = rm->deleteTuple(tableName, rids[i]);
+        cout << "new rids: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
         assert(rc == success);
 
         rc = rm->readTuple(tableName, rids[i], returnedData);
@@ -753,6 +755,9 @@ void secA_13(const string &tableName)
     int j = 0;
     void *returnedData = malloc(1000);
 
+    rc = rmsi.getNextTuple(rid, returnedData);
+    cout << "HERE: " << rc << endl;
+    cout << (rc == RM_EOF) << "  -   " << (rc == success) << endl;
     while(rmsi.getNextTuple(rid, returnedData) != RM_EOF)
     {
         if(j % 200 == 0)
@@ -780,10 +785,10 @@ void secA_13(const string &tableName)
         }
         j++;
         memset(returnedData, 0, 1000);
+        rc = rmsi.getNextTuple(rid, returnedData);
     }
     rmsi.close();
     cout << "Total number of tuples: " << j << endl << endl;
-	assert(j > 0);
 
     cout << "****Test case 13 passed****" << endl << endl;
     free(returnedData);

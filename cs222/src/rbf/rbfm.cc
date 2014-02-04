@@ -654,6 +654,7 @@ RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
 	slotIndex->size = 0;
     slotIndex->nextPage = 0;
     slotIndex->nextSlot = 0;
+    writePageIndexSlot(pageBuffer, rid.slotNum, slotIndex);
 
 	// Write back the new page
 	RC ret = fileHandle.writePage(rid.pageNum, pageBuffer);
@@ -713,7 +714,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
             {
                 return ret;
             }
-            slotIndex = getPageIndexSlot(pageBuffer, slotIndex->nextSlot);
+            slotIndex = getPageIndexSlot(pageBuffer, newRID.slotNum);
 
 			oldRID = newRID;
         }
@@ -1226,10 +1227,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
         // Update the freespace offset for future insertions
         header.freeSpaceOffset -= reallocatedSpace;
         header.gapSize -= reallocatedSpace;
-        cout << "gap size = " << header.gapSize << endl;
-        cout << "freespace offset = " << header.freeSpaceOffset << endl;
         movePageToCorrectFreeSpaceList(fileHandle, header);
-        cout << "done" << endl;
 
         // Update the slot entries in the new page
         memcpy(newBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header.numSlots * sizeof(PageIndexSlot)), offsets, (header.numSlots * sizeof(PageIndexSlot)));
@@ -1241,8 +1239,6 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
         {
             return ret;
         }
-
-        cout << " wrote the page " << endl;
     }
     else
     {

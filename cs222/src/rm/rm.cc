@@ -189,6 +189,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		}
 	}
 
+
     return rc::OK;
 }
 
