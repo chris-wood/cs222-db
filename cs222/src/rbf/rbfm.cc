@@ -519,7 +519,6 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
         unsigned char tempPageBuffer[PAGE_SIZE] = {0};
         while (slotIndex->nextPage > 0 || slotIndex->nextSlot > 0) // walk the forward pointers
         {
-            cout << "moving to " << slotIndex->nextPage << "," << slotIndex->nextSlot << endl;
             ret = fileHandle.readPage(slotIndex->nextPage, tempPageBuffer);
             if (ret != rc::OK)
             {
@@ -1437,7 +1436,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	{
 		// Attempt to read in the next record
 		PageIndexSlot* slot = RecordBasedFileManager::getPageIndexSlot(pageBuffer, _nextRid.slotNum);
-		if (slot->size == 0)
+		if (slot->size == 0 && slot->nextPage == 0)
 		{
 			// This record was deleted, skip it
 			nextRecord(pageHeader->numSlots);
@@ -1445,10 +1444,10 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		}
 
         // Pull up the next record, walking the tombstone chain if necessary
-        if (slot->nextPage > 0) // check to see if we moved to a different page
+        if (slot->nextPage > 0 || slot->nextSlot > 0) // check to see if we moved to a different page
         {
             unsigned char tempPageBuffer[PAGE_SIZE] = {0};
-            while (slot->nextPage != 0) // walk the forward pointers
+            while (slot->nextPage > 0 || slot->nextSlot > 0) // walk the forward pointers
             {
                 ret = _fileHandle->readPage(slot->nextPage, tempPageBuffer);
                 if (ret != rc::OK)
