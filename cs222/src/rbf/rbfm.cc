@@ -654,6 +654,7 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, PageIndexHeader* header, unsigned char* pageBuffer)
 {
 	// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
+    assert(slotIndex->pageOffset + slotIndex->size < (PAGE_SIZE - sizeof(PageIndexHeader) - (header->numSlots * sizeof(PageIndexSlot))));
 	memset(pageBuffer + slotIndex->pageOffset, 255, slotIndex->size);
 
 	// If this is the last record on the page being deleted, merge the freespace with the main pool
@@ -826,7 +827,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
     // With the correct page, now re-read everything into memory
     // Read the page of data RID points to
-    memset(pageBuffer, 255, PAGE_SIZE);
+    memset(pageBuffer, 0, PAGE_SIZE);
     ret = fileHandle.readPage(realPage, pageBuffer);
     if (ret != rc::OK)
     {
