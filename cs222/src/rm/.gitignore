@@ -1,2 +1,8 @@
 *.exe
 *.exe.stackdump
+RM_SYS_TABLE.db
+tbl_employee0
+tbl_employee1
+tbl_employee2
+tbl_employee3
+tbl_employee4
