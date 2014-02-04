@@ -668,6 +668,8 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
 		slotIndex->pageOffset = 0;
 		slotIndex->size = 0;
+        slotIndex->nextPage = 0;
+        slotIndex->nextSlot = 0;
 	}
 	else
 	{
