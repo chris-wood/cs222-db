@@ -715,9 +715,9 @@ void secA_12(const string &tableName, const vector<RID> &rids)
     // Delete the first 1000 tuples
     for(int i = 0; i < 1000; i++)
     {
-        cout << "deleting rid: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
+        // cout << "deleting rid: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
         rc = rm->deleteTuple(tableName, rids[i]);
-        cout << "new rids: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
+        // cout << "new rids: " << rids[i].pageNum << "," << rids[i].slotNum << endl;
         assert(rc == success);
 
         rc = rm->readTuple(tableName, rids[i], returnedData);
