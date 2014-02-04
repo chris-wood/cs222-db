@@ -783,6 +783,7 @@ void secA_13(const string &tableName)
     }
     rmsi.close();
     cout << "Total number of tuples: " << j << endl << endl;
+	assert(j > 0);
 
     cout << "****Test case 13 passed****" << endl << endl;
     free(returnedData);

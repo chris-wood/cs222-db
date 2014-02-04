@@ -1417,7 +1417,8 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 
 	// Read in the page with the next record
 	char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = _fileHandle->readPage(_nextRid.pageNum, pageBuffer);
+	PageNum loadedPage = _nextRid.pageNum;
+	RC ret = _fileHandle->readPage(loadedPage, pageBuffer);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -1434,6 +1435,17 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 
 	while(_nextRid.pageNum < numPages)
 	{
+		// If we are looking on a new page, load that buffer into memory
+		if (_nextRid.pageNum != loadedPage)
+		{
+			loadedPage = _nextRid.pageNum;
+			ret = _fileHandle->readPage(loadedPage, pageBuffer);
+			if (ret != rc::OK)
+			{
+				return ret;
+			}
+		}
+
 		// Attempt to read in the next record
 		PageIndexSlot* slot = RecordBasedFileManager::getPageIndexSlot(pageBuffer, _nextRid.slotNum);
 		if (slot->size == 0 && slot->nextPage == 0)
@@ -1475,7 +1487,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		break;
 	}
 
-	return rc::OK;
+	return RBFM_EOF;
 }
 
 void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned numAttributes)
