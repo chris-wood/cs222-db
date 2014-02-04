@@ -771,8 +771,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     if (rid.slotNum == realHeader->numSlots - 1)
     {
         PageIndexSlot* newSlotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
-        // adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
-        adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
+        adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
+        // adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
     }
     else
     {
@@ -811,8 +811,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             if (newRID.slotNum == realHeader->numSlots - 1)
             {
                 PageIndexSlot* newSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
-                // adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
-                adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
+                adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
+                // adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
             }
             else
             {
