@@ -230,6 +230,7 @@ protected:
   RC movePageToFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex);
   RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, PageIndexHeader& pageHeader);
   unsigned calcRecordSize(unsigned char* recordBuffer);
+  RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, PageIndexHeader* header, unsigned char* pageBuffer);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

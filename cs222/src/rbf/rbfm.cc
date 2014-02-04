@@ -148,8 +148,8 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 	}
 	
 	// Zero out memory for cleanliness
-    memset(newPages, 0, PAGE_SIZE * requiredPages);
-	memset(listSwapBuffer, 0, PAGE_SIZE);
+    memset(newPages, 255, PAGE_SIZE * requiredPages);
+	memset(listSwapBuffer, 255, PAGE_SIZE);
 
     for (unsigned i=0; i<requiredPages; ++i)
     {
@@ -634,6 +634,38 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 	return rc::OK;
 }
 
+RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, PageIndexHeader* header, unsigned char* pageBuffer)
+{
+	// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
+	memset(pageBuffer + slotIndex->pageOffset, 255, slotIndex->size);
+
+	// If this is the last record on the page being deleted, merge the freespace with the main pool
+	if (rid.slotNum + 1 == header->numSlots)
+	{
+		// Update the header to merge the freespace pool with this deleted record
+		header->freeSpaceOffset -= slotIndex->size;
+		header->numSlots -= 1;
+
+		// Zero out all of slotIndex
+		slotIndex->pageOffset = 0;
+	}
+	// else we leave the pageOffset in order to facilitate later calls to reorganizePage()
+
+	slotIndex->size = 0;
+    slotIndex->nextPage = 0;
+    slotIndex->nextSlot = 0;
+
+	// Write back the new page
+	RC ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// If need be, fix the freespace lists
+	return movePageToCorrectFreeSpaceList(fileHandle, *header); 
+}
+
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
 {
 	// Read the page of data RID points to
@@ -650,42 +682,49 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	// Find the slot where the record is stored
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
 
-	if (slotIndex->size == 0)
+	// Has this record been deleted already?
+	if (slotIndex->size == 0 && slotIndex->nextPage == 0)
 	{
 		// TODO: Should this be an error, deleting an already deleted record? Or do we allow it and skip the operation (like a free(NULL))
+		// return rc::RECORD_DELETED;
 		return rc::OK;
 	}
 
-	// If this is the last record on the page being deleted, merge the freespace with the main pool
-	if (rid.slotNum + 1 == header->numSlots)
+	// If it exists, walk the tombstone chain and delete all records along the way
+    if (slotIndex->nextPage > 0)
 	{
-		// Update the header to merge the freespace pool with this deleted record
-		header->freeSpaceOffset -= slotIndex->size;
-		header->numSlots -= 1;
+		RID newRID = rid;
+        while (slotIndex->nextPage > 0) // walk the forward pointers
+        {
+			// Delete the current record
+			ret = deleteRid(fileHandle, newRID, slotIndex, header, pageBuffer);
+			if (ret != rc::OK)
+			{
+				return ret;
+			}
 
-		// Zero out the slot data to leave a clean slate for the next one
-		memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
-		slotIndex->pageOffset = 0;
-		slotIndex->size = 0;
-        slotIndex->nextPage = 0;
-        slotIndex->nextSlot = 0;
+			// Look ahead to the next record to visit
+			newRID.pageNum = slotIndex->nextPage;
+			newRID.slotNum = slotIndex->nextSlot;
+
+            // Pull the new page into memory
+            ret = fileHandle.readPage(newRID.pageNum, pageBuffer);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
+            slotIndex = getPageIndexSlot(pageBuffer, slotIndex->nextSlot);
+        }
 	}
 	else
 	{
-		// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
-		memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
-
-		// Mark the slot as 'free' -- leave the pageOffset in order to facilitate later calls to reorganizePage()
-		slotIndex->size = 0;
-        slotIndex->nextPage = 0;
-        slotIndex->nextSlot = 0;
+		// We are deleting the record and no tombstone chain
+		ret = deleteRid(fileHandle, rid, slotIndex, header, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 	}
-
-	// Write back the new page
-	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-
-	// If need be, fix the freespace lists
-	movePageToCorrectFreeSpaceList(fileHandle, *header);
 
 	return ret;
 }
@@ -767,7 +806,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
     // With the correct page, now re-read everything into memory
     // Read the page of data RID points to
-    memset(pageBuffer, 0, PAGE_SIZE);
+    memset(pageBuffer, 255, PAGE_SIZE);
     ret = fileHandle.readPage(realPage, pageBuffer);
     if (ret != rc::OK)
     {
