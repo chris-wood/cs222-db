@@ -219,6 +219,7 @@ public:
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
+  static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 protected:
   RecordBasedFileManager();
@@ -232,6 +233,7 @@ protected:
   unsigned calcRecordSize(unsigned char* recordBuffer);
   RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, PageIndexHeader* header, unsigned char* pageBuffer);
   RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
+  RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 
 private:
   static RecordBasedFileManager *_rbf_manager;

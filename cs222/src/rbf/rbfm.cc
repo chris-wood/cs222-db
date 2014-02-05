@@ -225,7 +225,7 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
     PFHeader header;
     readHeader(fileHandle, &header);
 
-    unsigned freespace = PAGE_SIZE - pageHeader.freeSpaceOffset - sizeof(PageIndexHeader) - (pageHeader.numSlots * sizeof(PageIndexSlot));
+    unsigned freespace = calculateFreespace(pageHeader.freeSpaceOffset, pageHeader.numSlots);
     for (unsigned i=header.numFreespaceLists; i>0; --i)
     {
         unsigned listIndex = i - 1;
@@ -1142,17 +1142,11 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
     return rc::OK;
 }
 
-RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer)
 {
-    // Pull the page into memory - O(1)
-    unsigned char pageBuffer[PAGE_SIZE] = {0};
-    RC ret = fileHandle.readPage(pageNumber, pageBuffer);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+	RC ret = rc::OK;
 
-    // Read in the page header and recover the number of slots
+	// Read in the page header and recover the number of slots
     PageIndexHeader header;
     memcpy(&header, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader), sizeof(PageIndexHeader));
 
@@ -1246,9 +1240,61 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     return rc::OK;
 }
 
+RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+{
+    // Pull the page into memory - O(1)
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNumber, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+	return reorganizeBufferedPage(fileHandle, recordDescriptor, pageNumber, pageBuffer);
+}
+
 RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	PFHeader header;
+	RC ret = readHeader(fileHandle, &header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	std::vector< unsigned > freespace;
+	std::vector< std::vector<unsigned> > recordSizes;
+
+	// Step 1) Reorganize individual pages
+	for (unsigned page=0; page<header.numPages; ++page)
+	{
+		fileHandle.readPage(page, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Reorganize the page to 
+		reorganizeBufferedPage(fileHandle, recordDescriptor, page, pageBuffer);
+		PageIndexHeader* pageIndexHeader = getPageIndexHeader(pageBuffer);
+
+		// Keep track of freespace on each page
+		freespace.push_back(calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots));
+
+		// Keep track of the sizes of all records on this page
+		recordSizes.push_back(std::vector<unsigned>());
+		std::vector<unsigned>& currentPageRecordSizes = recordSizes.back();
+		for (unsigned slot=0; slot < pageIndexHeader->numSlots; ++slot)
+		{
+			PageIndexSlot* pageSlot = getPageIndexSlot(pageBuffer, slot);
+			currentPageRecordSizes.push_back(pageSlot->size);
+		}
+	}
+
+	// Step 2) Do other stuff
+
+	return rc::OK;
 }
 
 RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
@@ -1340,6 +1386,11 @@ void RecordBasedFileManager::writePageIndexSlot(void* pageBuffer, unsigned slotN
 PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
 {
 	return (PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
+}
+
+unsigned RecordBasedFileManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)
+{
+	return PAGE_SIZE - freespaceOffset - sizeof(PageIndexHeader) - (numSlots * sizeof(PageIndexSlot));
 }
 
 RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index)
