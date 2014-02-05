@@ -1292,7 +1292,13 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 		}
 	}
 
-	// Step 2) Do other stuff
+	// Step 2) Don't do bin packing, because it's NP hard
+
+	// Step 3) Find tombstones and collapse them
+	// TODO: Write me
+
+	// Step 4) Iterate through pages with few records and attempt to move them to consolotate space
+	// TODO: Write me
 
 	return rc::OK;
 }
