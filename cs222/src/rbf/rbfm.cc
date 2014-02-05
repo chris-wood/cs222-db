@@ -113,6 +113,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
     return rc::OK;
 }
 
+// Find a page (or insert a new one) that has at least 'bytes' free on it 
 RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum)
 {
     RC ret;
@@ -173,7 +174,6 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         else
         {
             // Read in the previous list head
-
             ret = fileHandle.readPage(oldFreeSpaceList.listHead, listSwapBuffer);
             if (ret != rc::OK)
             {
@@ -402,20 +402,20 @@ RC RecordBasedFileManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     return ret;
 }
 
-RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
+RC RecordBasedFileManager::generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeader, unsigned& recLength, unsigned& recHeaderSize)
 {
-    // Compute the size of the record to be inserted
+	// Compute the size of the record to be inserted
     // The header includes a field storing the number of attributes on disk, one offset field for each attribute, 
     // and then a final offset field to point to the end of the record (to enable easy size calculations)
-    const unsigned recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + (2 * sizeof(unsigned));
-    unsigned recLength = recHeaderSize;
-    unsigned headerIndex = 0;
+	recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + (2 * sizeof(unsigned));
+	recLength = recHeaderSize;
+	unsigned headerIndex = 0;
     unsigned dataOffset = 0;
 
     // Allocate an array of offets with N entries, where N is the number of fields as indicated
     // by the recordDescriptor vector. Each entry i in this array points to the address offset,
     // from the base address of the record on disk, where the i-th field is stored. 
-    unsigned* recHeader = (unsigned*)malloc(recHeaderSize);
+    recHeader = (unsigned*)malloc(recHeaderSize);
     if (!recHeader)
 	{
 		return rc::OUT_OF_MEMORY;
@@ -447,9 +447,24 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     // Drop in the pointer (offset) to the end of the record
     recHeader[headerIndex++] = recLength;
 
+	return rc::OK;
+}
+
+RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
+{
+	unsigned recLength = 0;
+	unsigned recHeaderSize = 0;
+	unsigned* recHeader = NULL;
+	RC ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+	if (ret != rc::OK)
+	{
+		free(recHeader);
+		return ret;
+	}
+	
     // Find the first page(s) with enough free space to hold this record
     PageNum pageNum;
-    RC ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
+    ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
     if (ret != rc::OK)
     {
         free(recHeader);
@@ -844,54 +859,15 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         return rc::RECORD_DELETED;
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////
-    ///// TODO: move this common code (record setup, between insertion) to a private method
-
-    // Compute the size of the record to be inserted
-    // The header includes a field storing the number of attributes on disk, one offset field for each attribute, 
-    // and then a final offset field to point to the end of the record (to enable easy size calculations)
-    const unsigned recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + (2 * sizeof(unsigned));
-    unsigned recLength = recHeaderSize;
-    unsigned headerIndex = 0;
-    unsigned dataOffset = 0;
-
-    // Allocate an array of offets with N entries, where N is the number of fields as indicated
-    // by the recordDescriptor vector. Each entry i in this array points to the address offset,
-    // from the base address of the record on disk, where the i-th field is stored. 
-    unsigned* recHeader = (unsigned*)malloc(recHeaderSize);
-    if (!recHeader)
-    {
-        return rc::OUT_OF_MEMORY;
-    }
-
-    // Write out the number of attributes as part of the header of the record
-    unsigned numAttributes = recordDescriptor.size();
-    memcpy(recHeader, &numAttributes, sizeof(unsigned));
-    ++headerIndex;
-
-    // Compute the compact record length and values to be inserted into the offset array
-    for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
-    {
-        // First, store the offset
-        recHeader[headerIndex++] = recLength;
-
-        // Now bump the length as needed based on the length of the contents
-        const Attribute& attr = *itr;
-        unsigned attrSize = Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
-        if (attrSize == 0)
-        {
-            return rc::ATTRIBUTE_INVALID_TYPE;
-        }
-
-        recLength += attrSize;
-        dataOffset += attrSize;
-    }
-
-    // Drop in the pointer (offset) to the end of the record
-    recHeader[headerIndex++] = dataOffset;
-
-    ///// END RECORD CALCULATION/FORMAT, BEGIN PLACEMENT
-    //////////////////////////////////////////////////////////////////////////////////////////
+	unsigned recLength = 0;
+	unsigned recHeaderSize = 0;
+	unsigned* recHeader = NULL;
+	ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+	if (ret != rc::OK)
+	{
+		free(recHeader);
+		return ret;
+	}
 
     // Walk the tombstone chain and see if we can fit in any of these slots
     unsigned ti = 0;
@@ -913,6 +889,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         ret = fileHandle.readPage(placePage, pageBuffer);
         if (ret != rc::OK)
         {
+			free(recHeader);
             return ret;
         }
 
