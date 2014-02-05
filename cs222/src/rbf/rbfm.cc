@@ -1568,9 +1568,18 @@ void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned numA
 
 RC RBFM_ScanIterator::close()
 {
-	// TODO: What's this supposed to do?
+	if (_comparasionValue)
+	{
+		free(_comparasionValue);
+		_comparasionValue = NULL;
+	}
 
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	_fileHandle = NULL;
+	_conditionAttributeIndex = -1;
+	_returnAttributeIndices.clear();
+	_returnAttributeTypes.clear();
+
+	return rc::OK;
 }
 
 RC RBFM_ScanIterator::allocateValue(AttrType attributeType, const void* value)
