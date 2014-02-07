@@ -183,7 +183,7 @@ RC RecordBasedFileManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
             // Update the prev pointer of the previous head to be our page number
             PageIndexHeader* previousListHead = getPageIndexHeader(listSwapBuffer);
-            previousListHead->prevPage = pageNum;
+            previousListHead->prevPage = index->pageNumber;
             ret = fileHandle.writePage(previousListHead->pageNumber, listSwapBuffer);
             if (ret != rc::OK)
             {
