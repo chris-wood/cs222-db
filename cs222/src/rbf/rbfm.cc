@@ -826,7 +826,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             {
                 PageIndexSlot* newSlotIndex = getPageIndexSlot(tempPageBuffer, newRID.slotNum);
                 adjacentFreeSpace.push_back(realHeader->freeSpaceOffset - newSlotIndex->pageOffset);
-                // adjacentFreeSpace.push_back((PAGE_SIZE - sizeof(PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexHeader))) - newSlotIndex->pageOffset);
             }
             else
             {
@@ -1004,6 +1003,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
         // Increase the gap size accordingly (the size of the previously stored record)
         oldHeader->gapSize += oldSlot->size;
+        cout << "after things" << endl;
 
         dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::updateRecord: header.freeSpaceOffset = " << newHeader->freeSpaceOffset << "\n";
 
@@ -1020,6 +1020,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         slotIndex->nextPage = 0; // NULL
         slotIndex->nextSlot = 0; // NULL    
         writePageIndexSlot(newPageBuffer, newHeader->numSlots, slotIndex);
+
+        cout << "wrote page index" << endl;
 
         dbg::out << dbg::LOG_EXTREMEDEBUG;
         dbg::out << "RecordBasedFileManager::updateRecord: RID = (" << newPageNum << ", " << newHeader->numSlots << ")\n";
@@ -1040,6 +1042,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             return ret;
         }
 
+        cout << "moved to new page" << endl;
+
         // Write the new page information to disk
         ret = fileHandle.writePage(newPageNum, newPageBuffer);
         if (ret != rc::OK)
@@ -1047,12 +1051,16 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             return ret;
         }
 
+        cout << "wrote page" << endl;
+
         // Re-read the page into memory, since we can potentially be on the same page
         ret = fileHandle.readPage(oldPage, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
         }
+
+        cout << "pulled in new page" << endl;
 
         // Update the current page with a forward pointer and more free space
         oldSlot->size = 0; // tombstones have a size of "0"
@@ -1071,7 +1079,9 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         // Finally, check for reorganization
         if (oldHeader->gapSize > REORG_THRESHOLD)
         {
+            cout << "reorg" << endl;
             RC ret = reorganizePage(fileHandle, recordDescriptor, oldPage);
+            cout << "done" << endl;
             if (ret != rc::OK)
             {
                 return ret;
