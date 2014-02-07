@@ -1916,7 +1916,7 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
         	{
         		memcpy((char*)charBuf + k, &text, 1);
         	}
-        	assert(strcmp(tempBuffer, charBuf) == 0);
+        	assert(strncmp(tempBuffer, charBuf, count) == 0);
         }
 
         // Walk the ints & floats now and compare equality
@@ -2471,6 +2471,165 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 	return rc;
 }
 
+void rbfmTestRandomInsertDeleteUpdateReorganize(int numRecords)
+{
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	RC rc = rbfm->createFile("rbfmTestRandomInsertDeleteUpdateReorganize_file");
+	assert(rc == success);
+
+	FileHandle file;
+	rc = rbfm->openFile("rbfmTestRandomInsertDeleteUpdateReorganize_file", file);
+	assert(rc == success);
+
+	char readData[PAGE_SIZE] = {0};
+	vector<char*> recordData;
+	vector<int> stringSizes;
+	vector<int> indexes;
+	vector<RID> rids;
+
+	// Allocate enough space for any sized record
+	for (int i=0; i<numRecords; ++i)
+	{
+		rids.push_back(RID());
+		indexes.push_back(i);
+		recordData.push_back((char*)malloc(PAGE_SIZE));
+		memset(recordData.back(), 0, PAGE_SIZE);
+	}
+
+	// Determine the size of the records
+	for (int i=0; i<numRecords; ++i)
+	{
+		int stringsize = 4 + (rand() % 4000);
+		stringSizes.push_back(stringsize);
+
+		int* pss = (int*)recordData[i];
+		*pss = stringsize;
+
+		// Fill out the data with random data
+		char* strdata = recordData[i] + 4;
+		for (int c=0; c<stringsize; ++c)
+		{
+			strdata[c] = 'a' + (rand()%50);
+		}
+	}
+
+	// Setup our simple record description
+	Attribute attr;
+	attr.length = 4000;
+	attr.name = "string";
+	attr.type = TypeVarChar;
+
+	vector<Attribute> recordDescriptor;
+	recordDescriptor.push_back(attr);
+
+	// Start adding in records
+	std::random_shuffle(indexes.begin(), indexes.end());
+	for (int i=0; i<numRecords; ++i)
+	{
+		int index = indexes[i];
+		rbfm->insertRecord(file, recordDescriptor, recordData[index], rids[index]);
+	}
+
+	// Check records are correct still
+	for (int i=0; i<numRecords; ++i)
+	{
+		rbfm->readRecord(file, recordDescriptor, rids[i], readData);
+		memcmp(recordData[i], readData, 4 + stringSizes[i]);
+	}
+
+	// reduce the size of half of the records
+	std::random_shuffle(indexes.begin(), indexes.end());
+	for (int i=0; i<numRecords/2; ++i)
+	{
+		int index = indexes[i];
+		std::cout << "decreasing size of " << index;
+
+		char* data = recordData[index];
+		int* strsize = (int*)data;
+		assert(*strsize == stringSizes[index]);
+
+
+		std::cout << " oldsize=" << (*strsize) << " ";
+		if (stringSizes[index] > 1000)
+		{
+			stringSizes[index] /= (1 + (rand() % 31));
+		}
+		else if (stringSizes[index] > 100)
+		{
+			stringSizes[index] -= (1 + (rand() % 57));
+		}
+		else if (stringSizes[index] > 10)
+		{
+			stringSizes[index] -= 4;
+		}
+
+		*strsize = stringSizes[index];
+		std::cout << " newsize=" << (*strsize) << " ";
+		std::cout << std::endl;
+
+		// change the data again so we can recompare correctly
+		char* strdata = data + 4;
+		for (int c=0; c<stringSizes[index]; ++c)
+		{
+			strdata[c] = 'a' + (rand()%50);
+		}
+
+		// update record on disk
+		rbfm->updateRecord(file, recordDescriptor, data, rids[index]);
+	}
+
+	// Check records are correct still
+	for (int i=0; i<numRecords; ++i)
+	{
+		rbfm->readRecord(file, recordDescriptor, rids[i], readData);
+		memcmp(recordData[i], readData, 4 + stringSizes[i]);
+	}
+
+	// increase the size of half of the records
+	std::random_shuffle(indexes.begin(), indexes.end());
+	for (int i=0; i<numRecords/2; ++i)
+	{
+		int index = indexes[i];
+		std::cout << "increasing size of " << index << "\n";
+
+		char* data = recordData[index];
+		int* strsize = (int*)data;
+		assert(*strsize == stringSizes[index]);
+
+		std::cout << " oldsize=" << (*strsize) << " ";
+
+		stringSizes[index] += (rand()%(4000 - stringSizes[index]));
+		if (stringSizes[index] > 4000)
+		{
+			stringSizes[index] = 4001;
+		}
+
+		*strsize = stringSizes[index];
+		std::cout << " newsize=" << (*strsize) << " ";
+		std::cout << std::endl;
+
+		// change the data again so we can recompare correctly
+		char* strdata = data + 4;
+		for (int c=0; c<stringSizes[index]; ++c)
+		{
+			strdata[c] = 'a' + (rand()%50);
+		}
+
+		// update record on disk
+		rbfm->updateRecord(file, recordDescriptor, data, rids[index]);
+	}
+
+	// Check records are correct still
+	for (int i=0; i<numRecords; ++i)
+	{
+		rbfm->readRecord(file, recordDescriptor, rids[i], readData);
+		memcmp(recordData[i], readData, 4 + stringSizes[i]);
+	}
+
+	rbfm->closeFile(file);
+}
+
 void cleanup()
 {
 	remove("test");
@@ -2490,6 +2649,7 @@ void cleanup()
     remove("rbfmTestReorganizePage_file");
     remove("rbfmTestUdpateRecord_file");
     remove("rbfmTestReorganizeDeleteUpdate_file");
+	remove("rbfmTestRandomInsertDeleteUpdateReorganize_file");
 }
 
 int main()
@@ -2516,7 +2676,8 @@ int main()
     // Our tests
     RBFTest_11(rbfm, rids, sizes);
     rbfmTestReadAttribute(rbfm, rids, sizes);
-
+	rbfmTestRandomInsertDeleteUpdateReorganize(49);
+	
     // Test the update record by varying how many records are upgraded each time
     for (int i = UPDATE_MIN_SKIP; i <= UPDATE_MAX_SKIP; i++)
     {
