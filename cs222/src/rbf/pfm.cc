@@ -243,12 +243,14 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
 	// Super basic checks to see if this write has corrupted data
 	const PageIndexHeader* header = getPageIndexHeader(data);
+	/*
 	assert(header->freespaceList < 32);
 	assert(header->freeSpaceOffset < PAGE_SIZE);
 	assert(header->gapSize < PAGE_SIZE);
 	assert(header->nextPage <= _numPages);
 	assert(header->prevPage <= _numPages);
 	assert(header->pageNumber <= _numPages);
+	*/
 
     RC ret = updatePageCount();
     if (ret != rc::OK)
