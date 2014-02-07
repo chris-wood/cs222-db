@@ -41,7 +41,7 @@ bool FileExists(string fileName)
 #define REORGANIZE_MIN_SKIP 2
 #define REORGANIZE_MAX_SKIP 50
 #define UPDATE_MIN_SKIP 1
-#define UPDATE_MAX_SKIP 25
+#define UPDATE_MAX_SKIP 50
 
 // Function to prepare the data in the correct form to be inserted/read
 void prepareRecord(const int nameLength, const string &name, const int age, const float height, const int salary, void *buffer, int *recordSize)
@@ -2243,7 +2243,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     RID rid; 
     char record[(PAGE_SIZE / 2) + sizeof(unsigned)];
     char record_copy[(PAGE_SIZE / 2) + sizeof(unsigned)];
-    int numRecords = 5000;
+    int numRecords = 10;
     unsigned halfPageSize = PAGE_SIZE / 2;
     unsigned quarterPageSize = PAGE_SIZE / 4;
     unsigned eighthPageSize = PAGE_SIZE / 8;
@@ -2310,7 +2310,13 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     // Skip across and delete some records
     for (int i = 0; i < numRecords; i += skip)
     {
-    	rbfm->deleteRecord(fileHandle, recordDescriptor, rids[i]);
+    	cout << "Deleting " << rids[i].pageNum << "," << rids[i].slotNum << endl;
+    	rc = rbfm->deleteRecord(fileHandle, recordDescriptor, rids[i]);
+    	assert(rc == success);
+
+    	memset(record, 0, 1000);
+    	rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record);
+    	assert(rc == rc::RECORD_DELETED);
     }
 
     // Double-check contents
@@ -2336,6 +2342,18 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     	assert(rc == rc::OK || rc == rc::PAGE_CANNOT_BE_ORGANIZED);
     }
 
+    // Double-check contents
+    for (int i = 0; i < numRecords; i++)
+    {
+		memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
+		rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record);
+		if (rc != rc::RECORD_DELETED)
+		{
+			assert(rc == success);
+			assert(memcmp(record, ridContentList[i], sizes[i]) == 0);
+		}
+    }
+
     // Expand every other "skipped" record
     for (int i = 1; i < numRecords; i += skip)
     {
@@ -2348,18 +2366,15 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 	        offset += 1;
 	    }
 
-	    cout << "allocating " << i << endl;
+	    cout << "Expanding " << rids[i].pageNum << "," << rids[i].slotNum << endl;
 	    free(ridContentList[i]);
 	    ridContentList[i] = (char*)malloc((PAGE_SIZE / 2) + sizeof(unsigned));
 		memcpy(ridContentList[i], record, offset);
 		sizes[i] = offset;
-		cout << "OK" << endl;
 
 	    // Update the record
 	    rc = rbfm->updateRecord(fileHandle, recordDescriptor, record, rids[i]);
 	    assert(rc == success);
-
-	    cout << "updated" << endl;
 
 	    // Read it back in and compare
 	    memset(record_copy, 0, PAGE_SIZE / 2);
@@ -2369,8 +2384,6 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 	    assert(memcmp(ridContentList[i], record_copy, offset) == 0);
     }
 
-    cout << "seg fault after" << endl;
-
     // Double-check contents
     for (int i = 0; i < numRecords; i++)
     {
@@ -2379,14 +2392,14 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 		if (rc != rc::RECORD_DELETED)
 		{
 			assert(rc == success);
-			cout << i << endl;
-			assert(memcmp(record, ridContentList[i], sizes[i]) == 0);
+			assert(strncmp(record, ridContentList[i], sizes[i]) == 0);
 		}
     }
 
     // Skip across and delete some more records
     for (int i = numRecords / 4; i < numRecords; i += skip)
     {
+    	cout << "Deleting " << rids[i].pageNum << "," << rids[i].slotNum << endl;
     	rbfm->deleteRecord(fileHandle, recordDescriptor, rids[i]);
     }
 
@@ -2416,13 +2429,16 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 
 	    // Update the record
 	    rc = rbfm->updateRecord(fileHandle, recordDescriptor, record, rids[i]);
-	    assert(rc == success);
+	    if (rc != rc::RECORD_DELETED)
+	    {
+	    	assert(rc == success);
 
-	    // Read it back in and compare
-	    memset(record_copy, 0, PAGE_SIZE / 2);
-	    rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record_copy);
-	    assert(rc == success);
-	    assert(memcmp(record, record_copy, offset) == 0);
+		    // Read it back in and compare
+		    memset(record_copy, 0, PAGE_SIZE / 2);
+		    rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record_copy);
+		    assert(rc == success);
+		    assert(memcmp(record, record_copy, offset) == 0);
+	    }
     }
 
     // Double-check contents
@@ -2430,7 +2446,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     {
 		memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 		rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record);
-		if (rc != rc::RECORD_DELETED)
+		if (rc != rc::RECORD_DELETED && rc != rc::RECORD_IS_ANCHOR)
 		{
 			assert(rc == success);
 			assert(memcmp(record, ridContentList[i], sizes[i]) == 0);
@@ -2455,7 +2471,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     {
 		memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 		rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record);
-		if (rc != rc::RECORD_DELETED)
+		if (rc != rc::RECORD_DELETED && rc != rc::RECORD_IS_ANCHOR)
 		{
 			assert(rc == success);
 			assert(memcmp(record, ridContentList[i], sizes[i]) == 0);
@@ -2695,7 +2711,7 @@ int main()
     for (int i = ALL_MIN_SKIP; i <= ALL_MAX_SKIP; i++)
     {
     	cleanup();
-    	rbfmTestReorganizeDeleteUpdate(rbfm, i);
+    	// rbfmTestReorganizeDeleteUpdate(rbfm, i);
     }
 
     // Finishing up

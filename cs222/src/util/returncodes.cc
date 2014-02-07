@@ -24,6 +24,7 @@ namespace rc
         case RECORD_CORRUPT:                        return "RECORD_CORRUPT";
         case RECORD_EXCEEDS_PAGE_SIZE:              return "RECORD_EXCEEDS_PAGE_SIZE";
 		case RECORD_DELETED:						return "RECORD_DELETED";
+        case RECORD_IS_ANCHOR:                      return "RECORD_IS_ANCHOR";
         case HEADER_SIZE_CORRUPT:                   return "HEADER_SIZE_CORRUPT";
         case HEADER_PAGESIZE_MISMATCH:              return "HEADER_PAGESIZE_MISMATCH";
         case HEADER_VERSION_MISMATCH:               return "HEADER_VERSION_MISMATCH";

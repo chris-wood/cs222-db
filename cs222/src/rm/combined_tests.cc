@@ -1,4 +1,5 @@
 #include "test_util.h"
+#include "../util/returncodes.h"
 using namespace std;
 
 void Tests_1();
@@ -315,6 +316,7 @@ void secA_6(const string &tableName, const int nameLength, const string &name, c
 
     // Test Delete Table
     rc = rm->deleteTable(tableName);
+    cout << rc::rcToString(rc) << endl;
     assert(rc == success);
     cout << "After deletion!" << endl;
     

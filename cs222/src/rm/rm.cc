@@ -356,6 +356,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 	
 	// Now delete the old table record from disk
+	cout << "Delete" << endl;
 	ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
 	if (ret != rc::OK)
 	{

@@ -33,6 +33,7 @@ typedef struct
   unsigned pageOffset;
   PageNum nextPage;
   unsigned nextSlot;
+  bool isAnchor;
 } PageIndexSlot;
 
 // Page index (directory)
