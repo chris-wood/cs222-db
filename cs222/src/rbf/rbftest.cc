@@ -2181,6 +2181,8 @@ RC rbfmTestUdpateRecord(RecordBasedFileManager *rbfm, int skip)
 	    // Read it back in and compare
 	    memset(record_copy, 0, PAGE_SIZE / 2);
 	    rc = rbfm->readRecord(fileHandle, recordDescriptor, rids[i], record_copy);
+	    rbfm->printRecord(recordDescriptor, record);
+	    cout << endl;
 	    rbfm->printRecord(recordDescriptor, record_copy);
 	    assert(rc == success);
 	    assert(memcmp(record, record_copy, offset) == 0);
@@ -2692,7 +2694,7 @@ int main()
     // Our tests
     RBFTest_11(rbfm, rids, sizes);
     rbfmTestReadAttribute(rbfm, rids, sizes);
-	rbfmTestRandomInsertDeleteUpdateReorganize(49);
+	// rbfmTestRandomInsertDeleteUpdateReorganize(49);
 	
     // Test the update record by varying how many records are upgraded each time
     for (int i = UPDATE_MIN_SKIP; i <= UPDATE_MAX_SKIP; i++)
