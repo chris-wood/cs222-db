@@ -1208,9 +1208,9 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 	return rc::OK;
 }
 
-RC RecordBasedFileManager::scan(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
+RC RecordBasedFileManager::scan(FileHandle& fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
 {
-	return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames, rbfm_ScanIterator);
+    return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames);
 }
 
 unsigned RecordBasedFileManager::calcRecordSize(unsigned char* recordBuffer)
@@ -1319,7 +1319,7 @@ RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescrip
 	return rc::ATTRIBUTE_NOT_FOUND;
 }
 
-RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator)
+RC RBFM_ScanIterator::init(FileHandle& fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames)
 {
 	RC ret = rc::OK;
 	
@@ -1334,7 +1334,7 @@ RC RBFM_ScanIterator::init(FileHandle &fileHandle, const vector<Attribute> &reco
 	}
 
 	// Save data we will need for future comparasion operations
-	_fileHandle = &fileHandle;
+    _fileHandle = &fileHandle;
 	_nextRid.pageNum = 1;
 	_nextRid.slotNum = 0;
 	_comparasionOp = compOp;
@@ -1402,7 +1402,7 @@ bool RBFM_ScanIterator::recordMatchesValue(char* record)
 
 RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 {
-	unsigned numPages = _fileHandle->getNumberOfPages();
+    unsigned numPages = _fileHandle->getNumberOfPages();
 
 	// Early exit if our next record is on a non-existant page
 	if (_nextRid.pageNum >= numPages)
@@ -1413,7 +1413,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	// Read in the page with the next record
 	char pageBuffer[PAGE_SIZE] = {0};
 	PageNum loadedPage = _nextRid.pageNum;
-	RC ret = _fileHandle->readPage(loadedPage, pageBuffer);
+    RC ret = _fileHandle->readPage(loadedPage, pageBuffer);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -1434,7 +1434,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		if (_nextRid.pageNum != loadedPage)
 		{
 			loadedPage = _nextRid.pageNum;
-			ret = _fileHandle->readPage(loadedPage, pageBuffer);
+            ret = _fileHandle->readPage(loadedPage, pageBuffer);
 			if (ret != rc::OK)
 			{
 				return ret;
@@ -1478,6 +1478,9 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
         unsigned* numAttributes = (unsigned*)(pageBuffer + slot->pageOffset);
 		copyRecord((char*)data, pageBuffer + slot->pageOffset, *numAttributes);
 
+        // Return the RID for the record we just copied out
+        rid = _nextRid;
+
 		// Advance RID once more and exit
 		nextRecord(pageHeader->numSlots);
 		return rc::OK;
@@ -1513,7 +1516,7 @@ RC RBFM_ScanIterator::close()
 		_comparasionValue = NULL;
 	}
 
-	_fileHandle = NULL;
+    _fileHandle = NULL;
 	_conditionAttributeIndex = -1;
 	_returnAttributeIndices.clear();
 	_returnAttributeTypes.clear();

@@ -135,14 +135,14 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 
 class RBFM_ScanIterator {
 public:
-	RBFM_ScanIterator() : _fileHandle(NULL), _comparasionValue(NULL), _conditionAttributeIndex(-1) {}
+    RBFM_ScanIterator() : _fileHandle(NULL), _comparasionValue(NULL), _conditionAttributeIndex(-1) {}
 	~RBFM_ScanIterator() { if (_comparasionValue) { free(_comparasionValue); } }
 
 	// "data" follows the same format as RecordBasedFileManager::insertRecord()
 	RC getNextRecord(RID& rid, void* data);
 	RC close();
 	
-	RC init(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames, RBFM_ScanIterator &rbfm_ScanIterator);
+    RC init(FileHandle& fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames);
 
 private:
 	static bool compareInt(CompOp op, void* a, void* b);
@@ -155,7 +155,7 @@ private:
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
 	bool recordMatchesValue(char* record);
 
-	FileHandle* _fileHandle;
+    FileHandle* _fileHandle;
 	RID _nextRid;
 
 	CompOp _comparasionOp;
@@ -203,7 +203,7 @@ public:
   RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
 
   // scan returns an iterator to allow the caller to go through the results one by one. 
-  RC scan(FileHandle &fileHandle,
+  RC scan(FileHandle& fileHandle,
       const vector<Attribute> &recordDescriptor,
       const string &conditionAttribute,
       const CompOp compOp,                  // comparision type such as "<" and "="

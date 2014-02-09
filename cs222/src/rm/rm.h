@@ -17,7 +17,7 @@ using namespace std;
 enum TableOwner
 {
 	TableOwnerSystem = 0,
-	TableOwnerUser = 1,
+    TableOwnerUser = 1
 };
 
 struct TableMetadataRow
@@ -62,8 +62,8 @@ struct AttributeRecord
 
 class RM_ScanIterator {
 public:
-  RM_ScanIterator() {};
-  ~RM_ScanIterator() {};
+  RM_ScanIterator() {}
+  ~RM_ScanIterator() {}
 
   // "data" follows the same format as RelationManager::insertTuple()
   RC getNextTuple(RID &rid, void *data);
@@ -124,7 +124,12 @@ protected:
 	  ~RelationManager();
 
 private:
-	RC loadTableMetadata();
+    RC createCatalogEntry(const string &tableName, const vector<Attribute> &attrs);
+    RC insertTableMetadata(bool isSystemTable, const string &tableName, const vector<Attribute> &attrs);
+
+    RC loadSystemTables();
+    RC createSystemTables();
+    RC loadTableMetadata();
 	RC loadTableColumnMetadata(int numAttributes, RID firstAttributeRID, std::vector<Attribute>& recordDescriptor);
 
 	RecordBasedFileManager* _rbfm;
