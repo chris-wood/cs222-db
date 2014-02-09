@@ -11,7 +11,7 @@ SOURCES += \
     ../cs222/src/util/returncodes.cc \
     ../cs222/src/util/dbgout.cc \
     ../cs222/src/rm/rm.cc \
-    ../cs222/src/rbf/rbftest.cc
+    ../cs222/src/rm/combined_tests.cc
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \

@@ -25,3 +25,14 @@ test_4
 testFile0.db
 testFile1.db
 testFile2.db
+RM_SYS_ATTRIBUTE_TABLE.db
+RM_SYS_CATALOG_TABLE.db
+tbl_employee0
+tbl_employee1
+tbl_employee2
+tbl_employee3
+tbl_employee4
+combined_tests
+rmtest_1
+rmtest_2
+rmtest_extra
