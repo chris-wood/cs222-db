@@ -6,16 +6,125 @@ void Tests_1();
 void Tests_2();
 void Tests_Custom();
 
+struct RecData
+{
+    char* data;
+    char* dataBuffer;
+    RID rid;
+    int size;
+    int index;
+};
+
+struct RecPlaceholder
+{
+    int uuid;
+    char c;
+    float f;
+    int i;
+    std::string s;
+};
+
+void generateSortableData(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName, const int numRecords, const float forcedDupeChance)
+{
+    static int S_UUID = 0;
+    RelationManager* rm = RelationManager::instance();
+
+    std::cout << "Generating " << tableName << " data" << std::endl;
+
+    // Clear out any old data (ignore errors because it may not exist)
+    rm->deleteTable(tableName);
+
+    // Create table
+    RC ret = rm->createTable(tableName, tupleDescriptor);
+    assert(ret == success);
+
+    int index = 0;
+    for (int i=0; i < numRecords; ++i)
+    {
+        // bad way of generating a random float, but it doesn't really matter
+        const float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        int numRecordCopies = (r < forcedDupeChance) ? rand()%4 : 1;
+
+        RecPlaceholder rec;
+        rec.c = 'a' + (rand()%26);
+        rec.uuid = S_UUID++;
+        rec.i = rand();
+        rec.f = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+        int strlen = rand() % 3987;
+        for (int s=0; s<strlen; ++s)
+        {
+            rec.s += 'A' + (rand()%26);
+        }
+
+        int recordLength = sizeof(float) + 4 * sizeof(int) + 1 + rec.s.length();
+        for (int copy=0; copy<numRecordCopies; ++copy)
+        {
+            recordData.push_back(RecData());
+            RecData& recData = recordData.back();
+            recData.data = (char*)malloc(recordLength);
+            recData.dataBuffer = (char*)malloc(recordLength);
+
+            int dataOffset = 0;
+            memcpy(recData.data + dataOffset, &rec.uuid, 4);
+            dataOffset += 4;
+
+            strlen = 1;
+            memcpy(recData.data + dataOffset, &strlen, 4);
+            dataOffset += 4;
+            memcpy(recData.data + dataOffset, &rec.c, 1);
+            dataOffset += 1;
+
+            memcpy(recData.data + dataOffset, &rec.f, 4);
+            dataOffset += 4;
+
+            memcpy(recData.data + dataOffset, &rec.i, 4);
+            dataOffset += 4;
+
+            strlen = rec.s.length();
+            memcpy(recData.data + dataOffset, &strlen, 4);
+            dataOffset += 4;
+            memcpy(recData.data + dataOffset, rec.s.c_str(), strlen);
+            dataOffset += strlen;
+
+            assert(dataOffset == recordLength);
+            recData.index = index++;
+            recData.size = recordLength;
+
+            rm->insertTuple(tableName, recData.data, recData.rid);
+        }
+    }
+}
+
+void verifySortedDataExists(std::vector<RecData>& recordData, const std::string& tableName)
+{
+    std::cout << "Doing basic verification on " << tableName << " data" << std::endl;
+
+    RelationManager* rm = RelationManager::instance();
+    for(vector<RecData>::iterator it = recordData.begin(); it != recordData.end(); ++it)
+    {
+        RecData& rec = *it;
+        RC ret = rm->readTuple(tableName, rec.rid, rec.dataBuffer);
+        assert(ret == success);
+
+        if (memcmp(rec.data, rec.dataBuffer, rec.size) != 0)
+        {
+            std::cout << "record mismatch: " << rec.index << std::endl;
+            assert(false);
+        }
+    }
+}
+
 int main()
 {
     // Basic Functions
     cout << endl << "Test Basic Functions..." << endl;
 
     // Create Table
-    createTable("tbl_employee");
+    //createTable("tbl_employee");
 
-    Tests_1();
-	Tests_2();
+    //Tests_1();
+    //Tests_2();
 	Tests_Custom();
 
     return 0;
@@ -23,7 +132,35 @@ int main()
 
 void Tests_Custom()
 {
-	// TODO: Write extra tests here
+    // Set up the recordDescriptor
+    std::vector<Attribute> tupleDescriptor;
+    Attribute attr;
+
+    attr.length = 4; attr.name = "UUID"; attr.type = TypeInt;  // This will be unique even across "dupe" records
+    tupleDescriptor.push_back(attr);
+
+    attr.length = 1; attr.name = "Char"; attr.type = TypeVarChar;
+    tupleDescriptor.push_back(attr);
+
+    attr.length = 4; attr.name = "Float"; attr.type = TypeReal;
+    tupleDescriptor.push_back(attr);
+
+    attr.length = 4; attr.name = "Int"; attr.type = TypeInt;
+    tupleDescriptor.push_back(attr);
+
+    attr.length = 3987; attr.name = "String"; attr.type = TypeVarChar;
+    tupleDescriptor.push_back(attr);
+
+    std::vector<RecData> sortingTest1RecordData;
+    generateSortableData(tupleDescriptor, sortingTest1RecordData, "sortingTest1", 10000, 0.01f);
+    verifySortedDataExists(sortingTest1RecordData, "sortingTest1");
+
+    // Free up memory
+    for(vector<RecData>::iterator it = sortingTest1RecordData.begin(); it != sortingTest1RecordData.end(); ++it)
+    {
+        free((*it).data);
+        free((*it).dataBuffer);
+    }
 }
 
 // tests from rmtest_1
