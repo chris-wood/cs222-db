@@ -1388,13 +1388,13 @@ bool RBFM_ScanIterator::recordMatchesValue(char* record)
 	switch(_conditionAttributeType)
 	{
 	case TypeInt:
-		return compareInt(_comparasionOp, record, attributeData);
+        return compareInt(_comparasionOp, attributeData, _comparasionValue);
 
 	case TypeReal:
-		return compareReal(_comparasionOp, record, attributeData);
+        return compareReal(_comparasionOp, attributeData, _comparasionValue);
 
 	case TypeVarChar:
-		return compareVarChar(_comparasionOp, record, attributeData);
+        return compareVarChar(_comparasionOp, attributeData, _comparasionValue);
 	}
 
 	return false;

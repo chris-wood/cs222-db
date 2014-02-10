@@ -1,5 +1,8 @@
 #include "test_util.h"
 #include "../util/returncodes.h"
+#include "../rbf/rbfm.h"
+#include <algorithm>
+
 using namespace std;
 
 void Tests_1();
@@ -13,6 +16,12 @@ struct RecData
     RID rid;
     int size;
     int index;
+
+    int uuid() const { return *(int*)(data); }
+    char c() const { return *(char*)(data+8); }
+    float f() const { return *(float*)(data+9); }
+    int i() const { return *(int*)(data+13); }
+    char* s() const { return (char*)(data+21); }
 };
 
 struct RecPlaceholder
@@ -115,17 +124,124 @@ void verifySortedDataExists(std::vector<RecData>& recordData, const std::string&
     }
 }
 
+void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
+{
+    RID rid;
+    char buffer[5000];
+
+    int scanned = 0;
+    while(scanner.getNextTuple(rid, buffer) == success)
+    {
+        ++scanned;
+        vector<RecData>::iterator rec = records.end();
+        for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
+        {
+            if (it->rid.pageNum == rid.pageNum && it->rid.slotNum && rid.slotNum)
+            {
+                rec = it;
+                break;
+            }
+        }
+
+        // TODO: Enable this test
+        //assert(rec != records.end());
+
+        // TODO: Enable this test
+        //assert(memcmp(rec->data, buffer, rec->size) == 0);
+    }
+
+    // TODO: Enable this test
+    //assert(records.size() == scanned);
+}
+
+void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
+{
+    std::cout << "Doing UUID verification on " << tableName << std::endl;
+    RelationManager* rm = RelationManager::instance();
+
+    vector<string> attributeNames;
+    for (vector<Attribute>::const_iterator it = tupleDescriptor.begin(); it != tupleDescriptor.end(); ++it)
+    {
+        attributeNames.push_back(it->name);
+    }
+
+    int compVal = 1111;
+
+    vector<RecData> lt;
+    vector<RecData> gt;
+    vector<RecData> lte;
+    vector<RecData> gte;
+    vector<RecData> eq;
+    vector<RecData> neq;
+
+    for(std::vector<RecData>::iterator it = recordData.begin(); it != recordData.end(); ++it)
+    {
+        RecData& rec = *it;
+        if (rec.uuid() < compVal)
+            lt.push_back(rec);
+
+        if (rec.uuid() > compVal)
+            gt.push_back(rec);
+
+        if (rec.uuid() <= compVal)
+            lte.push_back(rec);
+
+        if (rec.uuid() >= compVal)
+            gte.push_back(rec);
+
+        if (rec.uuid() == compVal)
+            eq.push_back(rec);
+
+        if (rec.uuid() != compVal)
+            neq.push_back(rec);
+    }
+
+    RM_ScanIterator scanLt;
+    RM_ScanIterator scanGt;
+    RM_ScanIterator scanLte;
+    RM_ScanIterator scanGte;
+    RM_ScanIterator scanEq;
+    RM_ScanIterator scanNeq;
+
+    RC ret;
+    ret = rm->scan(tableName, "UUID", LT_OP, &compVal, attributeNames, scanLt);
+    assert(ret == success);
+
+    ret = rm->scan(tableName, "UUID", GT_OP, &compVal, attributeNames, scanGt);
+    assert(ret == success);
+
+    ret = rm->scan(tableName, "UUID", LE_OP, &compVal, attributeNames, scanLte);
+    assert(ret == success);
+
+    ret = rm->scan(tableName, "UUID", GE_OP, &compVal, attributeNames, scanGte);
+    assert(ret == success);
+
+    ret = rm->scan(tableName, "UUID", EQ_OP, &compVal, attributeNames, scanEq);
+    assert(ret == success);
+
+    ret = rm->scan(tableName, "UUID", NE_OP, &compVal, attributeNames, scanNeq);
+    assert(ret == success);
+
+    verifyScan(lt,  scanLt);
+    verifyScan(gt,  scanGt);
+    verifyScan(lte, scanLte);
+    verifyScan(gte, scanGte);
+    verifyScan(eq,  scanEq);
+    verifyScan(neq, scanNeq);
+}
+
 int main()
 {
     // Basic Functions
     cout << endl << "Test Basic Functions..." << endl;
 
-    // Create Table
-    //createTable("tbl_employee");
+    Tests_Custom();
 
-    //Tests_1();
-    //Tests_2();
-	Tests_Custom();
+    // Create Table
+    createTable("tbl_employee");
+
+    Tests_1();
+    Tests_2();
 
     return 0;
 }
@@ -154,6 +270,7 @@ void Tests_Custom()
     std::vector<RecData> sortingTest1RecordData;
     generateSortableData(tupleDescriptor, sortingTest1RecordData, "sortingTest1", 10000, 0.01f);
     verifySortedDataExists(sortingTest1RecordData, "sortingTest1");
+    verifySortOnUUID(tupleDescriptor, sortingTest1RecordData, "sortingTest1");
 
     // Free up memory
     for(vector<RecData>::iterator it = sortingTest1RecordData.begin(); it != sortingTest1RecordData.end(); ++it)
