@@ -1007,7 +1007,8 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
         case TypeVarChar:
             int dataLen = 0;
             memcpy(&dataLen, tempBuffer + offset, sizeof(unsigned));
-            memcpy(data, tempBuffer + offset + sizeof(unsigned), dataLen);
+            memcpy(data, &dataLen, sizeof(unsigned));
+            memcpy((char*)data + sizeof(unsigned), tempBuffer + offset + sizeof(unsigned), dataLen);
             break;
     }
 

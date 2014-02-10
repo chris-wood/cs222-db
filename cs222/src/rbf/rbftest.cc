@@ -1912,7 +1912,8 @@ RC rbfmTestReadAttribute(RecordBasedFileManager *rbfm, vector<RID> &rids, vector
         	char text = i % 26 + 97;
         	int count = i % 50 + 1;
         	char* charBuf = (char*)malloc(count);
-        	for (int k = 0; k < count; k++)
+        	memcpy((char*)charBuf, &count, sizeof(int));
+        	for (int k = 4; k < count + 4; k++)
         	{
         		memcpy((char*)charBuf + k, &text, 1);
         	}

@@ -241,9 +241,6 @@ const PageIndexHeader* getPageIndexHeader(const void* pageBuffer)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
-	// Super basic checks to see if this write has corrupted data
-	const PageIndexHeader* header = getPageIndexHeader(data);
-
     RC ret = updatePageCount();
     if (ret != rc::OK)
     {

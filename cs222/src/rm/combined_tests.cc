@@ -369,10 +369,10 @@ int main()
     Tests_Custom();
 
     // Create Table
-    //createTable("tbl_employee");
+    createTable("tbl_employee");
 
-    //Tests_1();
-    //Tests_2();
+    Tests_1();
+    Tests_2();
 
     return 0;
 }
@@ -1156,8 +1156,6 @@ void secA_13(const string &tableName)
     void *returnedData = malloc(1000);
 
     rc = rmsi.getNextTuple(rid, returnedData);
-    cout << "HERE: " << rc << endl;
-    cout << (rc == RM_EOF) << "  -   " << (rc == success) << endl;
     while(rmsi.getNextTuple(rid, returnedData) != RM_EOF)
     {
         if(j % 200 == 0)

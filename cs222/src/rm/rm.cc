@@ -173,8 +173,6 @@ RC RelationManager::insertTableMetadata(bool isSystemTable, const string &tableN
     newRow.numAttributes = attrs.size();
     newRow.owner = isSystemTable ? TableOwnerSystem : TableOwnerUser;
 
-    std::cout << "insertTableMetadata(" << tableName << ")" << std::endl;
-
     int tableNameLen = tableName.size();
     if (tableNameLen >= MAX_TABLENAME_SIZE)
     {
@@ -315,8 +313,6 @@ RC RelationManager::loadTableMetadata()
         const std::string tableName((char*)(currentRow.tableName + sizeof(int)));
         _catalog[tableName].recordDescriptor.clear();
 
-        std::cout << "loading metadata of:" << tableName << std::endl;
-
         // Load in the attribute table data for this row
 		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, _catalog[tableName].recordDescriptor);
 		if (ret != rc::OK)
@@ -369,8 +365,6 @@ RC RelationManager::loadTableColumnMetadata(int numAttributes, RID firstAttribut
 		attr.type = attrRec.type;
         attr.name = std::string((char*)(attrRec.name + sizeof(int)));
 		recordDescriptor.push_back(attr);
-
-        std::cout << " attribute:" << attr.name << std::endl;
 
 		// Move on to the next attribute
 		currentRID.pageNum = attrRec.nextAttribute.pageNum;
@@ -488,7 +482,6 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 	
 	// Now delete the old table record from disk
-	cout << "Delete" << endl;
     ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
 	if (ret != rc::OK)
 	{
@@ -605,8 +598,6 @@ RC RelationManager::scan(const string &tableName,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
-    std::cout << "scan("<<tableName<<")" << std::endl;
-
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
@@ -641,7 +632,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	TableMetaData& tableData = _catalog[tableName];
+	// TableMetaData& tableData = _catalog[tableName];
 
 	// TODO: Write me
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
@@ -655,7 +646,7 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	TableMetaData& tableData = _catalog[tableName];
+	// TableMetaData& tableData = _catalog[tableName];
 
 	// TODO: Write me
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
