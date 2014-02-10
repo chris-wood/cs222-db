@@ -129,29 +129,43 @@ void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
     RID rid;
     char buffer[5000];
 
+    vector<RecData>::iterator rec = records.end();
+
+    /*
+    for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
+    {
+        rec = it;
+        std::cout << rec->rid.pageNum << " " << rec->rid.slotNum << " : ";
+    }
+
+    std::cout << std::endl;
+    */
     int scanned = 0;
     while(scanner.getNextTuple(rid, buffer) == success)
     {
+        //std::cout << rid.pageNum << " " << rid.slotNum << " | ";
+
         ++scanned;
-        vector<RecData>::iterator rec = records.end();
+
+        // Search for the record we just scanned in our list of verification records
+        rec = records.end();
         for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
         {
-            if (it->rid.pageNum == rid.pageNum && it->rid.slotNum && rid.slotNum)
+            RecData& r = *it;
+            if (r.rid.pageNum == rid.pageNum && r.rid.slotNum == rid.slotNum)
             {
                 rec = it;
                 break;
             }
         }
 
-        // TODO: Enable this test
-        //assert(rec != records.end());
-
-        // TODO: Enable this test
-        //assert(memcmp(rec->data, buffer, rec->size) == 0);
+        assert(rec != records.end());
+        assert(memcmp(rec->data, buffer, rec->size) == 0);
     }
 
-    // TODO: Enable this test
-    //assert(records.size() == scanned);
+    std::cout << std::endl;
+
+    assert(records.size() == scanned);
 }
 
 void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
@@ -165,7 +179,7 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
         attributeNames.push_back(it->name);
     }
 
-    int compVal = 1111;
+    int compVal = 16;
 
     vector<RecData> lt;
     vector<RecData> gt;
@@ -222,11 +236,22 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
     ret = rm->scan(tableName, "UUID", NE_OP, &compVal, attributeNames, scanNeq);
     assert(ret == success);
 
+    std::cout << " verify LT" << std::endl;
     verifyScan(lt,  scanLt);
+
+    std::cout << " verify GT" << std::endl;
     verifyScan(gt,  scanGt);
+
+    std::cout << " verify LTE" << std::endl;
     verifyScan(lte, scanLte);
+
+    std::cout << " verify GTE" << std::endl;
     verifyScan(gte, scanGte);
+
+    std::cout << " verify EQ" << std::endl;
     verifyScan(eq,  scanEq);
+
+    std::cout << " verify NEQ" << std::endl;
     verifyScan(neq, scanNeq);
 }
 
@@ -268,7 +293,7 @@ void Tests_Custom()
     tupleDescriptor.push_back(attr);
 
     std::vector<RecData> sortingTest1RecordData;
-    generateSortableData(tupleDescriptor, sortingTest1RecordData, "sortingTest1", 10000, 0.01f);
+    generateSortableData(tupleDescriptor, sortingTest1RecordData, "sortingTest1", 1024, 0.01f);
     verifySortedDataExists(sortingTest1RecordData, "sortingTest1");
     verifySortOnUUID(tupleDescriptor, sortingTest1RecordData, "sortingTest1");
 
