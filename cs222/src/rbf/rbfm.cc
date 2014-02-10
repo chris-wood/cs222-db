@@ -683,9 +683,9 @@ RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
         PageIndexSlot* offsets = (PageIndexSlot*)malloc(header->numSlots * sizeof(PageIndexSlot));
         memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader) - (header->numSlots * sizeof(PageIndexSlot)), (header->numSlots * sizeof(PageIndexSlot)));
         int empty = 1;
-        for (int slotIndex = 1; slotIndex < header->numSlots; slotIndex++)
+        for (unsigned i = 1; i < header->numSlots; i++)
         {
-            if (offsets[slotIndex].size == 0 && offsets[slotIndex].nextPage == 0)
+            if (offsets[i].size == 0 && offsets[i].nextPage == 0)
             {
                 empty++;
             }
