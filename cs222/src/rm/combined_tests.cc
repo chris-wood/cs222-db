@@ -18,7 +18,7 @@ struct RecData
     int index;
 
     int uuid() const { return *(int*)(data); }
-    char c() const { return *(char*)(data+8); }
+    char c() const { assert(  *(int*)(data+4) == 1 ); return *(char*)(data+8); }
     float f() const { return *(float*)(data+9); }
     int i() const { return *(int*)(data+13); }
     char* s() const { return (char*)(data+21); }
@@ -126,25 +126,17 @@ void verifySortedDataExists(std::vector<RecData>& recordData, const std::string&
 
 void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
 {
+    static int debug = 0;
+    ++debug;
+
     RID rid;
     char buffer[5000];
 
     vector<RecData>::iterator rec = records.end();
 
-    /*
-    for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
-    {
-        rec = it;
-        std::cout << rec->rid.pageNum << " " << rec->rid.slotNum << " : ";
-    }
-
-    std::cout << std::endl;
-    */
     int scanned = 0;
     while(scanner.getNextTuple(rid, buffer) == success)
     {
-        //std::cout << rid.pageNum << " " << rid.slotNum << " | ";
-
         ++scanned;
 
         // Search for the record we just scanned in our list of verification records
@@ -162,8 +154,6 @@ void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
         assert(rec != records.end());
         assert(memcmp(rec->data, buffer, rec->size) == 0);
     }
-
-    std::cout << std::endl;
 
     assert(records.size() == scanned);
 }
@@ -189,12 +179,12 @@ bool comp_ge_f(const RecData& rec, void* val) { return rec.f() >= *((float*)val)
 bool comp_eq_f(const RecData& rec, void* val) { return rec.f() == *((float*)val); }
 bool comp_ne_f(const RecData& rec, void* val) { return rec.f() != *((float*)val); }
 
-bool comp_lt_c(const RecData& rec, void* val) { return rec.c() <  *((char*)val); }
-bool comp_gt_c(const RecData& rec, void* val) { return rec.c() >  *((char*)val); }
-bool comp_le_c(const RecData& rec, void* val) { return rec.c() <= *((char*)val); }
-bool comp_ge_c(const RecData& rec, void* val) { return rec.c() >= *((char*)val); }
-bool comp_eq_c(const RecData& rec, void* val) { return rec.c() == *((char*)val); }
-bool comp_ne_c(const RecData& rec, void* val) { return rec.c() != *((char*)val); }
+bool comp_lt_c(const RecData& rec, void* val) { return rec.c() <  *((char*)val+4); }
+bool comp_gt_c(const RecData& rec, void* val) { return rec.c() >  *((char*)val+4); }
+bool comp_le_c(const RecData& rec, void* val) { return rec.c() <= *((char*)val+4); }
+bool comp_ge_c(const RecData& rec, void* val) { return rec.c() >= *((char*)val+4); }
+bool comp_eq_c(const RecData& rec, void* val) { return rec.c() == *((char*)val+4); }
+bool comp_ne_c(const RecData& rec, void* val) { return rec.c() != *((char*)val+4); }
 
 typedef bool (*comparefunc)(const RecData&,void*);
 
@@ -302,20 +292,22 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
 
 void verifySortOnChar(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
 {
-    char charComp;
+    char charComp[5];
+    int* len = (int*)charComp;
+    *len = 1;
 
     std::cout << "Testing char scanning..." << std::endl;
 
-    charComp = 'a';
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+    charComp[4] = 'a';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "Char",
                       comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
 
-    charComp = 'g';
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+    charComp[4] = 'g';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "Char",
                       comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
 
-    charComp = 'i';
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+    charComp[4] = 'i';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "Char",
                       comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
 }
 
@@ -323,18 +315,18 @@ void verifySortOnInt(const vector<Attribute>& tupleDescriptor, std::vector<RecDa
 {
     int intComp;
 
-    std::cout << "Testing UUID scanning..." << std::endl;
+    std::cout << "Testing int scanning..." << std::endl;
 
     intComp = 9823754;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "Int",
                       comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
 
     intComp = 36292;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "Int",
                       comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
 
     intComp = 77;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "Int",
                       comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
 }
 
@@ -342,18 +334,18 @@ void verifySortOnFloat(const vector<Attribute>& tupleDescriptor, std::vector<Rec
 {
     float floatComp;
 
-    std::cout << "Testing UUID scanning..." << std::endl;
+    std::cout << "Testing float scanning..." << std::endl;
 
     floatComp = 0.0f;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "Float",
                       comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
 
     floatComp = 0.5f;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "Float",
                       comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
 
     floatComp = 0.1234f;
-    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "Float",
                       comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
 }
 
@@ -365,12 +357,30 @@ int main()
     Tests_Custom();
 
     // Create Table
-    createTable("tbl_employee");
+    //createTable("tbl_employee");
 
-    Tests_1();
-    Tests_2();
+    //Tests_1();
+    //Tests_2();
 
     return 0;
+}
+
+void doScanTest(std::vector<Attribute>& tupleDescriptor, const std::string tableName, int numRecords, float dupeChance)
+{
+    std::vector<RecData> r;
+    generateSortableData(tupleDescriptor, r, tableName, numRecords, dupeChance);
+    verifySortedDataExists(r, tableName);
+    verifySortOnUUID(tupleDescriptor, r, tableName);
+    verifySortOnChar(tupleDescriptor, r, tableName);
+    verifySortOnInt(tupleDescriptor, r, tableName);
+    verifySortOnFloat(tupleDescriptor, r, tableName);
+
+    // Free up memory
+    for(vector<RecData>::iterator it = r.begin(); it != r.end(); ++it)
+    {
+        free((*it).data);
+        free((*it).dataBuffer);
+    }
 }
 
 void Tests_Custom()
@@ -394,38 +404,12 @@ void Tests_Custom()
     attr.length = 3987; attr.name = "String"; attr.type = TypeVarChar;
     tupleDescriptor.push_back(attr);
 
-    // TODO: Uncomment tests once they work
-
-    std::string t1 = "sortingTest1";
-    std::vector<RecData> r1;
-    generateSortableData(tupleDescriptor, r1, t1, 1024, 0.01f);
-    verifySortedDataExists(r1, t1);
-    verifySortOnUUID(tupleDescriptor, r1, t1);
-    //verifySortOnChar(tupleDescriptor, r1, t1);
-    //verifySortOnInt(tupleDescriptor, r1, t1);
-    //verifySortOnFloat(tupleDescriptor, r1, t1);
-
-    std::string t2 = "sortingTest2";
-    std::vector<RecData> r2;
-    generateSortableData(tupleDescriptor, r2, t2, 1024, 0.01f);
-    verifySortedDataExists(r2, t2);
-    verifySortOnUUID(tupleDescriptor, r2, t2);
-    //verifySortOnChar(tupleDescriptor, r2, t2);
-    //verifySortOnInt(tupleDescriptor, r2, t2);
-    //verifySortOnFloat(tupleDescriptor, r2, t2);
-
-    // Free up memory
-    for(vector<RecData>::iterator it = r1.begin(); it != r1.end(); ++it)
-    {
-        free((*it).data);
-        free((*it).dataBuffer);
-    }
-
-    for(vector<RecData>::iterator it = r2.begin(); it != r2.end(); ++it)
-    {
-        free((*it).data);
-        free((*it).dataBuffer);
-    }
+    doScanTest(tupleDescriptor, "sortingTest1", 1024, 0.0f);
+    doScanTest(tupleDescriptor, "sortingTest2", 55, 0.01f);
+    doScanTest(tupleDescriptor, "sortingTest3", 3000, 0.02f);
+    doScanTest(tupleDescriptor, "sortingTest4", 1000, 0.75f);
+    doScanTest(tupleDescriptor, "sortingTest5", 250, 0.02f);
+    doScanTest(tupleDescriptor, "sortingTest6", 123, 0.99f);
 }
 
 // tests from rmtest_1
