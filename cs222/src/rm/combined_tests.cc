@@ -168,18 +168,44 @@ void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
     assert(records.size() == scanned);
 }
 
-void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
-{
-    std::cout << "Doing UUID verification on " << tableName << std::endl;
-    RelationManager* rm = RelationManager::instance();
+bool comp_lt_uuid(const RecData& rec, void* val) { return rec.uuid() <  *((int*)val); }
+bool comp_gt_uuid(const RecData& rec, void* val) { return rec.uuid() >  *((int*)val); }
+bool comp_le_uuid(const RecData& rec, void* val) { return rec.uuid() <= *((int*)val); }
+bool comp_ge_uuid(const RecData& rec, void* val) { return rec.uuid() >= *((int*)val); }
+bool comp_eq_uuid(const RecData& rec, void* val) { return rec.uuid() == *((int*)val); }
+bool comp_ne_uuid(const RecData& rec, void* val) { return rec.uuid() != *((int*)val); }
 
+bool comp_lt_i(const RecData& rec, void* val) { return rec.i() <  *((int*)val); }
+bool comp_gt_i(const RecData& rec, void* val) { return rec.i() >  *((int*)val); }
+bool comp_le_i(const RecData& rec, void* val) { return rec.i() <= *((int*)val); }
+bool comp_ge_i(const RecData& rec, void* val) { return rec.i() >= *((int*)val); }
+bool comp_eq_i(const RecData& rec, void* val) { return rec.i() == *((int*)val); }
+bool comp_ne_i(const RecData& rec, void* val) { return rec.i() != *((int*)val); }
+
+bool comp_lt_f(const RecData& rec, void* val) { return rec.f() <  *((float*)val); }
+bool comp_gt_f(const RecData& rec, void* val) { return rec.f() >  *((float*)val); }
+bool comp_le_f(const RecData& rec, void* val) { return rec.f() <= *((float*)val); }
+bool comp_ge_f(const RecData& rec, void* val) { return rec.f() >= *((float*)val); }
+bool comp_eq_f(const RecData& rec, void* val) { return rec.f() == *((float*)val); }
+bool comp_ne_f(const RecData& rec, void* val) { return rec.f() != *((float*)val); }
+
+bool comp_lt_c(const RecData& rec, void* val) { return rec.c() <  *((char*)val); }
+bool comp_gt_c(const RecData& rec, void* val) { return rec.c() >  *((char*)val); }
+bool comp_le_c(const RecData& rec, void* val) { return rec.c() <= *((char*)val); }
+bool comp_ge_c(const RecData& rec, void* val) { return rec.c() >= *((char*)val); }
+bool comp_eq_c(const RecData& rec, void* val) { return rec.c() == *((char*)val); }
+bool comp_ne_c(const RecData& rec, void* val) { return rec.c() != *((char*)val); }
+
+typedef bool (*comparefunc)(const RecData&,void*);
+
+void verifySortOnValue(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName, void* compValue, const std::string attrName, comparefunc f_lt, comparefunc f_gt, comparefunc f_le, comparefunc f_ge, comparefunc f_eq, comparefunc f_ne)
+{
+    RelationManager* rm = RelationManager::instance();
     vector<string> attributeNames;
     for (vector<Attribute>::const_iterator it = tupleDescriptor.begin(); it != tupleDescriptor.end(); ++it)
     {
         attributeNames.push_back(it->name);
     }
-
-    int compVal = 16;
 
     vector<RecData> lt;
     vector<RecData> gt;
@@ -191,22 +217,22 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
     for(std::vector<RecData>::iterator it = recordData.begin(); it != recordData.end(); ++it)
     {
         RecData& rec = *it;
-        if (rec.uuid() < compVal)
+        if (f_lt(rec, compValue))
             lt.push_back(rec);
 
-        if (rec.uuid() > compVal)
+        if (f_gt(rec, compValue))
             gt.push_back(rec);
 
-        if (rec.uuid() <= compVal)
+        if (f_le(rec, compValue))
             lte.push_back(rec);
 
-        if (rec.uuid() >= compVal)
+        if (f_ge(rec, compValue))
             gte.push_back(rec);
 
-        if (rec.uuid() == compVal)
+        if (f_eq(rec, compValue))
             eq.push_back(rec);
 
-        if (rec.uuid() != compVal)
+        if (f_ne(rec, compValue))
             neq.push_back(rec);
     }
 
@@ -218,22 +244,22 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
     RM_ScanIterator scanNeq;
 
     RC ret;
-    ret = rm->scan(tableName, "UUID", LT_OP, &compVal, attributeNames, scanLt);
+    ret = rm->scan(tableName, attrName, LT_OP, compValue, attributeNames, scanLt);
     assert(ret == success);
 
-    ret = rm->scan(tableName, "UUID", GT_OP, &compVal, attributeNames, scanGt);
+    ret = rm->scan(tableName, attrName, GT_OP, compValue, attributeNames, scanGt);
     assert(ret == success);
 
-    ret = rm->scan(tableName, "UUID", LE_OP, &compVal, attributeNames, scanLte);
+    ret = rm->scan(tableName, attrName, LE_OP, compValue, attributeNames, scanLte);
     assert(ret == success);
 
-    ret = rm->scan(tableName, "UUID", GE_OP, &compVal, attributeNames, scanGte);
+    ret = rm->scan(tableName, attrName, GE_OP, compValue, attributeNames, scanGte);
     assert(ret == success);
 
-    ret = rm->scan(tableName, "UUID", EQ_OP, &compVal, attributeNames, scanEq);
+    ret = rm->scan(tableName, attrName, EQ_OP, compValue, attributeNames, scanEq);
     assert(ret == success);
 
-    ret = rm->scan(tableName, "UUID", NE_OP, &compVal, attributeNames, scanNeq);
+    ret = rm->scan(tableName, attrName, NE_OP, compValue, attributeNames, scanNeq);
     assert(ret == success);
 
     std::cout << " verify LT" << std::endl;
@@ -253,6 +279,82 @@ void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecD
 
     std::cout << " verify NEQ" << std::endl;
     verifyScan(neq, scanNeq);
+}
+
+void verifySortOnUUID(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
+{
+    int uuidCompare;
+
+    std::cout << "Testing UUID scanning..." << std::endl;
+
+    uuidCompare = 16;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &uuidCompare, "UUID",
+                      comp_lt_uuid, comp_gt_uuid, comp_le_uuid, comp_ge_uuid, comp_eq_uuid, comp_ne_uuid);
+
+    uuidCompare = 2;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &uuidCompare, "UUID",
+                      comp_lt_uuid, comp_gt_uuid, comp_le_uuid, comp_ge_uuid, comp_eq_uuid, comp_ne_uuid);
+
+    uuidCompare = 30;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &uuidCompare, "UUID",
+                      comp_lt_uuid, comp_gt_uuid, comp_le_uuid, comp_ge_uuid, comp_eq_uuid, comp_ne_uuid);
+}
+
+void verifySortOnChar(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
+{
+    char charComp;
+
+    std::cout << "Testing char scanning..." << std::endl;
+
+    charComp = 'a';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+                      comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
+
+    charComp = 'g';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+                      comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
+
+    charComp = 'i';
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &charComp, "c",
+                      comp_lt_c, comp_gt_c, comp_le_c, comp_ge_c, comp_eq_c, comp_ne_c);
+}
+
+void verifySortOnInt(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
+{
+    int intComp;
+
+    std::cout << "Testing UUID scanning..." << std::endl;
+
+    intComp = 9823754;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+                      comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
+
+    intComp = 36292;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+                      comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
+
+    intComp = 77;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &intComp, "i",
+                      comp_lt_i, comp_gt_i, comp_le_i, comp_ge_i, comp_eq_i, comp_ne_i);
+}
+
+void verifySortOnFloat(const vector<Attribute>& tupleDescriptor, std::vector<RecData>& recordData, const std::string& tableName)
+{
+    float floatComp;
+
+    std::cout << "Testing UUID scanning..." << std::endl;
+
+    floatComp = 0.0f;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+                      comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
+
+    floatComp = 0.5f;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+                      comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
+
+    floatComp = 0.1234f;
+    verifySortOnValue(tupleDescriptor, recordData, tableName, &floatComp, "f",
+                      comp_lt_f, comp_gt_f, comp_le_f, comp_ge_f, comp_eq_f, comp_ne_f);
 }
 
 int main()
@@ -292,13 +394,34 @@ void Tests_Custom()
     attr.length = 3987; attr.name = "String"; attr.type = TypeVarChar;
     tupleDescriptor.push_back(attr);
 
-    std::vector<RecData> sortingTest1RecordData;
-    generateSortableData(tupleDescriptor, sortingTest1RecordData, "sortingTest1", 1024, 0.01f);
-    verifySortedDataExists(sortingTest1RecordData, "sortingTest1");
-    verifySortOnUUID(tupleDescriptor, sortingTest1RecordData, "sortingTest1");
+    // TODO: Uncomment tests once they work
+
+    std::string t1 = "sortingTest1";
+    std::vector<RecData> r1;
+    generateSortableData(tupleDescriptor, r1, t1, 1024, 0.01f);
+    verifySortedDataExists(r1, t1);
+    verifySortOnUUID(tupleDescriptor, r1, t1);
+    //verifySortOnChar(tupleDescriptor, r1, t1);
+    //verifySortOnInt(tupleDescriptor, r1, t1);
+    //verifySortOnFloat(tupleDescriptor, r1, t1);
+
+    std::string t2 = "sortingTest2";
+    std::vector<RecData> r2;
+    generateSortableData(tupleDescriptor, r2, t2, 1024, 0.01f);
+    verifySortedDataExists(r2, t2);
+    verifySortOnUUID(tupleDescriptor, r2, t2);
+    //verifySortOnChar(tupleDescriptor, r2, t2);
+    //verifySortOnInt(tupleDescriptor, r2, t2);
+    //verifySortOnFloat(tupleDescriptor, r2, t2);
 
     // Free up memory
-    for(vector<RecData>::iterator it = sortingTest1RecordData.begin(); it != sortingTest1RecordData.end(); ++it)
+    for(vector<RecData>::iterator it = r1.begin(); it != r1.end(); ++it)
+    {
+        free((*it).data);
+        free((*it).dataBuffer);
+    }
+
+    for(vector<RecData>::iterator it = r2.begin(); it != r2.end(); ++it)
     {
         free((*it).data);
         free((*it).dataBuffer);
