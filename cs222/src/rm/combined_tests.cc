@@ -133,21 +133,33 @@ void verifyScan(vector<RecData>& records, RM_ScanIterator& scanner)
     char buffer[5000];
 
     vector<RecData>::iterator rec = records.end();
+    vector<RecData>::iterator possible_rec = records.begin();
 
     int scanned = 0;
     while(scanner.getNextTuple(rid, buffer) == success)
     {
+        if (possible_rec != records.end())
+            ++possible_rec;
+
         ++scanned;
 
-        // Search for the record we just scanned in our list of verification records
-        rec = records.end();
-        for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
+        // If it's just the next one, use it, otherwise we'll just do a linear search
+        if (possible_rec != records.end() && possible_rec->rid.pageNum == rid.pageNum && possible_rec->rid.slotNum == rid.slotNum)
         {
-            RecData& r = *it;
-            if (r.rid.pageNum == rid.pageNum && r.rid.slotNum == rid.slotNum)
+            rec = possible_rec;
+        }
+        else
+        {
+            // Search for the record we just scanned in our list of verification records
+            rec = records.end();
+            for (vector<RecData>::iterator it = records.begin(); it != records.end(); ++it)
             {
-                rec = it;
-                break;
+                RecData& r = *it;
+                if (r.rid.pageNum == rid.pageNum && r.rid.slotNum == rid.slotNum)
+                {
+                    rec = it;
+                    break;
+                }
             }
         }
 
