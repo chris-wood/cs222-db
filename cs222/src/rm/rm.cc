@@ -408,7 +408,6 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 
 	// Load in the row that is to be deleted
-    //TableMetaData& tableMetaData = it->second;
 	TableMetadataRow currentRow;
     ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
 	if (ret != rc::OK)
@@ -416,6 +415,34 @@ RC RelationManager::deleteTable(const string &tableName)
 		return ret;
 	}
 
+	// Delete the attributes stored along with this table
+	int deletedAttributes = 0;
+	AttributeRecord attributeBuffer;
+	RID attributeRid = currentRow.firstAttribute;
+	while(attributeRid.pageNum > 0 && deletedAttributes <= currentRow.numAttributes)
+	{
+		RID prevAttribute = attributeRid;
+		memset(&attributeBuffer, 0, sizeof(attributeBuffer));
+
+		// Read in the attribute so we can continue along the chain
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid, &attributeBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Delete the current attribute
+		++deletedAttributes;
+		ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Determine the next attribute
+		attributeRid = attributeBuffer.nextAttribute;
+	}
+	
 	// Load in the previous row, we will need to update its next pointer
 	if (currentRow.prevRow.pageNum > 0)
 	{
