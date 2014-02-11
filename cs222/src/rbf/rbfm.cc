@@ -711,15 +711,21 @@ RC RecordBasedFileManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
     slotIndex->isAnchor = false;
     writePageIndexSlot(pageBuffer, rid.slotNum, slotIndex);
 
-	// Write back the new page
-	RC ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+	// If need be, fix the freespace lists
+	RC ret = movePageToCorrectFreeSpaceList(fileHandle, *header);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	// If need be, fix the freespace lists
-	return movePageToCorrectFreeSpaceList(fileHandle, *header); 
+	// Write back the new page
+	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	return rc::OK;
 }
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
