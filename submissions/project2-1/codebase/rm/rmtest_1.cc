@@ -324,7 +324,7 @@ void secA_7(const string &tableName)
    
     RID rid; 
     int tupleSize = 0;
-    int numTuples = 5;
+    const int numTuples = 5;
     void *tuple;
     void *returnedData = malloc(100);
 
@@ -399,7 +399,7 @@ void secA_8_A(const string &tableName)
 
     RID rid;    
     int tupleSize = 0;
-    int numTuples = 100;
+    const int numTuples = 100;
     void *tuple;
     void *returnedData = malloc(100);
 

@@ -7,7 +7,7 @@ void secA_8_B(const string &tableName)
     cout << "****In Test Case 8_B****" << endl;
 
     RID rid;    
-    int numTuples = 100;
+    const int numTuples = 100;
     void *returnedData = malloc(100);
 
     set<int> ages; 
@@ -61,7 +61,7 @@ void secA_9(const string &tableName, vector<RID> &rids, vector<int> &sizes)
 
     RID rid; 
     void *tuple = malloc(1000);
-    int numTuples = 2000;
+    const int numTuples = 2000;
 
     // GetAttributes
     vector<Attribute> attrs;
@@ -101,7 +101,7 @@ void secA_10(const string &tableName, const vector<RID> &rids, const vector<int>
     // 1. read tuple
     cout << "****In Test case 10****" << endl;
 
-    int numTuples = 2000;
+    const int numTuples = 2000;
     void *tuple = malloc(1000);
     void *returnedData = malloc(1000);
 
@@ -294,7 +294,7 @@ void secA_15(const string &tableName) {
     
     RID rid;    
     int tupleSize = 0;
-    int numTuples = 500;
+    const int numTuples = 500;
     void *tuple;
     void *returnedData = malloc(100);
     int ageVal = 25;

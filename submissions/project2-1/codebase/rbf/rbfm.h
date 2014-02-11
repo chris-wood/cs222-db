@@ -220,7 +220,7 @@ public:
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
-  static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
+  static int calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 protected:
   RecordBasedFileManager();
