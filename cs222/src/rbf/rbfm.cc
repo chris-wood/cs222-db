@@ -225,7 +225,9 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
     PFHeader header;
     readHeader(fileHandle, &header);
 
-    unsigned freespace = calculateFreespace(pageHeader.freeSpaceOffset, pageHeader.numSlots);
+    int freespace = calculateFreespace(pageHeader.freeSpaceOffset, pageHeader.numSlots);
+	assert(freespace >= 0);
+
     for (unsigned i=header.numFreespaceLists; i>0; --i)
     {
         unsigned listIndex = i - 1;
@@ -235,7 +237,8 @@ RC RecordBasedFileManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
         }
     }
 
-    return rc::RECORD_EXCEEDS_PAGE_SIZE;
+	// Backup plan, if we somehow ruined our page somewhow
+	return movePageToFreeSpaceList(fileHandle, pageHeader, 0);
 }
 
 RC RecordBasedFileManager::movePageToFreeSpaceList(FileHandle& fileHandle, PageIndexHeader& pageHeader, unsigned destinationListIndex)
@@ -785,6 +788,13 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		{
 			return ret;
 		}
+
+		// Write out the updated page data
+		ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 	}
 
 	return ret;
@@ -1156,7 +1166,7 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 	}
 
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
-	std::vector< unsigned > freespace;
+	std::vector< int > freespace;
 	std::vector< std::vector<unsigned> > recordSizes;
 
 	// Step 1) Reorganize individual pages
@@ -1300,7 +1310,7 @@ PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
 	return (PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
 }
 
-unsigned RecordBasedFileManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)
+int RecordBasedFileManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)
 {
 	return PAGE_SIZE - freespaceOffset - sizeof(PageIndexHeader) - (numSlots * sizeof(PageIndexSlot));
 }
