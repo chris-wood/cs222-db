@@ -5,7 +5,7 @@ namespace rc
 {
     enum ReturnCode
     {
-        UNKNOWN_FAILURE = -1,
+        UNKNOWN_FAILURE = 0x7FFFFFFF, // All custom error codes must be positive
         OK = 0,
 
         FEATURE_NOT_YET_IMPLEMENTED,
