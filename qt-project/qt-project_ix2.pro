@@ -12,7 +12,7 @@ SOURCES += \
     ../cs222/src/util/dbgout.cc \
     ../cs222/src/rm/rm.cc \
     ../cs222/src/ix/ix.cc \
-    ../cs222/src/ix/ix_combined.cc
+    ../cs222/src/ix/ixtest2.cc
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \

@@ -1,5 +1,5 @@
-
 #include "ix.h"
+#include "../util/returncodes.h"
 
 IndexManager* IndexManager::_index_manager = 0;
 
@@ -17,36 +17,38 @@ IndexManager::IndexManager()
 
 IndexManager::~IndexManager()
 {
+    // We don't want our static pointer to be pointing to deleted data in case the object is ever deleted!
+    _index_manager = NULL;
 }
 
 RC IndexManager::createFile(const string &fileName)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::scan(FileHandle &fileHandle,
@@ -57,7 +59,7 @@ RC IndexManager::scan(FileHandle &fileHandle,
     bool        	highKeyInclusive,
     IX_ScanIterator &ix_ScanIterator)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 IX_ScanIterator::IX_ScanIterator()
@@ -70,14 +72,15 @@ IX_ScanIterator::~IX_ScanIterator()
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IX_ScanIterator::close()
 {
-	return -1;
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 void IX_PrintError (RC rc)
 {
+    std::cout << rc::rcToString(rc);
 }
