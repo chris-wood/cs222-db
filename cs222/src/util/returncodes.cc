@@ -6,6 +6,7 @@ namespace rc
     {
         switch((ReturnCode)rc)
         {
+        case END_OF_FILE:                           return "END_OF_FILE";
         case UNKNOWN_FAILURE:                       return "UNKNOWN_FAILURE";
         case OK:                                    return "OK";
         case FEATURE_NOT_YET_IMPLEMENTED:           return "FEATURE_NOT_YET_IMPLEMENTED";

@@ -5,6 +5,7 @@ namespace rc
 {
     enum ReturnCode
     {
+        END_OF_FILE = -1, // Scan iterator return codes may be negative
         UNKNOWN_FAILURE = 0x7FFFFFFF, // All custom error codes must be positive
         OK = 0,
 
