@@ -1,4 +1,5 @@
 #include "ix.h"
+#include "../rbf/pfm.h"
 #include "../util/returncodes.h"
 
 IndexManager* IndexManager::_index_manager = 0;
@@ -23,22 +24,22 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return PagedFileManager::instance()->createFile(fileName.c_str());
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return PagedFileManager::instance()->destroyFile(fileName.c_str());
 }
 
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return PagedFileManager::instance()->openFile(fileName.c_str(), fileHandle);
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    return PagedFileManager::instance()->closeFile(fileHandle);
 }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
