@@ -9,6 +9,8 @@
 
 # define IX_EOF (-1)  // end of the index scan
 
+#define MAX_KEY_SIZE 2048
+
 struct IndexHeader
 {
 	int isLeafPage;
@@ -24,7 +26,7 @@ struct IndexNonLeafRecord
 	RID nextSlot;
 
 	int keySize;
-	char key[PAGE_SIZE]; // This is a super lazy way to not have to dynamically malloc based on the size every time
+	char key[MAX_KEY_SIZE]; // This is a super lazy way to not have to dynamically malloc based on the size every time
 };
 
 struct IndexLeafRecord
@@ -33,7 +35,7 @@ struct IndexLeafRecord
 	RID nextSlot;
 
 	int keySize;
-	char key[PAGE_SIZE];
+	char key[MAX_KEY_SIZE];
 };
 
 class IX_ScanIterator;

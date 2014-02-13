@@ -1,5 +1,6 @@
 #include "ix.h"
 #include "../rbf/pfm.h"
+#include "../rbf/rbfm.h"
 #include "../util/returncodes.h"
 
 IndexManager* IndexManager::_index_manager = 0;
@@ -29,15 +30,15 @@ IndexManager::IndexManager()
 	attr.name = "nextSlot_PageNum";			attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
 	attr.name = "nextSlot_SlotNum";			attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
 	attr.name = "keySize";					attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
-	attr.name = "key";						attr.type = TypeVarChar;	attr.length = PAGE_SIZE;	_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "key";						attr.type = TypeVarChar;	attr.length = MAX_KEY_SIZE;	_indexNonLeafRecordDescriptor.push_back(attr);
 
 	// Index Leaf Record
-	attr.name = "dataRid_PageNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
-	attr.name = "dataRid_SlotNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
-	attr.name = "nextSlot_PageNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
-	attr.name = "nextSlot_SlotNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
-	attr.name = "keySize";					attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
-	attr.name = "key";						attr.type = TypeVarChar;	attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "dataRid_PageNum";			attr.type = TypeInt;		attr.length = 4;			_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "dataRid_SlotNum";			attr.type = TypeInt;		attr.length = 4;			_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_PageNum";			attr.type = TypeInt;		attr.length = 4;			_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_SlotNum";			attr.type = TypeInt;		attr.length = 4;			_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "keySize";					attr.type = TypeInt;		attr.length = 4;			_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "key";						attr.type = TypeVarChar;	attr.length = MAX_KEY_SIZE;	_indexLeafRecordDescriptor.push_back(attr);
 }
 
 IndexManager::~IndexManager()

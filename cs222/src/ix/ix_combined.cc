@@ -706,7 +706,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
     // insert entry
     for(unsigned i = 1; i <= numOfTuples; i++)
     {
-        key = (float)i + 76.5;
+        key = (float)i + 76.5f;
         rid.pageNum = i;
         rid.slotNum = i;
 
@@ -724,7 +724,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
 
     for(unsigned i = 6000; i <= numOfTuples+6000; i++)
     {
-        key = (float)i + 76.5;
+        key = (float)i + 76.5f;
         rid.pageNum = i;
         rid.slotNum = i-(unsigned)500;
 
