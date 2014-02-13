@@ -474,17 +474,38 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
         return ret;
     }
 
+	return insertRecordToPage(fileHandle, recordDescriptor, data, pageNum, rid);
+}
+
+RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid) 
+{
     // Read in the designated page
     unsigned char pageBuffer[PAGE_SIZE] = {0};
-    ret = fileHandle.readPage(pageNum, pageBuffer);
+    RC ret = fileHandle.readPage(pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
-        free(recHeader);
 		return ret;
 	}
 
     // Recover the index header structure
     PageIndexHeader* header = getPageIndexHeader(pageBuffer);
+
+	// Verify this page has enough space for the record
+	unsigned recLength = 0;
+	unsigned recHeaderSize = 0;
+	unsigned* recHeader = NULL;
+	ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+	if (ret != rc::OK)
+	{
+		free(recHeader);
+		return ret;
+	}
+
+	int freespace = calculateFreespace(header->freeSpaceOffset, header->numSlots);
+	if (recLength > freespace)
+	{
+		return rc::RECORD_EXCEEDS_PAGE_SIZE;
+	}
 
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
 
@@ -1319,6 +1340,38 @@ PageIndexHeader* RecordBasedFileManager::getPageIndexHeader(void* pageBuffer)
 int RecordBasedFileManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)
 {
 	return PAGE_SIZE - freespaceOffset - sizeof(PageIndexHeader) - (numSlots * sizeof(PageIndexSlot));
+}
+
+RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace)
+{
+	if (pageNum <= 0)
+	{
+		return rc::PAGE_NUM_INVALID;
+	}
+
+	PFHeader header;
+	RC ret = readHeader(fileHandle, &header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	if (pageNum > header.numPages)
+	{
+		return rc::PAGE_NUM_INVALID;
+	}
+
+	char pageBuffer[PAGE_SIZE] = {0};
+	ret = fileHandle.readPage(pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	PageIndexHeader* pageIndexHeader = getPageIndexHeader(pageBuffer);
+	freespace = calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots);
+
+	return rc::OK;
 }
 
 RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index)

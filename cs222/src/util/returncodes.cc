@@ -33,6 +33,7 @@ namespace rc
         case HEADER_FREESPACE_LISTS_CORRUPT:        return "HEADER_FREESPACE_LIST_CORRUPT";
         case HEADER_SIZE_TOO_LARGE:                 return "HEADER_SIZE_TOO_LARGE";
         case PAGE_CANNOT_BE_ORGANIZED:              return "PAGE_CANNOT_BE_ORGANIZED";
+		case PAGE_NUM_INVALID:						return "PAGE_NUM_INVALID";
         case RECORD_SIZE_INVALID:                   return "RECORD_SIZE_INVALID";
 		case TABLE_NOT_FOUND:						return "TABLE_NOT_FOUND";
 		case TABLE_ALREADY_CREATED:					return "TABLE_ALREADY_CREATED";

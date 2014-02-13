@@ -222,6 +222,10 @@ public:
   static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
   static int calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
+  // Additional API for part 3 of the project, consumer is the Indexing Manager
+  RC freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace);
+  RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
+
 protected:
   RecordBasedFileManager();
   ~RecordBasedFileManager();
