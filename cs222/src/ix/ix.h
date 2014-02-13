@@ -92,12 +92,24 @@ class IndexManager {
 };
 
 class IX_ScanIterator {
- public:
+public:
   IX_ScanIterator();  							// Constructor
   ~IX_ScanIterator(); 							// Destructor
 
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
   RC close();             						// Terminate index scan
+
+  RC init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
+
+private:
+	FileHandle* _fileHandle;
+	Attribute _attribute;
+	void* _lowKeyValue;
+	void* _highKeyValue;
+	bool _lowKeyInclusive;
+	bool _highKeyInclusive;
+
+	RID _currentRid;
 };
 
 // print out the error message for a given return code

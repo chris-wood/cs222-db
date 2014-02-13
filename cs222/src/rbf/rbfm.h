@@ -77,6 +77,7 @@ struct Attribute {
     AttrLength length; // attribute length
 
 	static unsigned sizeInBytes(AttrType type, const void* value);
+	static RC allocateValue(AttrType attributeType, const void* valueIn, void** valueOut);
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)
@@ -151,7 +152,6 @@ private:
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
 	void nextRecord(unsigned numSlots);
-	RC allocateValue(AttrType attributeType, const void* value);
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
 	bool recordMatchesValue(char* record);
 

@@ -49,22 +49,22 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName)
 {
-    return PagedFileManager::instance()->createFile(fileName.c_str());
+	return RecordBasedFileManager::instance()->createFile(fileName.c_str());
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-    return PagedFileManager::instance()->destroyFile(fileName.c_str());
+    return RecordBasedFileManager::instance()->destroyFile(fileName.c_str());
 }
 
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
-    return PagedFileManager::instance()->openFile(fileName.c_str(), fileHandle);
+    return RecordBasedFileManager::instance()->openFile(fileName.c_str(), fileHandle);
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
 {
-    return PagedFileManager::instance()->closeFile(fileHandle);
+    return RecordBasedFileManager::instance()->closeFile(fileHandle);
 }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
@@ -85,15 +85,76 @@ RC IndexManager::scan(FileHandle &fileHandle,
     bool        	highKeyInclusive,
     IX_ScanIterator &ix_ScanIterator)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	return ix_ScanIterator.init(&fileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
 }
 
 IX_ScanIterator::IX_ScanIterator()
+	: _fileHandle(NULL), 
+	_attribute(),
+	_lowKeyValue(NULL), 
+	_highKeyValue(NULL), 
+	_lowKeyInclusive(false), 
+	_highKeyInclusive(false),
+	_currentRid()
 {
 }
 
 IX_ScanIterator::~IX_ScanIterator()
 {
+	close();
+}
+
+RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+{
+	if (!fileHandle)
+		return rc::FILE_HANDLE_NOT_INITIALIZED;
+
+	if (attribute.length == 0)
+		return rc::ATTRIBUTE_LENGTH_INVALID;
+
+	_fileHandle = fileHandle;
+	_attribute = attribute;
+	_lowKeyInclusive = lowKeyInclusive;
+	_highKeyInclusive = highKeyInclusive;
+
+	// TODO: Find the first record
+	_currentRid.pageNum = 1;
+	_currentRid.slotNum = 0;
+
+	// Copy over the key values to local memory
+	if (lowKey)
+	{
+		RC ret = Attribute::allocateValue(attribute.type, lowKey, &_lowKeyValue);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+	else
+	{
+		if (_lowKeyValue)
+			free(_lowKeyValue);
+
+		_lowKeyValue = NULL;
+	}
+
+	if (highKey)
+	{
+		RC ret = Attribute::allocateValue(attribute.type, highKey, &_highKeyValue);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+	else
+	{
+		if (_highKeyValue)
+			free(_highKeyValue);
+
+		_highKeyValue = NULL;
+	}
+
+	return rc::OK;
 }
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
@@ -103,7 +164,17 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 
 RC IX_ScanIterator::close()
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	if (_lowKeyValue)
+		free(_lowKeyValue);
+
+	if (_highKeyValue)
+		free(_highKeyValue);
+
+	_fileHandle = NULL; 
+	_lowKeyValue = NULL;
+	_highKeyValue = NULL; 
+
+	return rc::OK;
 }
 
 void IX_PrintError (RC rc)

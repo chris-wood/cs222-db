@@ -1359,7 +1359,7 @@ RC RBFM_ScanIterator::init(FileHandle& fileHandle, const vector<Attribute> &reco
 	if (compOp != NO_OP)
 	{
 		_conditionAttributeType = recordDescriptor[_conditionAttributeIndex].type;
-		allocateValue(_conditionAttributeType, value);
+		Attribute::allocateValue(_conditionAttributeType, value, &_comparasionValue);
 	}
 
 	_returnAttributeIndices.clear();
@@ -1541,26 +1541,26 @@ RC RBFM_ScanIterator::close()
 	return rc::OK;
 }
 
-RC RBFM_ScanIterator::allocateValue(AttrType attributeType, const void* value)
+RC Attribute::allocateValue(AttrType attributeType, const void* valueIn, void** valueOut)
 {
-	if(_comparasionValue)
+	if(*valueOut)
 	{
-		free(_comparasionValue);
+		free(*valueOut);
 	}
 
-	unsigned attributeSize = Attribute::sizeInBytes(attributeType, value);
+	unsigned attributeSize = Attribute::sizeInBytes(attributeType, valueIn);
 	if (attributeSize == 0)
 	{
 		return rc::ATTRIBUTE_INVALID_TYPE;
 	}
 
-	_comparasionValue = malloc(attributeSize);
-	if (!_comparasionValue)
+	*valueOut = malloc(attributeSize);
+	if (!(*valueOut))
 	{
 		return rc::OUT_OF_MEMORY;
 	}
 
-	memcpy(_comparasionValue, value, attributeSize);
+	memcpy(*valueOut, valueIn, attributeSize);
 
 	return rc::OK;
 }
