@@ -49,7 +49,69 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName)
 {
-	return RecordBasedFileManager::instance()->createFile(fileName.c_str());
+	RC ret = RecordBasedFileManager::instance()->createFile(fileName.c_str());
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Open up the file so we can initialize it with some data
+	FileHandle fileHandle;
+	ret = openFile(fileName, fileHandle);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Insert the index header as the 1st record
+	
+
+	RID rid;
+	ret = newPage(fileHandle, rid);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	if (rid.pageNum != 1)
+	{
+		return rc::INDEX_PAGE_INITIALIZATION_FAILED;
+	}
+
+	// We're done, leave the file closed
+	ret = closeFile(fileHandle);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	return rc::OK;
+}
+
+RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
+{
+	IndexHeader header;
+	header.isLeafPage = false;
+	header.firstRecord.pageNum = 0;
+	header.firstRecord.slotNum = 0;
+	header.parent = 0;
+	header.prev = 0;
+	header.next = 0;
+
+	// TODO: We need a way to tell RBFM to force a new page
+	RC ret = RecordBasedFileManager::instance()->insertRecord(fileHandle, _indexHeaderDescriptor, &header, headerRid);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// We have just created the file, so we should be garunteed to have the 1st page and 1st slot
+	if (headerRid.slotNum != 0)
+	{
+		return rc::INDEX_PAGE_INITIALIZATION_FAILED;
+	}
+
+	return rc::OK;
 }
 
 RC IndexManager::destroyFile(const string &fileName)

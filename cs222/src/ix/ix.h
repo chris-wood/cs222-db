@@ -82,6 +82,8 @@ class IndexManager {
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
 
+  RC newPage(FileHandle& fileHandle, RID& headerRid);
+
  private:
   static IndexManager *_index_manager;
 
