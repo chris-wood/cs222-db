@@ -9,8 +9,34 @@
 
 # define IX_EOF (-1)  // end of the index scan
 
-class IX_ScanIterator;
+struct IndexHeader
+{
+	int isLeafPage;
+	RID firstRecord;
+	PageNum parent;
+	PageNum prev;
+	PageNum next;
+};
 
+struct IndexNonLeafRecord
+{
+	RID pagePointer;
+	RID nextSlot;
+
+	int keySize;
+	char key[PAGE_SIZE]; // This is a super lazy way to not have to dynamically malloc based on the size every time
+};
+
+struct IndexLeafRecord
+{
+	RID dataRid;
+	RID nextSlot;
+
+	int keySize;
+	char key[PAGE_SIZE];
+};
+
+class IX_ScanIterator;
 class IndexManager {
  public:
   static IndexManager* instance();
@@ -45,12 +71,22 @@ class IndexManager {
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
 
+  const std::vector<Attribute>& indexHeaderDescriptor() { return _indexHeaderDescriptor; }
+
+  const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
+  const std::vector<Attribute>& indexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
+
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
 
  private:
   static IndexManager *_index_manager;
+
+  std::vector<Attribute> _indexHeaderDescriptor;
+  
+  std::vector<Attribute> _indexNonLeafRecordDescriptor;
+  std::vector<Attribute> _indexLeafRecordDescriptor;
 };
 
 class IX_ScanIterator {

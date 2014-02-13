@@ -14,6 +14,30 @@ IndexManager* IndexManager::instance()
 
 IndexManager::IndexManager()
 {
+	// Index Header
+	Attribute attr;
+	attr.name = "isLeafPage";				attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+	attr.name = "firstRecord_PageNum";		attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+	attr.name = "firstRecord_SlotNum";		attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+	attr.name = "parent_PageNum";			attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+	attr.name = "prev_PageNum";				attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+	attr.name = "next_PageNum";				attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
+
+	// Index Non-Leaf Record
+	attr.name = "pagePointer_PageNum";		attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "pagePointer_SlotNum";		attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_PageNum";			attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_SlotNum";			attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "keySize";					attr.type = TypeInt;		attr.length = 4;			_indexNonLeafRecordDescriptor.push_back(attr);
+	attr.name = "key";						attr.type = TypeVarChar;	attr.length = PAGE_SIZE;	_indexNonLeafRecordDescriptor.push_back(attr);
+
+	// Index Leaf Record
+	attr.name = "dataRid_PageNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "dataRid_SlotNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_PageNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "nextSlot_SlotNum";			attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "keySize";					attr.type = TypeInt;		attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
+	attr.name = "key";						attr.type = TypeVarChar;	attr.length = 4;	_indexLeafRecordDescriptor.push_back(attr);
 }
 
 IndexManager::~IndexManager()
