@@ -20,22 +20,32 @@ struct IndexHeader
 	PageNum next;
 };
 
+struct KeyValueData
+{
+    int size;
+
+    // This is a super lazy way to not have to dynamically malloc based on the size every time
+    // Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
+    union
+    {
+        int integer;
+        float real;
+        char varchar[MAX_KEY_SIZE];
+    };
+};
+
 struct IndexNonLeafRecord
 {
 	RID pagePointer;
 	RID nextSlot;
-
-	int keySize;
-	char key[MAX_KEY_SIZE]; // This is a super lazy way to not have to dynamically malloc based on the size every time
+    KeyValueData key;
 };
 
 struct IndexLeafRecord
 {
 	RID dataRid;
 	RID nextSlot;
-
-	int keySize;
-	char key[MAX_KEY_SIZE];
+    KeyValueData key;
 };
 
 class IX_ScanIterator;

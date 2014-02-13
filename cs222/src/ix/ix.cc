@@ -3,6 +3,8 @@
 #include "../rbf/rbfm.h"
 #include "../util/returncodes.h"
 
+#include <cstring>
+
 IndexManager* IndexManager::_index_manager = 0;
 
 IndexManager* IndexManager::instance()
