@@ -11,13 +11,11 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IndexHeader
+struct IX_PageIndexHeader : public CorePageIndexHeader
 {
 	int isLeafPage;
 	RID firstRecord;
 	PageNum parent;
-	PageNum prev;
-	PageNum next;
 };
 
 struct KeyValueData
@@ -95,12 +93,14 @@ class IndexManager {
   RC newPage(FileHandle& fileHandle, RID& headerRid);
 
  private:
-  static IndexManager *_index_manager;
+	static IndexManager *_index_manager;
+	
+	RecordBasedFileManager* _rbfm;
 
-  std::vector<Attribute> _indexHeaderDescriptor;
-  
-  std::vector<Attribute> _indexNonLeafRecordDescriptor;
-  std::vector<Attribute> _indexLeafRecordDescriptor;
+	RID _indexHeaderRid;
+	std::vector<Attribute> _indexHeaderDescriptor;
+	std::vector<Attribute> _indexNonLeafRecordDescriptor;
+	std::vector<Attribute> _indexLeafRecordDescriptor;
 };
 
 class IX_ScanIterator {
@@ -114,6 +114,8 @@ public:
   RC init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
 
 private:
+	RecordBasedFileManager* _rbfm;
+
 	FileHandle* _fileHandle;
 	Attribute _attribute;
 	void* _lowKeyValue;

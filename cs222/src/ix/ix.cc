@@ -17,6 +17,8 @@ IndexManager* IndexManager::instance()
 
 IndexManager::IndexManager()
 {
+	_rbfm = RecordBasedFileManager::instance();
+
 	// Index Header
 	Attribute attr;
 	attr.name = "isLeafPage";				attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
@@ -51,7 +53,7 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName)
 {
-	RC ret = RecordBasedFileManager::instance()->createFile(fileName.c_str());
+	RC ret = _rbfm->createFile(fileName.c_str());
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -66,16 +68,13 @@ RC IndexManager::createFile(const string &fileName)
 	}
 
 	// Insert the index header as the 1st record
-	
-
-	RID rid;
-	ret = newPage(fileHandle, rid);
+	ret = newPage(fileHandle, _indexHeaderRid);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	if (rid.pageNum != 1)
+	if (_indexHeaderRid.pageNum != 1)
 	{
 		return rc::INDEX_PAGE_INITIALIZATION_FAILED;
 	}
@@ -92,16 +91,16 @@ RC IndexManager::createFile(const string &fileName)
 
 RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
 {
-	IndexHeader header;
+	IX_PageIndexHeader header;
 	header.isLeafPage = false;
 	header.firstRecord.pageNum = 0;
 	header.firstRecord.slotNum = 0;
 	header.parent = 0;
-	header.prev = 0;
-	header.next = 0;
+	header.prevPage = 0;
+	header.nextPage = 0;
 
 	// TODO: We need a way to tell RBFM to force a new page
-	RC ret = RecordBasedFileManager::instance()->insertRecord(fileHandle, _indexHeaderDescriptor, &header, headerRid);
+	RC ret = _rbfm->insertRecord(fileHandle, _indexHeaderDescriptor, &header, headerRid);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -118,21 +117,24 @@ RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-    return RecordBasedFileManager::instance()->destroyFile(fileName.c_str());
+    return _rbfm->destroyFile(fileName.c_str());
 }
 
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
-    return RecordBasedFileManager::instance()->openFile(fileName.c_str(), fileHandle);
+    return _rbfm->openFile(fileName.c_str(), fileHandle);
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
 {
-    return RecordBasedFileManager::instance()->closeFile(fileHandle);
+    return _rbfm->closeFile(fileHandle);
 }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	IX_PageIndexHeader header;
+	RC ret = _rbfm->readRecord(fileHandle, _indexHeaderDescriptor, _indexHeaderRid, &header);
+
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 

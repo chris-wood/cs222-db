@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define CURRENT_PF_VERSION 1
+#define CURRENT_PF_VERSION 2
 #define NUM_FREESPACE_LISTS 11
 
 // The temporary threshold used to determine when we should reorganize pages
@@ -166,12 +166,15 @@ protected:
   virtual RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, void* pageHeaderBuffer);
   
   RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* headerBuffer, unsigned char* pageBuffer);
-  // RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
-  // RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
+  
+  CorePageIndexHeader* getCorePageIndexHeader(void* pageBuffer);
+  PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
+  void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
+  int calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 private:
-  PagedFileManager& _pfm;
-  unsigned _pageSlotOffset;
+	PagedFileManager& _pfm;
+	unsigned _pageSlotOffset;
 };
 
 #endif /* _rbcm_h_ */
