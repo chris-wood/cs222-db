@@ -11,7 +11,7 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IX_PageIndexHeader : public CorePageIndexHeader
+struct IX_PageIndexHeader : public CorePageIndexFooter
 {
 	int isLeafPage;
 	RID firstRecord;

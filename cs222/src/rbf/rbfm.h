@@ -4,7 +4,7 @@
 #include "rbcm.h"
 #include "../util/dbgout.h"
 
-struct RBFM_PageIndexHeader : public CorePageIndexHeader
+struct RBFM_PageIndexFooter : public CorePageIndexFooter
 {
 	int someValue;
 	float foobar;
@@ -90,7 +90,7 @@ protected:
 	RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
 	RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 
-	RBFM_PageIndexHeader* getRBFMPageIndexHeader(void* pageBuffer);
+	RBFM_PageIndexFooter* getRBFMPageIndexFooter(void* pageBuffer);
 
 private:
 	static RecordBasedFileManager *_rbf_manager;

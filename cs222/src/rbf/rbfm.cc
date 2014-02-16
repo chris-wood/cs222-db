@@ -22,7 +22,7 @@ RecordBasedFileManager* RecordBasedFileManager::instance()
 }
 
 RecordBasedFileManager::RecordBasedFileManager()
-    : RecordBasedCoreManager(sizeof(RBFM_PageIndexHeader)), _pfm(*PagedFileManager::instance())
+    : RecordBasedCoreManager(sizeof(RBFM_PageIndexFooter)), _pfm(*PagedFileManager::instance())
 {
 }
 
@@ -115,7 +115,7 @@ RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vect
 	}
 
     // Recover the index header structure
-	RBFM_PageIndexHeader* header = getRBFMPageIndexHeader(pageBuffer);
+	RBFM_PageIndexFooter* footer = getRBFMPageIndexFooter(pageBuffer);
 
 	// Verify this page has enough space for the record
 	unsigned recLength = 0;
@@ -128,40 +128,40 @@ RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vect
 		return ret;
 	}
 
-	int freespace = calculateFreespace(header->freeSpaceOffset, header->numSlots);
+	unsigned freespace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 	if (recLength > freespace)
 	{
 		return rc::RECORD_EXCEEDS_PAGE_SIZE;
 	}
 
-    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << footer->freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
-    memcpy(pageBuffer + header->freeSpaceOffset, recHeader, recHeaderSize);
-    memcpy(pageBuffer + header->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
+    memcpy(pageBuffer + footer->freeSpaceOffset, recHeader, recHeaderSize);
+    memcpy(pageBuffer + footer->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
     free(recHeader);
 
     // Create a new index slot entry and prepend it to the list
-    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, header->numSlots);
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, footer->numSlots);
     slotIndex->size = recLength;
-    slotIndex->pageOffset = header->freeSpaceOffset;
+    slotIndex->pageOffset = footer->freeSpaceOffset;
     slotIndex->nextPage = 0; // NULL
     slotIndex->nextSlot = 0; // NULL
     slotIndex->isAnchor = false; // only true if we're the end - anchor - of a tombstone chain
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
-    dbg::out << "RecordBasedFileManager::insertRecord: RID = (" << pageNum << ", " << header->numSlots << ")\n";
-    dbg::out << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - sizeof(RBFM_PageIndexHeader) - ((header->numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: RID = (" << pageNum << ", " << footer->numSlots << ")\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Writing to: " << PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - ((footer->numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
     dbg::out << "RecordBasedFileManager::insertRecord: Offset: " << slotIndex->pageOffset << "\n";
     dbg::out << "RecordBasedFileManager::insertRecord: Size of data: " << recLength << "\n";
-    dbg::out << "RecordBasedFileManager::insertRecord: Header free after record: " << (header->freeSpaceOffset + recLength) << "\n";
+    dbg::out << "RecordBasedFileManager::insertRecord: Header free after record: " << (footer->freeSpaceOffset + recLength) << "\n";
 
     // Update the header information
-    header->numSlots++;
-    header->freeSpaceOffset += recLength;
+    footer->numSlots++;
+    footer->freeSpaceOffset += recLength;
 
     // Update the position of this page in the freespace lists, if necessary
-    ret = movePageToCorrectFreeSpaceList(fileHandle, (void*)header);
+    ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -176,7 +176,7 @@ RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vect
 
     // Once the write is committed, store the RID information and return
     rid.pageNum = pageNum;
-    rid.slotNum = header->numSlots - 1;
+    rid.slotNum = footer->numSlots - 1;
 
     return rc::OK;
 }
@@ -193,7 +193,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     }
 
     // Pull the target slot into memory
-	RBFM_PageIndexHeader* realHeader = getRBFMPageIndexHeader(pageBuffer);
+	RBFM_PageIndexFooter* realFooter = getRBFMPageIndexFooter(pageBuffer);
     PageIndexSlot* realSlot = getPageIndexSlot(pageBuffer, rid.slotNum);
 
     // Create the record
@@ -210,9 +210,9 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     // Determine adjacent freespace on this page
     unsigned samePageFreeSpace = 0;
     bool expandInPlace = false;
-    if (rid.slotNum == realHeader->numSlots - 1)
+    if (rid.slotNum == realFooter->numSlots - 1)
     {
-		samePageFreeSpace = calculateFreespace(realHeader->freeSpaceOffset, realHeader->numSlots);
+		samePageFreeSpace = calculateFreespace(realFooter->freeSpaceOffset, realFooter->numSlots);
         if (samePageFreeSpace >= recLength)
         {
             expandInPlace = true;
@@ -244,18 +244,18 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         {
             return ret;
         }
-		realHeader = getRBFMPageIndexHeader(pageBuffer);
+		realFooter = getRBFMPageIndexFooter(pageBuffer);
         realSlot = getPageIndexSlot(pageBuffer, rid.slotNum);
 
         // Copy the data to the same place in memory
-        assert(realSlot->pageOffset + recLength < (PAGE_SIZE - sizeof(RBFM_PageIndexHeader) - (realHeader->numSlots * sizeof(PageIndexSlot))));
+        assert(realSlot->pageOffset + recLength < (PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (realFooter->numSlots * sizeof(PageIndexSlot))));
         memcpy(pageBuffer + realSlot->pageOffset, recHeader, recHeaderSize);
         memcpy(pageBuffer + realSlot->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
 
         // Update the freespace offset in the header, as well as the index slot
-        if (rid.slotNum == realHeader->numSlots - 1)
+        if (rid.slotNum == realFooter->numSlots - 1)
         {
-            realHeader->freeSpaceOffset = realSlot->pageOffset + recLength;    
+            realFooter->freeSpaceOffset = realSlot->pageOffset + recLength;    
         }
         realSlot->size = recLength;
 
@@ -276,7 +276,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
         // Push the changes to disk
         writePageIndexSlot(pageBuffer, rid.slotNum, realSlot);
-        ret = movePageToCorrectFreeSpaceList(fileHandle, realHeader);
+        ret = movePageToCorrectFreeSpaceList(fileHandle, realFooter);
         if (ret != rc::OK)
         {
             return ret;
@@ -300,9 +300,9 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         }
 
         // Increase the gap size accordingly (the size of the previously stored record)
-		realHeader = getRBFMPageIndexHeader(pageBuffer);
+		realFooter = getRBFMPageIndexFooter(pageBuffer);
         realSlot = getPageIndexSlot(pageBuffer, rid.slotNum);
-        realHeader->gapSize += realSlot->size;
+        realFooter->gapSize += realSlot->size;
 
         // Delete the old slot, if necessary
         if (realSlot->nextPage > 0)
@@ -331,7 +331,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         }
 
         // Finally, check for reorganization
-        if (realHeader->gapSize > REORG_THRESHOLD)
+        if (realFooter->gapSize > REORG_THRESHOLD)
         {
             RC ret = reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
             if (ret != rc::OK && ret != rc::PAGE_CANNOT_BE_ORGANIZED)
@@ -346,7 +346,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
         {
             return ret;
         }
-		realHeader = getRBFMPageIndexHeader(pageBuffer);
+		realFooter = getRBFMPageIndexFooter(pageBuffer);
         realSlot = getPageIndexSlot(pageBuffer, newRid.slotNum);
     }
 
@@ -407,7 +407,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
     dbg::out << "RecordBasedFileManager::readAttribute: RID = (" << rid.pageNum << ", " << rid.slotNum << ")\n";;
-    dbg::out << "RecordBasedFileManager::readAttribute: Reading from: " << PAGE_SIZE - sizeof(RBFM_PageIndexHeader) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n";;
+    dbg::out << "RecordBasedFileManager::readAttribute: Reading from: " << PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - ((rid.slotNum + 1) * sizeof(PageIndexSlot)) << "\n";;
     dbg::out << "RecordBasedFileManager::readAttribute: Offset: " << slotIndex->pageOffset << "\n";
     dbg::out << "RecordBasedFileManager::readAttribute: Size: " << slotIndex->size << "\n";
 
@@ -419,20 +419,20 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
 	RC ret = rc::OK;
 
 	// Read in the page header and recover the number of slots
-	RBFM_PageIndexHeader* header = getRBFMPageIndexHeader(pageBuffer);
+	RBFM_PageIndexFooter* footer = getRBFMPageIndexFooter(pageBuffer);
 
     // Only proceed if there are actually slots on this page that need to be reordered
-    if (header->numSlots > 0)
+    if (footer->numSlots > 0)
     {
         unsigned reallocatedSpace = 0;
 
         // Read in the record offsets
-        PageIndexSlot* offsets = (PageIndexSlot*)malloc(header->numSlots * sizeof(PageIndexSlot));
-        memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexHeader) - (header->numSlots * sizeof(PageIndexSlot)), (header->numSlots * sizeof(PageIndexSlot)));
+        PageIndexSlot* offsets = (PageIndexSlot*)malloc(footer->numSlots * sizeof(PageIndexSlot));
+        memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (footer->numSlots * sizeof(PageIndexSlot)), (footer->numSlots * sizeof(PageIndexSlot)));
 
         // Find the first non-empty slot
         int offsetIndex = -1;
-        for (int i = header->numSlots - 1; i >= 0; i--)
+        for (int i = footer->numSlots - 1; i >= 0; i--)
         {
             if (offsets[i].size != 0 && offsets[i].nextPage == 0) // not deleted, not tombstone
             {
@@ -499,12 +499,12 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
         }
 
         // Update the freespace offset for future insertions
-        header->freeSpaceOffset -= header->gapSize;
-        header->gapSize = 0;
-        movePageToCorrectFreeSpaceList(fileHandle, (void*)(&header));
+        footer->freeSpaceOffset -= footer->gapSize;
+        footer->gapSize = 0;
+        movePageToCorrectFreeSpaceList(fileHandle, footer);
 
         // Update the slot entries in the new page
-        memcpy(newBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexHeader) - (header->numSlots * sizeof(PageIndexSlot)), offsets, (header->numSlots * sizeof(PageIndexSlot)));
+        memcpy(newBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (footer->numSlots * sizeof(PageIndexSlot)), offsets, (footer->numSlots * sizeof(PageIndexSlot)));
 
         // Push the changes to disk
         ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
@@ -558,15 +558,15 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 
 		// Reorganize the page to 
 		reorganizeBufferedPage(fileHandle, recordDescriptor, page, pageBuffer);
-		RBFM_PageIndexHeader* pageIndexHeader = getRBFMPageIndexHeader(pageBuffer);
+		RBFM_PageIndexFooter* pageIndexFooter = getRBFMPageIndexFooter(pageBuffer);
 
 		// Keep track of freespace on each page
-		freespace.push_back(calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots));
+		freespace.push_back(calculateFreespace(pageIndexFooter->freeSpaceOffset, pageIndexFooter->numSlots));
 
 		// Keep track of the sizes of all records on this page
 		recordSizes.push_back(std::vector<unsigned>());
 		std::vector<unsigned>& currentPageRecordSizes = recordSizes.back();
-		for (unsigned slot=0; slot < pageIndexHeader->numSlots; ++slot)
+		for (unsigned slot=0; slot < pageIndexFooter->numSlots; ++slot)
 		{
 			PageIndexSlot* pageSlot = getPageIndexSlot(pageBuffer, slot);
 			currentPageRecordSizes.push_back(pageSlot->size);
@@ -574,25 +574,8 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 	}
 
 	// Step 2) Don't do bin packing, because it's NP hard
-
 	// Step 3) Find tombstones and collapse them
-	// for (unsigned page=0; page<header.numPages; page++)
- //    {
- //        fileHandle.readPage(page, pageBuffer);
- //        if (ret != rc::OK)
- //        {
- //            return ret;
- //        }
-
- //        PageIndexHeader* header = (PageIndexHeader*)getPageIndexHeader(pageBuffer, sizeof(PageIndexHeader));
- //        for (unsigned slotIndex = 0; slotIndex < header->numSlots; slotIndex++)
- //        {
-
- //        }
- //    }
-
 	// Step 4) Iterate through pages with few records and attempt to move them to consolotate space
-	// TODO: Write me
 
 	return rc::OK;
 }
@@ -612,9 +595,9 @@ unsigned RecordBasedFileManager::calcRecordSize(unsigned char* recordBuffer)
     return (recEnd - recStart + (numFields * sizeof(unsigned)) + (2 * sizeof(unsigned))); 
 }
 
-RBFM_PageIndexHeader* RecordBasedFileManager::getRBFMPageIndexHeader(void* pageBuffer)
+RBFM_PageIndexFooter* RecordBasedFileManager::getRBFMPageIndexFooter(void* pageBuffer)
 {
-	return (RBFM_PageIndexHeader*)getCorePageIndexHeader(pageBuffer);
+	return (RBFM_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
 }
 
 RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace)
@@ -643,8 +626,8 @@ RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageN
 		return ret;
 	}
 
-    RBFM_PageIndexHeader *pageIndexHeader = getRBFMPageIndexHeader(pageBuffer);
-	freespace = calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots);
+    RBFM_PageIndexFooter *pageIndexFooter = getRBFMPageIndexFooter(pageBuffer);
+	freespace = calculateFreespace(pageIndexFooter->freeSpaceOffset, pageIndexFooter->numSlots);
 
 	return rc::OK;
 }
@@ -765,10 +748,10 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	}
 
 	// Pull in the header preemptively
-    RBFM_PageIndexHeader* pageHeader = (RBFM_PageIndexHeader*)RecordBasedCoreManager::getPageIndexHeader(pageBuffer, sizeof(RBFM_PageIndexHeader));
+    RBFM_PageIndexFooter* pageFooter = (RBFM_PageIndexFooter*)RecordBasedCoreManager::getPageIndexFooter(pageBuffer, sizeof(RBFM_PageIndexFooter));
 
     // Early exit if our next slot is non-existant
-    if (_nextRid.slotNum >= pageHeader->numSlots)
+    if (_nextRid.slotNum >= pageFooter->numSlots)
     {
         return RBFM_EOF;
     }
@@ -787,11 +770,11 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		}
 
 		// Attempt to read in the next record
-		PageIndexSlot* slot = RecordBasedCoreManager::getPageIndexSlot(pageBuffer, _nextRid.slotNum, sizeof(RBFM_PageIndexHeader));
+		PageIndexSlot* slot = RecordBasedCoreManager::getPageIndexSlot(pageBuffer, _nextRid.slotNum, sizeof(RBFM_PageIndexFooter));
 		if (slot->size == 0 && slot->nextPage == 0)
 		{
 			// This record was deleted, skip it
-			nextRecord(pageHeader->numSlots);
+			nextRecord(pageFooter->numSlots);
 			continue;
 		}
 
@@ -807,7 +790,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
                     return ret;
                 }
 
-                slot = RecordBasedCoreManager::getPageIndexSlot(tempPageBuffer, slot->nextSlot, sizeof(RBFM_PageIndexHeader));
+                slot = RecordBasedCoreManager::getPageIndexSlot(tempPageBuffer, slot->nextSlot, sizeof(RBFM_PageIndexFooter));
                 memcpy(pageBuffer, tempPageBuffer, PAGE_SIZE);
             }
         }
@@ -815,7 +798,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		// Compare record with user's data, skip if it doesn't match
 		if (!recordMatchesValue(pageBuffer + slot->pageOffset))
 		{
-			nextRecord(pageHeader->numSlots);
+			nextRecord(pageFooter->numSlots);
 			continue;
 		}
 
@@ -827,7 +810,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
         rid = _nextRid;
 
 		// Advance RID once more and exit
-		nextRecord(pageHeader->numSlots);
+		nextRecord(pageFooter->numSlots);
 		return rc::OK;
 	}
 

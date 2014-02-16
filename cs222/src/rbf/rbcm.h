@@ -101,7 +101,7 @@ The slotNum of an RID will (backwards) index into the list of PageIndexSlots, th
 | ... [PageIndexSlot_0] [PageIndexHeader] |
 \-----------------------------------------/
 */
-struct CorePageIndexHeader
+struct CorePageIndexFooter
 {
   ///////////////
   // layer-specific bytes will go here, above the common core
@@ -125,33 +125,23 @@ public:
   static RecordBasedCoreManager* instance(unsigned slotOffset);
 
   RC createFile(const string &fileName);
-  
   RC destroyFile(const string &fileName);
-  
   RC openFile(const string &fileName, FileHandle &fileHandle);
-  
   RC closeFile(FileHandle &fileHandle);
 
   virtual RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
-  
   virtual RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
-
   virtual RC deleteRecords(FileHandle &fileHandle);
-
   virtual RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
-
   virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) = 0;
-
   virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid) = 0;
-
   virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data) = 0;
-
   virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber) = 0;
 
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset);
   static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset, PageIndexSlot* slot);
-  static void* getPageIndexHeader(void* pageBuffer, unsigned pageSlotOffset);
-  static int calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset);
+  static void* getPageIndexFooter(void* pageBuffer, unsigned pageSlotOffset);
+  static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset);
 
 protected:
   RecordBasedCoreManager(unsigned slotOffset);
@@ -167,10 +157,10 @@ protected:
   
   RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* headerBuffer, unsigned char* pageBuffer);
   
-  CorePageIndexHeader* getCorePageIndexHeader(void* pageBuffer);
+  CorePageIndexFooter* getCorePageIndexFooter(void* pageBuffer);
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
-  int calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
+  unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 private:
 	PagedFileManager& _pfm;
