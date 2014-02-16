@@ -71,6 +71,7 @@ struct Attribute {
     AttrLength length; // attribute length
 
   static unsigned sizeInBytes(AttrType type, const void* value);
+  static RC allocateValue(AttrType attributeType, const void* valueIn, void** valueOut);
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)

@@ -823,3 +823,27 @@ unsigned Attribute::sizeInBytes(AttrType type, const void* value)
         return 0;
     }
 }
+
+RC Attribute::allocateValue(AttrType attributeType, const void* valueIn, void** valueOut)
+{
+    if(*valueOut)
+    {
+        free(*valueOut);
+    }
+
+    unsigned attributeSize = Attribute::sizeInBytes(attributeType, valueIn);
+    if (attributeSize == 0)
+    {
+        return rc::ATTRIBUTE_INVALID_TYPE;
+    }
+
+    *valueOut = malloc(attributeSize);
+    if (!(*valueOut))
+    {
+        return rc::OUT_OF_MEMORY;
+    }
+
+    memcpy(*valueOut, valueIn, attributeSize);
+
+    return rc::OK;
+}

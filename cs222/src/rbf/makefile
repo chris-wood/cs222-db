@@ -12,8 +12,8 @@ librbf.a: librbf.a(../util/returncodes.o)
 
 # c file dependencies
 pfm.o: pfm.h ../util/returncodes.h ../util/dbgout.h
-rbcm.o: rbcm.h  ../util/returncodes.h ../util/dbgout.h
-rbfm.o: rbfm.h  ../util/returncodes.h ../util/dbgout.h
+rbcm.o: rbcm.h ../util/returncodes.h ../util/dbgout.h
+rbfm.o: rbfm.h ../util/returncodes.h ../util/dbgout.h
 ../util/returncodes.o: ../util/returncodes.h
 ../util/dbgout.o: ../util/dbgout.h
 

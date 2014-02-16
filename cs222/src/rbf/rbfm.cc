@@ -407,10 +407,7 @@ RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vect
 	}
 
     // Recover the index header structure
-<<<<<<< HEAD
     PageIndexHeader* header = (PageIndexHeader*)getPageIndexHeader(pageBuffer, sizeof(PageIndexHeader));
-=======
-    PageIndexHeader* header = getPageIndexHeader(pageBuffer);
 
 	// Verify this page has enough space for the record
 	unsigned recLength = 0;
@@ -423,13 +420,12 @@ RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vect
 		return ret;
 	}
 
-	int freespace = calculateFreespace(header->freeSpaceOffset, header->numSlots);
+	int freespace = calculateFreespace(header->freeSpaceOffset, header->numSlots, sizeof(PageIndexHeader));
 	if (recLength > freespace)
 	{
 		return rc::RECORD_EXCEEDS_PAGE_SIZE;
 	}
 
->>>>>>> e8205e1a2dba889e8079820d3bc2bf22df4979f6
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
@@ -1230,8 +1226,11 @@ RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageN
 		return ret;
 	}
 
-	PageIndexHeader* pageIndexHeader = getPageIndexHeader(pageBuffer);
-	freespace = calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots);
+	char* pageIndexHeaderBuffer = (char*)getPageIndexHeader(pageBuffer, sizeof(PageIndexHeader));
+    PageIndexHeader *pageIndexHeader = (PageIndexHeader*)malloc(sizeof(PageIndexHeader));
+    memcpy(pageIndexHeader, pageIndexHeaderBuffer, sizeof(PageIndexHeader));
+	freespace = calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots, sizeof(PageIndexHeader));
+    free(pageIndexHeader);
 
 	return rc::OK;
 }
@@ -1452,30 +1451,6 @@ RC RBFM_ScanIterator::close()
 	_conditionAttributeIndex = -1;
 	_returnAttributeIndices.clear();
 	_returnAttributeTypes.clear();
-
-	return rc::OK;
-}
-
-RC Attribute::allocateValue(AttrType attributeType, const void* valueIn, void** valueOut)
-{
-	if(*valueOut)
-	{
-		free(*valueOut);
-	}
-
-	unsigned attributeSize = Attribute::sizeInBytes(attributeType, valueIn);
-	if (attributeSize == 0)
-	{
-		return rc::ATTRIBUTE_INVALID_TYPE;
-	}
-
-	*valueOut = malloc(attributeSize);
-	if (!(*valueOut))
-	{
-		return rc::OUT_OF_MEMORY;
-	}
-
-	memcpy(*valueOut, valueIn, attributeSize);
 
 	return rc::OK;
 }
