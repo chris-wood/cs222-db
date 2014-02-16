@@ -536,6 +536,10 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
             return ret;
         }
 
+		// Clear out all data on this page
+		memset(pageBuffer, 0, PAGE_SIZE);
+
+		// Rewrite the footer with new data
 		CorePageIndexFooter *pageFooter = getCorePageIndexFooter(pageBuffer);
         pageFooter->gapSize = 0;
 		pageFooter->numSlots = 0;
@@ -547,6 +551,7 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 		pageFooter->nextPage = (page < pfHeader->numPages) ? (page + 1) : 0;
 		pageFooter->freespaceList = pfHeader->numFreespaceLists - 1;
 
+		// Write the page back out to disk
 		RC ret = fileHandle.writePage(page, pageBuffer);
 		if (ret != rc::OK)
 		{
