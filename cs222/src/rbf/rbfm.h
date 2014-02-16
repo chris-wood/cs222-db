@@ -6,8 +6,6 @@
 
 struct RBFM_PageIndexFooter : public CorePageIndexFooter
 {
-	int someValue;
-	float foobar;
 };
 
 # define RBFM_EOF (-1)  // end of a scan operator
