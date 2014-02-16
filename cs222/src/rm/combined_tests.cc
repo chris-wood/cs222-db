@@ -373,6 +373,12 @@ void cleanup()
 	remove("tbl_employee5");
 	remove("tbl_employee6");
 	remove("tbl_employee7");
+	remove("sortingTest1");
+	remove("sortingTest2");
+	remove("sortingTest3");
+	remove("sortingTest4");
+	remove("sortingTest5");
+	remove("sortingTest6");
 }
 
 int main()
@@ -388,6 +394,7 @@ int main()
     Tests_2();
 	Tests_Custom();
 
+	cleanup();
     return 0;
 }
 
