@@ -19,6 +19,60 @@ struct PageIndexHeader
   PageNum nextPage;
 };
 
+<<<<<<< HEAD
+=======
+
+// Attribute
+typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;
+typedef unsigned AttrLength;
+struct Attribute {
+    string   name;     // attribute name
+    AttrType type;     // attribute type
+    AttrLength length; // attribute length
+
+	static unsigned sizeInBytes(AttrType type, const void* value);
+	static RC allocateValue(AttrType attributeType, const void* valueIn, void** valueOut);
+};
+
+// Comparison Operator (NOT needed for part 1 of the project)
+typedef enum { EQ_OP = 0,  // =
+           LT_OP,      // <
+           GT_OP,      // >
+           LE_OP,      // <=
+           GE_OP,      // >=
+           NE_OP,      // !=
+           NO_OP       // no condition
+} CompOp;
+
+// Page FreeSpace list data
+// The head of a freespace list
+struct FreeSpaceList
+{
+    unsigned short cutoff; // Any pages on this list are garunteed to have >= cutoff free bytes
+    PageNum listHead; // Point to the first page in this list, 0 if list is empty
+};
+
+// PageFile Header (must fit on page #0)
+// The file header, data which we store on page 0 that allows us to access free pages
+struct PFHeader
+{
+    PFHeader();
+    void init();
+    RC validate();
+
+    // Verification that we are using the correct version of the file with constants that are known
+    unsigned headerSize;
+    unsigned pageSize;
+    unsigned version;
+    unsigned numPages;
+    unsigned numFreespaceLists;
+
+    // Lists of pages with free space
+    FreeSpaceList freespaceLists[NUM_FREESPACE_LISTS];
+};
+
+
+>>>>>>> e8205e1a2dba889e8079820d3bc2bf22df4979f6
 /****************************************************************************
 The scan iterator is NOT required to be implemented for part 1 of the project 
 *****************************************************************************/
@@ -52,7 +106,6 @@ private:
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
 	void nextRecord(unsigned numSlots);
-	RC allocateValue(AttrType attributeType, const void* value);
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
 	bool recordMatchesValue(char* record);
 
@@ -115,6 +168,10 @@ public:
   // static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   // static PageIndexHeader* getPageIndexHeader(void* pageBuffer);
   // static int calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
+
+  // Additional API for part 3 of the project, consumer is the Indexing Manager
+  RC freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace);
+  RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
 
 protected:
   RecordBasedFileManager();

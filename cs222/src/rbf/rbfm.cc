@@ -393,17 +393,43 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
         return ret;
     }
 
+	return insertRecordToPage(fileHandle, recordDescriptor, data, pageNum, rid);
+}
+
+RC RecordBasedFileManager::insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid) 
+{
     // Read in the designated page
     unsigned char pageBuffer[PAGE_SIZE] = {0};
-    ret = fileHandle.readPage(pageNum, pageBuffer);
+    RC ret = fileHandle.readPage(pageNum, pageBuffer);
 	if (ret != rc::OK)
 	{
-        free(recHeader);
 		return ret;
 	}
 
     // Recover the index header structure
+<<<<<<< HEAD
     PageIndexHeader* header = (PageIndexHeader*)getPageIndexHeader(pageBuffer, sizeof(PageIndexHeader));
+=======
+    PageIndexHeader* header = getPageIndexHeader(pageBuffer);
+
+	// Verify this page has enough space for the record
+	unsigned recLength = 0;
+	unsigned recHeaderSize = 0;
+	unsigned* recHeader = NULL;
+	ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+	if (ret != rc::OK)
+	{
+		free(recHeader);
+		return ret;
+	}
+
+	int freespace = calculateFreespace(header->freeSpaceOffset, header->numSlots);
+	if (recLength > freespace)
+	{
+		return rc::RECORD_EXCEEDS_PAGE_SIZE;
+	}
+
+>>>>>>> e8205e1a2dba889e8079820d3bc2bf22df4979f6
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedFileManager::insertRecord: header.freeSpaceOffset = " << header->freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
@@ -1178,6 +1204,38 @@ unsigned RecordBasedFileManager::calcRecordSize(unsigned char* recordBuffer)
 // 	return PAGE_SIZE - freespaceOffset - sizeof(PageIndexHeader) - (numSlots * sizeof(PageIndexSlot));
 // }
 
+RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace)
+{
+	if (pageNum <= 0)
+	{
+		return rc::PAGE_NUM_INVALID;
+	}
+
+	PFHeader header;
+	RC ret = readHeader(fileHandle, &header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	if (pageNum > header.numPages)
+	{
+		return rc::PAGE_NUM_INVALID;
+	}
+
+	char pageBuffer[PAGE_SIZE] = {0};
+	ret = fileHandle.readPage(pageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	PageIndexHeader* pageIndexHeader = getPageIndexHeader(pageBuffer);
+	freespace = calculateFreespace(pageIndexHeader->freeSpaceOffset, pageIndexHeader->numSlots);
+
+	return rc::OK;
+}
+
 RC RBFM_ScanIterator::findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index)
 {
 	// Linearly search through the attributes to match up the name
@@ -1216,7 +1274,7 @@ RC RBFM_ScanIterator::init(FileHandle& fileHandle, const vector<Attribute> &reco
 	if (compOp != NO_OP)
 	{
 		_conditionAttributeType = recordDescriptor[_conditionAttributeIndex].type;
-		allocateValue(_conditionAttributeType, value);
+		Attribute::allocateValue(_conditionAttributeType, value, &_comparasionValue);
 	}
 
 	_returnAttributeIndices.clear();
@@ -1398,26 +1456,26 @@ RC RBFM_ScanIterator::close()
 	return rc::OK;
 }
 
-RC RBFM_ScanIterator::allocateValue(AttrType attributeType, const void* value)
+RC Attribute::allocateValue(AttrType attributeType, const void* valueIn, void** valueOut)
 {
-	if(_comparasionValue)
+	if(*valueOut)
 	{
-		free(_comparasionValue);
+		free(*valueOut);
 	}
 
-	unsigned attributeSize = Attribute::sizeInBytes(attributeType, value);
+	unsigned attributeSize = Attribute::sizeInBytes(attributeType, valueIn);
 	if (attributeSize == 0)
 	{
 		return rc::ATTRIBUTE_INVALID_TYPE;
 	}
 
-	_comparasionValue = malloc(attributeSize);
-	if (!_comparasionValue)
+	*valueOut = malloc(attributeSize);
+	if (!(*valueOut))
 	{
 		return rc::OUT_OF_MEMORY;
 	}
 
-	memcpy(_comparasionValue, value, attributeSize);
+	memcpy(*valueOut, valueIn, attributeSize);
 
 	return rc::OK;
 }

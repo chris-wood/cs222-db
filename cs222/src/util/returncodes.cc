@@ -6,6 +6,7 @@ namespace rc
     {
         switch((ReturnCode)rc)
         {
+        case END_OF_FILE:                           return "END_OF_FILE";
         case UNKNOWN_FAILURE:                       return "UNKNOWN_FAILURE";
         case OK:                                    return "OK";
         case FEATURE_NOT_YET_IMPLEMENTED:           return "FEATURE_NOT_YET_IMPLEMENTED";
@@ -32,14 +33,17 @@ namespace rc
         case HEADER_FREESPACE_LISTS_CORRUPT:        return "HEADER_FREESPACE_LIST_CORRUPT";
         case HEADER_SIZE_TOO_LARGE:                 return "HEADER_SIZE_TOO_LARGE";
         case PAGE_CANNOT_BE_ORGANIZED:              return "PAGE_CANNOT_BE_ORGANIZED";
+		case PAGE_NUM_INVALID:						return "PAGE_NUM_INVALID";
         case RECORD_SIZE_INVALID:                   return "RECORD_SIZE_INVALID";
+		case TABLE_NOT_FOUND:						return "TABLE_NOT_FOUND";
+		case TABLE_ALREADY_CREATED:					return "TABLE_ALREADY_CREATED";
+		case TABLE_NAME_TOO_LONG:					return "TABLE_NAME_TOO_LONG";
         case ATTRIBUTE_INVALID_TYPE:                return "ATTRIBUTE_INVALID_TYPE";
 		case ATTRIBUTE_NOT_FOUND:					return "ATTRIBUTE_NOT_FOUND";
 		case ATTRIBUTE_NAME_TOO_LONG:				return "ATTRIBUTE_NAME_TOO_LONG";
 		case ATTRIBUTE_COUNT_MISMATCH:				return "ATTRIBUTE_COUNT_MISMATCH";
-		case TABLE_NOT_FOUND:						return "TABLE_NOT_FOUND";
-		case TABLE_ALREADY_CREATED:					return "TABLE_ALREADY_CREATED";
-		case TABLE_NAME_TOO_LONG:					return "TABLE_NAME_TOO_LONG";
+		case ATTRIBUTE_LENGTH_INVALID:				return "ATTRIBUTE_LENGTH_INVALID";
+		case INDEX_PAGE_INITIALIZATION_FAILED:		return "INDEX_PAGE_INITIALIZATION_FAILED";
 		case OUT_OF_MEMORY:							return "OUT_OF_MEMORY";
         }
 

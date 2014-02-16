@@ -5,7 +5,8 @@ namespace rc
 {
     enum ReturnCode
     {
-        UNKNOWN_FAILURE = -1,
+        END_OF_FILE = -1, // Scan iterator return codes may be negative
+        UNKNOWN_FAILURE = 0x7FFFFFFF, // All custom error codes must be positive
         OK = 0,
 
         FEATURE_NOT_YET_IMPLEMENTED,
@@ -38,6 +39,7 @@ namespace rc
         HEADER_SIZE_TOO_LARGE,
 
         PAGE_CANNOT_BE_ORGANIZED,
+		PAGE_NUM_INVALID,
 
 		TABLE_NOT_FOUND,
 		TABLE_ALREADY_CREATED,
@@ -47,6 +49,9 @@ namespace rc
 		ATTRIBUTE_NOT_FOUND,
 		ATTRIBUTE_NAME_TOO_LONG,
 		ATTRIBUTE_COUNT_MISMATCH,
+		ATTRIBUTE_LENGTH_INVALID,
+
+		INDEX_PAGE_INITIALIZATION_FAILED,
 
 		OUT_OF_MEMORY
     };
