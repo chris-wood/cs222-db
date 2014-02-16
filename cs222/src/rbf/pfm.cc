@@ -220,25 +220,6 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
     }
 }
 
-// This shouldn't be here, just putting this here to do quick tests to make it easier to see when the header gets corrupted
-struct PageIndexHeader
-{
-  unsigned pageNumber;
-  unsigned freeSpaceOffset;
-  unsigned numSlots;
-  unsigned gapSize;
-
-  // Doubly linked list data for whichever freespace list we are attached to
-  unsigned freespaceList;
-  PageNum prevPage;
-  PageNum nextPage;
-};
-
-const PageIndexHeader* getPageIndexHeader(const void* pageBuffer)
-{
-	return (const PageIndexHeader*)((char*)pageBuffer + PAGE_SIZE - sizeof(PageIndexHeader));
-}
-
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
     RC ret = updatePageCount();
