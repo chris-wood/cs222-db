@@ -152,10 +152,10 @@ protected:
   virtual unsigned calcRecordSize(unsigned char* recordBuffer) = 0;
 
   virtual RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
-  virtual RC movePageToFreeSpaceList(FileHandle &fileHandle, void* pageHeaderBuffer, unsigned destinationListIndex);
-  virtual RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, void* pageHeaderBuffer);
+  virtual RC movePageToFreeSpaceList(FileHandle &fileHandle, void* pageFooterBuffer, unsigned destinationListIndex);
+  virtual RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, void* pageFooterBuffer);
   
-  RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* headerBuffer, unsigned char* pageBuffer);
+  RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* pageFooterBuffer, unsigned char* pageBuffer);
   
   CorePageIndexFooter* getCorePageIndexFooter(void* pageBuffer);
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
