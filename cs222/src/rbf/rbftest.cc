@@ -482,7 +482,7 @@ RC testMaxSizeRecords(FileHandle& fileHandle, int recordSizeDelta, int minRecord
     bigString.type = TypeVarChar;
     recordDescriptor.push_back(bigString);
 
-    const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(PageIndexHeader) - sizeof(unsigned) * recordDescriptor.size() - sizeof(unsigned) - sizeof(unsigned);
+	const int maxRecordSize = PAGE_SIZE - sizeof(PageIndexSlot) - sizeof(RBFM_PageIndexFooter) - sizeof(unsigned) * recordDescriptor.size() - sizeof(unsigned) - sizeof(unsigned);
 
     // Allocate memory
     int seed = 0x7ed55d16;
@@ -2141,7 +2141,7 @@ RC rbfmTestUdpateRecord(RecordBasedFileManager *rbfm, int skip)
 
         memcpy((char*)record, &quarterPageSize, sizeof(unsigned));
         unsigned offset = sizeof(unsigned);
-        for(int j = 0; j < quarterPageSize; j++)
+        for(unsigned j = 0; j < quarterPageSize; j++)
         {
             memcpy((char *)record + offset, "a", 1);
             offset += 1;
@@ -2169,7 +2169,7 @@ RC rbfmTestUdpateRecord(RecordBasedFileManager *rbfm, int skip)
     	memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 	    memcpy((char*)record, &halfPageSize, sizeof(unsigned));
 	    unsigned offset = sizeof(unsigned);
-	    for(int j = 0; j < halfPageSize; j++)
+	    for(unsigned j = 0; j < halfPageSize; j++)
 	    {
 	        memcpy((char *)record + offset, "a", 1);
 	        offset += 1;
@@ -2195,7 +2195,7 @@ RC rbfmTestUdpateRecord(RecordBasedFileManager *rbfm, int skip)
     	memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 	    memcpy((char*)record, &eighthPageSize, sizeof(unsigned));
 	    unsigned offset = sizeof(unsigned);
-	    for(int j = 0; j < eighthPageSize; j++)
+	    for(unsigned j = 0; j < eighthPageSize; j++)
 	    {
 	        memcpy((char *)record + offset, "a", 1);
 	        offset += 1;
@@ -2271,7 +2271,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
 
         memcpy((char*)record, &quarterPageSize, sizeof(unsigned));
         unsigned offset = sizeof(unsigned);
-        for(int j = 0; j < quarterPageSize; j++)
+        for(unsigned j = 0; j < quarterPageSize; j++)
         {
             memcpy((char *)record + offset, "a", 1);
             offset += 1;
@@ -2363,7 +2363,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     	memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 	    memcpy((char*)record, &halfPageSize, sizeof(unsigned));
 	    unsigned offset = sizeof(unsigned);
-	    for(int j = 0; j < halfPageSize; j++)
+	    for(unsigned j = 0; j < halfPageSize; j++)
 	    {
 	        memcpy((char *)record + offset, "a", 1);
 	        offset += 1;
@@ -2419,7 +2419,7 @@ RC rbfmTestReorganizeDeleteUpdate(RecordBasedFileManager *rbfm, int skip)
     	memset(record, 0, (PAGE_SIZE / 2) + sizeof(unsigned));
 	    memcpy((char*)record, &eighthPageSize, sizeof(unsigned));
 	    unsigned offset = sizeof(unsigned);
-	    for(int j = 0; j < eighthPageSize; j++)
+	    for(unsigned j = 0; j < eighthPageSize; j++)
 	    {
 	        memcpy((char *)record + offset, "a", 1);
 	        offset += 1;
