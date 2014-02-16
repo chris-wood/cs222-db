@@ -366,6 +366,13 @@ void cleanup()
 	remove("RM_SYS_ATTRIBUTE_TABLE.db");
 	remove("RM_SYS_CATALOG_TABLE.db");
 	remove("tbl_employee");
+	remove("tbl_employee1");
+	remove("tbl_employee2");
+	remove("tbl_employee3");
+	remove("tbl_employee4");
+	remove("tbl_employee5");
+	remove("tbl_employee6");
+	remove("tbl_employee7");
 }
 
 int main()

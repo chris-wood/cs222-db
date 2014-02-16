@@ -515,7 +515,16 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 	{
 		return ret;
 	}
+
+	// Rewrite freespace list data in the header
 	PFHeader* pfHeader = (PFHeader*)headerBuffer;
+	for (unsigned i=0; i<pfHeader->numFreespaceLists-1; ++i)
+	{
+		pfHeader->freespaceLists[i].listHead = 0;
+	}
+
+	// All pages will be hanging off page 1, so point to page 1
+	pfHeader->freespaceLists[pfHeader->numFreespaceLists].listHead = 1;
 
 	// O(N) cost - We are rewriting all pages in this file
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
@@ -532,8 +541,10 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 		pageFooter->numSlots = 0;
 		pageFooter->freeSpaceOffset = 0;
 		pageFooter->pageNumber = page;
+
+		// Place all pages on the 'full' freepsace list, all sequentially linked to each other
 		pageFooter->prevPage = page - 1;
-		pageFooter->nextPage = (page < pfHeader->numPages) ? (page - 1) : 0;
+		pageFooter->nextPage = (page < pfHeader->numPages) ? (page + 1) : 0;
 		pageFooter->freespaceList = pfHeader->numFreespaceLists - 1;
 
 		RC ret = fileHandle.writePage(page, pageBuffer);
