@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-#include "../rbf/rbfm.h"
+#include "../rbf/rbcm.h"
 
 # define IX_EOF (-1)  // end of the index scan
 
@@ -47,17 +47,22 @@ struct IndexLeafRecord
 };
 
 class IX_ScanIterator;
-class IndexManager {
+class IndexManager : public RecordBasedCoreManager {
  public:
   static IndexManager* instance();
 
   RC createFile(const string &fileName);
-
   RC destroyFile(const string &fileName);
-
   RC openFile(const string &fileName, FileHandle &fileHandle);
-
   RC closeFile(FileHandle &fileHandle);
+
+	// From RecordBasedCoreManager
+	virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
+	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
+	virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
+	virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
+	virtual unsigned calcRecordSize(unsigned char* recordBuffer);
+
 
   // The following two functions are using the following format for the passed key value.
   //  1) data is a concatenation of values of the attributes
@@ -88,14 +93,14 @@ class IndexManager {
 
  protected:
   IndexManager   ();                            // Constructor
-  ~IndexManager  ();                            // Destructor
+  virtual ~IndexManager  ();                            // Destructor
 
   RC newPage(FileHandle& fileHandle, RID& headerRid);
 
  private:
 	static IndexManager *_index_manager;
 	
-	RecordBasedFileManager* _rbfm;
+	PagedFileManager& _pfm;
 
 	RID _indexHeaderRid;
 	std::vector<Attribute> _indexHeaderDescriptor;
@@ -114,7 +119,7 @@ public:
   RC init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
 
 private:
-	RecordBasedFileManager* _rbfm;
+	PagedFileManager& _pfm;
 
 	FileHandle* _fileHandle;
 	Attribute _attribute;

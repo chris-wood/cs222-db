@@ -16,9 +16,8 @@ IndexManager* IndexManager::instance()
 }
 
 IndexManager::IndexManager()
+	: RecordBasedCoreManager(sizeof(IX_PageIndexHeader)), _pfm(*PagedFileManager::instance())
 {
-	_rbfm = RecordBasedFileManager::instance();
-
 	// Index Header
 	Attribute attr;
 	attr.name = "isLeafPage";				attr.type = TypeInt;	attr.length = 4;	_indexHeaderDescriptor.push_back(attr);
@@ -51,8 +50,34 @@ IndexManager::~IndexManager()
     _index_manager = NULL;
 }
 
+RC IndexManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC IndexManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC IndexManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+unsigned IndexManager::calcRecordSize(unsigned char* recordBuffer)
+{
+	return 0;
+}
+
 RC IndexManager::createFile(const string &fileName)
 {
+	/*
 	RC ret = _rbfm->createFile(fileName.c_str());
 	if (ret != rc::OK)
 	{
@@ -85,12 +110,13 @@ RC IndexManager::createFile(const string &fileName)
 	{
 		return ret;
 	}
-
+	*/
 	return rc::OK;
 }
 
 RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
 {
+	/*
 	IX_PageIndexHeader header;
 	header.isLeafPage = false;
 	header.firstRecord.pageNum = 0;
@@ -111,29 +137,33 @@ RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
 	{
 		return rc::INDEX_PAGE_INITIALIZATION_FAILED;
 	}
+	*/
 
 	return rc::OK;
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-    return _rbfm->destroyFile(fileName.c_str());
+    //return _rbfm->destroyFile(fileName.c_str());
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
-    return _rbfm->openFile(fileName.c_str(), fileHandle);
+    //return _rbfm->openFile(fileName.c_str(), fileHandle);
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
 {
-    return _rbfm->closeFile(fileHandle);
+    //return _rbfm->closeFile(fileHandle);
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	IX_PageIndexHeader header;
-	RC ret = _rbfm->readRecord(fileHandle, _indexHeaderDescriptor, _indexHeaderRid, &header);
+	//IX_PageIndexHeader header;
+	//RC ret = _rbfm->readRecord(fileHandle, _indexHeaderDescriptor, _indexHeaderRid, &header);
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
@@ -161,7 +191,8 @@ IX_ScanIterator::IX_ScanIterator()
 	_highKeyValue(NULL), 
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
-	_currentRid()
+	_currentRid(),
+	_pfm(*PagedFileManager::instance())
 {
 }
 

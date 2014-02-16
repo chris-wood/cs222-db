@@ -54,14 +54,14 @@ public:
 	//  2) For int and real: use 4 bytes to store the value;
 	//     For varchar: use 4 bytes to store the length of characters, then store the actual characters.
 	//  !!!The same format is used for updateRecord(), the returned data of readRecord(), and readAttribute()
-	RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
+	virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
   
 	// Assume the rid does not change after update
-	RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
+	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 
-	RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
+	virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
 
-	RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
+	virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
 
 	// scan returns an iterator to allow the caller to go through the results one by one. 
 	RC scan(FileHandle& fileHandle,
@@ -83,7 +83,7 @@ protected:
 	RecordBasedFileManager();
 	virtual ~RecordBasedFileManager();
 
-	unsigned calcRecordSize(unsigned char* recordBuffer);
+	virtual unsigned calcRecordSize(unsigned char* recordBuffer);
 	
 	RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
 	RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
