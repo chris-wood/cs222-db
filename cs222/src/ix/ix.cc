@@ -1,6 +1,5 @@
 #include "ix.h"
 #include "../rbf/pfm.h"
-#include "../rbf/rbfm.h"
 #include "../util/returncodes.h"
 
 #include <cstring>
