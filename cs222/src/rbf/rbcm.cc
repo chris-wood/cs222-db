@@ -101,6 +101,155 @@ RC RecordBasedCoreManager::closeFile(FileHandle &fileHandle) {
     return rc::OK;
 }
 
+RC RecordBasedCoreManager::generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeader, unsigned& recLength, unsigned& recHeaderSize)
+{
+    // Compute the size of the record to be inserted
+    // The header includes a field storing the number of attributes on disk, one offset field for each attribute, 
+    // and then a final offset field to point to the end of the record (to enable easy size calculations)
+    recHeaderSize = sizeof(unsigned) * recordDescriptor.size() + (2 * sizeof(unsigned));
+    recLength = recHeaderSize;
+    unsigned headerIndex = 0;
+    unsigned dataOffset = 0;
+
+    // Allocate an array of offets with N entries, where N is the number of fields as indicated
+    // by the recordDescriptor vector. Each entry i in this array points to the address offset,
+    // from the base address of the record on disk, where the i-th field is stored. 
+    recHeader = (unsigned*)malloc(recHeaderSize);
+    if (!recHeader)
+    {
+        return rc::OUT_OF_MEMORY;
+    }
+
+    // Write out the number of attributes as part of the header of the record
+    unsigned numAttributes = recordDescriptor.size();
+    memcpy(recHeader, &numAttributes, sizeof(unsigned));
+    ++headerIndex;
+
+    // Compute the compact record length and values to be inserted into the offset array
+    for (vector<Attribute>::const_iterator itr = recordDescriptor.begin(); itr != recordDescriptor.end(); itr++)
+    {
+        // First, store the offset
+        recHeader[headerIndex++] = recLength;
+
+        // Now bump the length as needed based on the length of the contents
+        const Attribute& attr = *itr;
+        unsigned attrSize = Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
+        if (attrSize == 0)
+        {
+            return rc::ATTRIBUTE_INVALID_TYPE;
+        }
+
+        recLength += attrSize;
+        dataOffset += attrSize;
+    }
+
+    // Drop in the pointer (offset) to the end of the record
+    recHeader[headerIndex++] = recLength;
+
+    return rc::OK;
+}
+
+RC RecordBasedCoreManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
+{
+    unsigned recLength = 0;
+    unsigned recHeaderSize = 0;
+    unsigned* recHeader = NULL;
+    RC ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+    if (ret != rc::OK)
+    {
+        free(recHeader);
+        return ret;
+    }
+    
+    // Find the first page(s) with enough free space to hold this record
+    PageNum pageNum;
+    ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
+    if (ret != rc::OK)
+    {
+        free(recHeader);
+        return ret;
+    }
+
+    return insertRecordToPage(fileHandle, recordDescriptor, data, pageNum, rid);
+}
+
+RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid) 
+{
+    // Read in the designated page
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Recover the index header structure
+    CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+
+    // Verify this page has enough space for the record
+    unsigned recLength = 0;
+    unsigned recHeaderSize = 0;
+    unsigned* recHeader = NULL;
+    ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+    if (ret != rc::OK)
+    {
+        free(recHeader);
+        return ret;
+    }
+
+    unsigned freespace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
+    if (recLength > freespace)
+    {
+        return rc::RECORD_EXCEEDS_PAGE_SIZE;
+    }
+
+    dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedCoreManager::insertRecord: header.freeSpaceOffset = " << footer->freeSpaceOffset << "\n";
+
+    // Write the offsets array and data to disk
+    memcpy(pageBuffer + footer->freeSpaceOffset, recHeader, recHeaderSize);
+    memcpy(pageBuffer + footer->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
+    free(recHeader);
+
+    // Create a new index slot entry and prepend it to the list
+    PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, footer->numSlots);
+    slotIndex->size = recLength;
+    slotIndex->pageOffset = footer->freeSpaceOffset;
+    slotIndex->nextPage = 0; // NULL
+    slotIndex->nextSlot = 0; // NULL
+    slotIndex->isAnchor = false; // only true if we're the end - anchor - of a tombstone chain
+
+    dbg::out << dbg::LOG_EXTREMEDEBUG;
+    dbg::out << "RecordBasedCoreManager::insertRecord: RID = (" << pageNum << ", " << footer->numSlots << ")\n";
+    dbg::out << "RecordBasedCoreManager::insertRecord: Writing to: " << PAGE_SIZE - sizeof(CorePageIndexFooter) - ((footer->numSlots + 1) * sizeof(PageIndexSlot)) << "\n";
+    dbg::out << "RecordBasedCoreManager::insertRecord: Offset: " << slotIndex->pageOffset << "\n";
+    dbg::out << "RecordBasedCoreManager::insertRecord: Size of data: " << recLength << "\n";
+    dbg::out << "RecordBasedCoreManager::insertRecord: Header free after record: " << (footer->freeSpaceOffset + recLength) << "\n";
+
+    // Update the header information
+    footer->numSlots++;
+    footer->freeSpaceOffset += recLength;
+
+    // Update the position of this page in the freespace lists, if necessary
+    ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Write the new page information to disk
+    ret = fileHandle.writePage(pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Once the write is committed, store the RID information and return
+    rid.pageNum = pageNum;
+    rid.slotNum = footer->numSlots - 1;
+
+    return rc::OK;
+}
+
 // Find a page (or insert a new one) that has at least 'bytes' free on it 
 RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum)
 {

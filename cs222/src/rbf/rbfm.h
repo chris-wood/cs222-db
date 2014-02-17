@@ -73,19 +73,17 @@ public:
 		RBFM_ScanIterator &rbfm_ScanIterator);
 
 public:
-	RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
+	virtual RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
 
 	// Additional API for part 3 of the project, consumer is the Indexing Manager
-	RC freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace);
-	RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
+	virtual RC freespaceOnPage(FileHandle& fileHandle, PageNum pageNum, int& freespace);
 
 protected:
 	RecordBasedFileManager();
 	virtual ~RecordBasedFileManager();
 
-	virtual unsigned calcRecordSize(unsigned char* recordBuffer);
+	unsigned calcRecordSize(unsigned char* recordBuffer);
 	
-	RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
 	RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 
 	RBFM_PageIndexFooter* getRBFMPageIndexFooter(void* pageBuffer);

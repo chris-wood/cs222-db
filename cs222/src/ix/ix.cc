@@ -76,8 +76,8 @@ unsigned IndexManager::calcRecordSize(unsigned char* recordBuffer)
 
 RC IndexManager::createFile(const string &fileName)
 {
-	/*
-	RC ret = _rbfm->createFile(fileName.c_str());
+	cout << "creating file" << endl;
+	RC ret = _pfm.createFile(fileName.c_str());
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -91,8 +91,8 @@ RC IndexManager::createFile(const string &fileName)
 		return ret;
 	}
 
-	// Insert the index header as the 1st record
-	ret = newPage(fileHandle, _indexHeaderRid);
+	// Insert the index header as the 1st record on the first page
+	ret = newPage(fileHandle, _indexHeaderRid, 1);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -109,60 +109,59 @@ RC IndexManager::createFile(const string &fileName)
 	{
 		return ret;
 	}
-	*/
-	return rc::OK;
-}
-
-RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid)
-{
-	/*
-	IX_PageIndexHeader header;
-	header.isLeafPage = false;
-	header.firstRecord.pageNum = 0;
-	header.firstRecord.slotNum = 0;
-	header.parent = 0;
-	header.prevPage = 0;
-	header.nextPage = 0;
-
-	// TODO: We need a way to tell RBFM to force a new page
-	RC ret = _rbfm->insertRecord(fileHandle, _indexHeaderDescriptor, &header, headerRid);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
-
-	// We have just created the file, so we should be garunteed to have the 1st page and 1st slot
-	if (headerRid.slotNum != 0)
-	{
-		return rc::INDEX_PAGE_INITIALIZATION_FAILED;
-	}
-	*/
 
 	return rc::OK;
 }
 
-RC IndexManager::destroyFile(const string &fileName)
+RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum)
 {
-    //return _rbfm->destroyFile(fileName.c_str());
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	// IX_PageIndexHeader header;
+	// header.isLeafPage = false;
+	// header.firstRecord.pageNum = 0;
+	// header.firstRecord.slotNum = 0;
+	// header.parent = 0;
+	// header.prevPage = 0;
+	// header.nextPage = 0;
+
+	// // We need a way to tell RBFM to force a new page
+	// // RC ret = _rbfm->insertRecord(fileHandle, _indexHeaderDescriptor, &header, headerRid);
+	// RC ret = _rbfm->insertRecordToPage(fileHandle, _indexHeaderDescriptor, &header, pageNum, headerRid) 
+	// if (ret != rc::OK)
+	// {
+	// 	return ret;
+	// }
+
+	// // We have just created the file, so we should be garunteed to have the 1st page and 1st slot
+	// if (headerRid.slotNum != 0)
+	// {
+	// 	return rc::INDEX_PAGE_INITIALIZATION_FAILED;
+	// }
+
+	return rc::OK;
 }
 
-RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
-{
-    //return _rbfm->openFile(fileName.c_str(), fileHandle);
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
-}
+// RC IndexManager::destroyFile(const string &fileName)
+// {
+//     //return _rbfm->destroyFile(fileName.c_str());
+// 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+// }
 
-RC IndexManager::closeFile(FileHandle &fileHandle)
-{
-    //return _rbfm->closeFile(fileHandle);
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
-}
+// RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
+// {
+//     //return _rbfm->openFile(fileName.c_str(), fileHandle);
+// 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+// }
+
+// RC IndexManager::closeFile(FileHandle &fileHandle)
+// {
+//     //return _rbfm->closeFile(fileHandle);
+// 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+// }
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	//IX_PageIndexHeader header;
-	//RC ret = _rbfm->readRecord(fileHandle, _indexHeaderDescriptor, _indexHeaderRid, &header);
+	IX_PageIndexHeader header;
+	RC ret = readRecord(fileHandle, _indexHeaderDescriptor, _indexHeaderRid, &header);
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }

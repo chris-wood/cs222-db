@@ -36,14 +36,14 @@ struct IndexNonLeafRecord
 {
 	RID pagePointer;
 	RID nextSlot;
-    KeyValueData key;
+  KeyValueData key;
 };
 
 struct IndexLeafRecord
 {
 	RID dataRid;
 	RID nextSlot;
-    KeyValueData key;
+  KeyValueData key;
 };
 
 class IX_ScanIterator;
@@ -52,9 +52,9 @@ class IndexManager : public RecordBasedCoreManager {
   static IndexManager* instance();
 
   RC createFile(const string &fileName);
-  RC destroyFile(const string &fileName);
-  RC openFile(const string &fileName, FileHandle &fileHandle);
-  RC closeFile(FileHandle &fileHandle);
+  // RC destroyFile(const string &fileName);
+  // RC openFile(const string &fileName, FileHandle &fileHandle);
+  // RC closeFile(FileHandle &fileHandle);
 
 	// From RecordBasedCoreManager
 	virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
@@ -87,15 +87,14 @@ class IndexManager : public RecordBasedCoreManager {
       IX_ScanIterator &ix_ScanIterator);
 
   const std::vector<Attribute>& indexHeaderDescriptor() { return _indexHeaderDescriptor; }
-
   const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
   const std::vector<Attribute>& indexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
 
  protected:
   IndexManager   ();                            // Constructor
-  virtual ~IndexManager  ();                            // Destructor
+  virtual ~IndexManager  ();                    // Destructor
 
-  RC newPage(FileHandle& fileHandle, RID& headerRid);
+  RC newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum);
 
  private:
 	static IndexManager *_index_manager;
