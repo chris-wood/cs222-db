@@ -93,8 +93,10 @@ class IndexManager : public RecordBasedCoreManager {
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
 
+  PageNum split(FileHandle& fileHandle, PageNum target);
+
  private:
-	static IndexManager *_index_manager;
+  static IndexManager *_index_manager;
 	
 	PagedFileManager& _pfm;
 

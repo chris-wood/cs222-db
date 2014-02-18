@@ -2,6 +2,7 @@
 #include "../rbf/pfm.h"
 #include "../util/returncodes.h"
 
+#include <assert.h>
 #include <cstring>
 
 IndexManager* IndexManager::_index_manager = 0;
@@ -183,12 +184,13 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	else if (header->isLeafPage) // else, search the height=1 tree (just a root page) and figure out where it should go
 	{
 		bool found = false;
+		bool atEnd = false;
 		RID currRid = header->firstRecord;
 		RID prevRid;
 		IndexLeafRecord currEntry;
 		IndexLeafRecord prevEntry;
 
-		while (!found && currEntry.nextSlot.pageNum != 0) // second condition implies the end of the chain
+		while (!found) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
 			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &currEntry);
@@ -229,6 +231,12 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			if (!found)
 			{
+				// Check to see if we reached the end of the list
+				if (currEntry.nextSlot.pageNum != 0) 
+				{
+					atEnd = true;
+					found = true;
+				}
 				prevRid = currRid;
 				prevEntry = currEntry;
 				currRid = currEntry.nextSlot;
@@ -246,22 +254,38 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		unsigned targetFreeSpace = calculateFreespace(header->core.freeSpaceOffset, header->core.numSlots, sizeof(IX_PageIndexHeader));
 		unsigned entryRecordSize = calcRecordSize((unsigned char*)(&leaf));
 
-		// TODO: need to branch based on whether or not we can fit on this page...
-
-		// Determine how we should update the page contents, and if a split is needed
-		if (currEntry.nextSlot.pageNum != 0) // start or middle of list
+		// if we can squeeze on this page, put it in the right spot 
+		if (entryRecordSize < targetFreeSpace)
 		{
-			return rc::FEATURE_NOT_YET_IMPLEMENTED;
-		}
-		else // end of the list
-		{
-			// Insert the new record into the root
-			RID newEntry;
-			insertRecord(fileHandle, _indexLeafRecordDescriptor, &leaf, newEntry);
+			if (!atEnd) // start or middle of list
+			{
+				// Insert the new record into the root, and make it point to the current RID
+				leaf.nextSlot = currRid;
+				RID newEntry;
+				insertRecord(fileHandle, _indexLeafRecordDescriptor, &leaf, newEntry);
 
-			// Update the previous entry
-			prevEntry.nextSlot = currRid;
-			// TODO: invoke updateRecord with the new information...
+				// Update the previous entry to point to the new entry (it's in the middle now)
+				prevEntry.nextSlot = newEntry;
+				ret = updateRecord(fileHandle, _indexLeafRecordDescriptor, &prevEntry, prevRid);
+				if (ret != rc::OK)
+				{
+					return ret;
+				}
+			}
+			else // append the RID to the end of the on-page list 
+			{
+				// Insert the new record into the root
+				RID newEntry;
+				insertRecord(fileHandle, _indexLeafRecordDescriptor, &leaf, newEntry);
+
+				// Update the previous entry to point to the new entry
+				prevEntry.nextSlot = newEntry;
+				ret = updateRecord(fileHandle, _indexLeafRecordDescriptor, &prevEntry, prevRid);
+				if (ret != rc::OK)
+				{
+					return ret;
+				}
+			}
 
 			// Write the new page information to disk
 			ret = fileHandle.writePage(_rootPageNum, pageBuffer);
@@ -269,6 +293,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			{
 				return ret;
 			}
+		}
+		else // SPLIT CONDITION
+		{
+			return rc::FEATURE_NOT_YET_IMPLEMENTED;
 		}
 	}
 	else // else, the root is a non-leaf, and we have the general search here
@@ -282,6 +310,99 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+PageNum IndexManager::split(FileHandle& fileHandle, PageNum target)
+{
+	// Read in the page to be split
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(_rootPageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Extract the header
+	IX_PageIndexHeader* targetHeader = (IX_PageIndexHeader*)getPageIndexFooter(pageBuffer, sizeof(IX_PageIndexHeader));
+	assert(targetHeader->core.numSlots > 0); 
+
+	// Allocate the new page
+	PageNum newPageNum = fileHandle.getNumberOfPages();
+	newPage(fileHandle, newPageNum, targetHeader->isLeafPage);
+
+	// Read in half of the entries from the target page and insert them onto the new page
+	RID currRid = targetHeader->firstRecord;
+	unsigned numToMove = (targetHeader->core.numSlots / 2);
+	for (unsigned i = 0; i < numToMove; i++)
+	{
+		// Skip over the first 'numToMove' RIDs since they stay in place
+		if (targetHeader->isLeafPage)
+		{
+			IndexLeafRecord lRecord;
+			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &lRecord);
+			currRid = lRecord.nextSlot;
+		}
+		else
+		{
+			IndexNonLeafRecord nlRecord;	
+			readRecord(fileHandle, _indexNonLeafRecordDescriptor, currRid, &nlRecord);
+			currRid = nlRecord.nextSlot;
+		}
+		
+	}
+
+	// Save a reference to the split spot so the disconnect can be made later
+	RID splitRid = currRid;
+
+	// The currRid variable now points to the correct spot in the list from which we should start moving
+	// Move the rest over to the new page
+	for (unsigned i = numToMove; i < targetHeader->core.numSlots; i++)
+	{
+		// Move the entry over to the new page
+		RID newEntry;
+		if (targetHeader->isLeafPage)
+		{
+			IndexLeafRecord lRecord;
+			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &lRecord);
+			insertRecord(fileHandle, _indexLeafRecordDescriptor, &lRecord, newEntry);
+			currRid = lRecord.nextSlot;
+		}
+		else
+		{
+			IndexNonLeafRecord nlRecord;	
+			readRecord(fileHandle, _indexNonLeafRecordDescriptor, currRid, &nlRecord);
+			insertRecord(fileHandle, _indexNonLeafRecordDescriptor, &nlRecord, newEntry);
+			currRid = nlRecord.nextSlot;
+		}
+	}
+
+	// Make the disconnect by terminating the on-page list on the first (source) page
+	if (targetHeader->isLeafPage)
+	{
+		IndexLeafRecord lRecord;
+		readRecord(fileHandle, _indexLeafRecordDescriptor, splitRid, &lRecord);
+		lRecord.nextSlot.pageNum = 0;
+		lRecord.nextSlot.slotNum = 0;
+		ret = updateRecord(fileHandle, _indexLeafRecordDescriptor, &lRecord, splitRid);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+	else
+	{
+		IndexNonLeafRecord nlRecord;	
+		readRecord(fileHandle, _indexNonLeafRecordDescriptor, splitRid, &nlRecord);
+		nlRecord.nextSlot.pageNum = 0;
+		nlRecord.nextSlot.slotNum = 0;
+		ret = updateRecord(fileHandle, _indexNonLeafRecordDescriptor, &nlRecord, splitRid);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+	}
+
+	return newPageNum;
 }
 
 RC IndexManager::scan(FileHandle &fileHandle,
