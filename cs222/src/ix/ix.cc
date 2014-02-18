@@ -119,9 +119,9 @@ RC IndexManager::createFile(const string &fileName)
 RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum)
 {
 	IX_PageIndexHeader header;
-	header.isLeafPage = false;
+	header.isLeafPage = false; // TODO: this should really be passed in as a parameter
 	header.firstRecord.pageNum = pageNum;
-	header.firstRecord.slotNum = 0;
+	header.firstRecord.slotNum = 1; 
 	header.parent = 0;
 	header.core.prevPage = 0;
 	header.core.nextPage = 0;
@@ -149,6 +149,7 @@ RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum
 	IX_PageIndexHeader testheader;
 	ret = readRecord(fileHandle, _indexHeaderDescriptor, _rootHeaderRid, &testheader);
 	cout << testheader.firstRecord.pageNum << " " << testheader.firstRecord.slotNum << endl;
+	cout << _rootHeaderRid.pageNum << " " << _rootHeaderRid.slotNum << endl;
 
 	// We have just created the file, so we should be garunteed to have the 1st page and 1st slot
 	if (headerRid.slotNum != 0)
@@ -161,8 +162,26 @@ RC IndexManager::newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	// Pull in the root header
 	IX_PageIndexHeader header;
 	RC ret = readRecord(fileHandle, _indexHeaderDescriptor, _rootHeaderRid, &header);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// if index entry is empty, this is one of the first to be added, so allocate a new leaf page and set up the root/leaf
+	// else, read in first rid
+
+	// Read in the first record on the page - this will NEVER be a leaf
+	IndexNonLeafRecord nlRecord;
+	ret = readRecord(fileHandle, _indexNonLeafRecordDescriptor, header.firstRecord, &nlRecord);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// walk the list of records starting with header.firstRecord and find out where to go
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
