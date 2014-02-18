@@ -54,7 +54,6 @@ public:
 	//  2) For int and real: use 4 bytes to store the value;
 	//     For varchar: use 4 bytes to store the length of characters, then store the actual characters.
 	//  !!!The same format is used for updateRecord(), the returned data of readRecord(), and readAttribute()
-	// virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
   
 	// Assume the rid does not change after update
 	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
@@ -81,8 +80,6 @@ public:
 protected:
 	RecordBasedFileManager();
 	virtual ~RecordBasedFileManager();
-
-	// unsigned calcRecordSize(unsigned char* recordBuffer);
 	
 	RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 

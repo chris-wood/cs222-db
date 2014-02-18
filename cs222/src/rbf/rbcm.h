@@ -103,10 +103,6 @@ The slotNum of an RID will (backwards) index into the list of PageIndexSlots, th
 */
 struct CorePageIndexFooter
 {
-  ///////////////
-  // layer-specific bytes will go here, above the common core
-  ///////////////
-
   // header metadata
   unsigned freeSpaceOffset;
   unsigned numSlots;

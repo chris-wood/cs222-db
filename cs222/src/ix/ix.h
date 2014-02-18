@@ -11,11 +11,12 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IX_PageIndexHeader : public CorePageIndexFooter
+struct IX_PageIndexHeader
 {
-	int isLeafPage;
+	unsigned isLeafPage;
 	RID firstRecord;
 	PageNum parent;
+  CorePageIndexFooter core;
 };
 
 struct KeyValueData
@@ -51,7 +52,7 @@ class IndexManager : public RecordBasedCoreManager {
  public:
   static IndexManager* instance();
 
-  RC createFile(const string &fileName);
+  virtual RC createFile(const string &fileName);
   // RC destroyFile(const string &fileName);
   // RC openFile(const string &fileName, FileHandle &fileHandle);
   // RC closeFile(FileHandle &fileHandle);
@@ -101,7 +102,7 @@ class IndexManager : public RecordBasedCoreManager {
 	
 	PagedFileManager& _pfm;
 
-	RID _indexHeaderRid;
+	RID _rootHeaderRid;
 	std::vector<Attribute> _indexHeaderDescriptor;
 	std::vector<Attribute> _indexNonLeafRecordDescriptor;
 	std::vector<Attribute> _indexLeafRecordDescriptor;
