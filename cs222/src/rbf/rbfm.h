@@ -56,7 +56,7 @@ public:
 	//  !!!The same format is used for updateRecord(), the returned data of readRecord(), and readAttribute()
   
 	// Assume the rid does not change after update
-	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
+	// virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 
 	virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
 

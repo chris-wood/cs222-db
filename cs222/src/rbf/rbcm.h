@@ -132,17 +132,18 @@ public:
   virtual RC deleteRecords(FileHandle &fileHandle);
   virtual RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
   virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
+  virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 
   // Additional API for part 3
   RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
 
   // Methods delegated to the children
-  virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid) = 0;
   virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data) = 0;
   virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber) = 0;
 
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset);
   static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset, PageIndexSlot* slot);
+  static void writePageIndexFooter(void* pageBuffer, void* footerBuffer, unsigned pageSlotOffset);
   static void* getPageIndexFooter(void* pageBuffer, unsigned pageSlotOffset);
   static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset);
 

@@ -16,6 +16,8 @@ struct IX_PageIndexHeader
 	unsigned isLeafPage;
 	RID firstRecord;
 	PageNum parent;
+
+  // Append the information maintained in the core footer
   CorePageIndexFooter core;
 };
 
@@ -52,18 +54,13 @@ class IndexManager : public RecordBasedCoreManager {
  public:
   static IndexManager* instance();
 
+  // Override parent createFile
   virtual RC createFile(const string &fileName);
-  // RC destroyFile(const string &fileName);
-  // RC openFile(const string &fileName, FileHandle &fileHandle);
-  // RC closeFile(FileHandle &fileHandle);
 
 	// From RecordBasedCoreManager
-	virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
 	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 	virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
 	virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
-	virtual unsigned calcRecordSize(unsigned char* recordBuffer);
-
 
   // The following two functions are using the following format for the passed key value.
   //  1) data is a concatenation of values of the attributes
@@ -81,13 +78,12 @@ class IndexManager : public RecordBasedCoreManager {
   // If highKey is null, then the range is lowKey to +infinity
   RC scan(FileHandle &fileHandle,
       const Attribute &attribute,
-	  const void        *lowKey,
+      const void        *lowKey,
       const void        *highKey,
       bool        lowKeyInclusive,
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
 
-  const std::vector<Attribute>& indexHeaderDescriptor() { return _indexHeaderDescriptor; }
   const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
   const std::vector<Attribute>& indexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
 
@@ -95,15 +91,14 @@ class IndexManager : public RecordBasedCoreManager {
   IndexManager   ();                            // Constructor
   virtual ~IndexManager  ();                    // Destructor
 
-  RC newPage(FileHandle& fileHandle, RID& headerRid, PageNum pageNum);
+  RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
 
  private:
 	static IndexManager *_index_manager;
 	
 	PagedFileManager& _pfm;
 
-	RID _rootHeaderRid;
-	std::vector<Attribute> _indexHeaderDescriptor;
+  PageNum _rootPageNum;
 	std::vector<Attribute> _indexNonLeafRecordDescriptor;
 	std::vector<Attribute> _indexLeafRecordDescriptor;
 };
