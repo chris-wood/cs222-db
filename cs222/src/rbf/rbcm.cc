@@ -952,6 +952,16 @@ unsigned RecordBasedCoreManager::calculateFreespace(unsigned freespaceOffset, un
 	return freespace;
 }
 
+unsigned RecordBasedCoreManager::calcRecordSize(unsigned char* recordBuffer)
+{
+    unsigned numFields = 0;
+    memcpy(&numFields, recordBuffer, sizeof(unsigned));
+    unsigned recStart, recEnd;
+    memcpy(&recStart, recordBuffer + sizeof(unsigned), sizeof(unsigned));
+    memcpy(&recEnd, recordBuffer + sizeof(unsigned) + (numFields * sizeof(unsigned)), sizeof(unsigned));
+    return (recEnd - recStart + (numFields * sizeof(unsigned)) + (2 * sizeof(unsigned))); 
+}
+
 CorePageIndexFooter* RecordBasedCoreManager::getCorePageIndexFooter(void* pageBuffer)
 {
 	return (CorePageIndexFooter*)getPageIndexFooter(pageBuffer, _pageSlotOffset);

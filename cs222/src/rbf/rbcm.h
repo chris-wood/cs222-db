@@ -124,17 +124,23 @@ class RecordBasedCoreManager
 public:
   static RecordBasedCoreManager* instance(unsigned slotOffset);
 
+  // File operations
   virtual RC createFile(const string &fileName);
   virtual RC destroyFile(const string &fileName);
   virtual RC openFile(const string &fileName, FileHandle &fileHandle);
   virtual RC closeFile(FileHandle &fileHandle);
 
+  // Generalized record operations
   virtual RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
   virtual RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
   virtual RC deleteRecords(FileHandle &fileHandle);
   virtual RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
   virtual RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
 
+  // Additional API for part 3
+  RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
+
+  // Methods delegated to the children
   virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid) = 0;
   virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data) = 0;
   virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber) = 0;
@@ -144,22 +150,19 @@ public:
   static void* getPageIndexFooter(void* pageBuffer, unsigned pageSlotOffset);
   static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset);
 
-  // Additional API for part 3
-  virtual RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
-
 protected:
   RecordBasedCoreManager(unsigned slotOffset);
   virtual ~RecordBasedCoreManager();
 
   virtual RC writeHeader(FileHandle &fileHandle, PFHeader* header);
   virtual RC readHeader(FileHandle &fileHandle, PFHeader* header);
-  virtual unsigned calcRecordSize(unsigned char* recordBuffer) = 0;
+  unsigned calcRecordSize(unsigned char* recordBuffer);
 
   virtual RC findFreeSpace(FileHandle &fileHandle, unsigned bytes, PageNum& pageNum);
   virtual RC movePageToFreeSpaceList(FileHandle &fileHandle, void* pageFooterBuffer, unsigned destinationListIndex);
   virtual RC movePageToCorrectFreeSpaceList(FileHandle &fileHandle, void* pageFooterBuffer);
   
-  virtual RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* pageFooterBuffer, unsigned char* pageBuffer);
+  RC deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* pageFooterBuffer, unsigned char* pageBuffer);
 
   virtual RC generateRecordHeader(const vector<Attribute> &recordDescriptor, const void *data, unsigned*& recHeaderOut, unsigned& recLength, unsigned& recHeaderSize);
   

@@ -436,16 +436,6 @@ RC RecordBasedFileManager::scan(FileHandle& fileHandle, const vector<Attribute> 
     return rbfm_ScanIterator.init(fileHandle, recordDescriptor, conditionAttributeString, compOp, value, attributeNames);
 }
 
-unsigned RecordBasedFileManager::calcRecordSize(unsigned char* recordBuffer)
-{
-    unsigned numFields = 0;
-    memcpy(&numFields, recordBuffer, sizeof(unsigned));
-    unsigned recStart, recEnd;
-    memcpy(&recStart, recordBuffer + sizeof(unsigned), sizeof(unsigned));
-    memcpy(&recEnd, recordBuffer + sizeof(unsigned) + (numFields * sizeof(unsigned)), sizeof(unsigned));
-    return (recEnd - recStart + (numFields * sizeof(unsigned)) + (2 * sizeof(unsigned))); 
-}
-
 RBFM_PageIndexFooter* RecordBasedFileManager::getRBFMPageIndexFooter(void* pageBuffer)
 {
 	return (RBFM_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
