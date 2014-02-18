@@ -141,7 +141,11 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     else // overflow onto new page somewhere and continue the tombstone chain
     {
         RID newRid;
-        insertRecord(fileHandle, recordDescriptor, data, newRid);
+        ret = insertRecord(fileHandle, recordDescriptor, data, newRid);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 
         // Re-read the page into memory, since we can potentially be on the same page
         ret = fileHandle.readPage(rid.pageNum, pageBuffer);
@@ -270,20 +274,20 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
 	RC ret = rc::OK;
 
 	// Read in the page header and recover the number of slots
-	RBFM_PageIndexFooter* footer = getRBFMPageIndexFooter(pageBuffer);
+	RBFM_PageIndexFooter* oldFooter = getRBFMPageIndexFooter(pageBuffer);
 
     // Only proceed if there are actually slots on this page that need to be reordered
-    if (footer->numSlots > 0)
+    if (oldFooter->numSlots > 0)
     {
         unsigned reallocatedSpace = 0;
 
         // Read in the record offsets
-        PageIndexSlot* offsets = (PageIndexSlot*)malloc(footer->numSlots * sizeof(PageIndexSlot));
-        memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (footer->numSlots * sizeof(PageIndexSlot)), (footer->numSlots * sizeof(PageIndexSlot)));
+        PageIndexSlot* offsets = (PageIndexSlot*)malloc(oldFooter->numSlots * sizeof(PageIndexSlot));
+        memcpy(offsets, pageBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (oldFooter->numSlots * sizeof(PageIndexSlot)), (oldFooter->numSlots * sizeof(PageIndexSlot)));
 
         // Find the first non-empty slot
         int offsetIndex = -1;
-        for (int i = footer->numSlots - 1; i >= 0; i--)
+        for (int i = oldFooter->numSlots - 1; i >= 0; i--)
         {
             if (offsets[i].size != 0 && offsets[i].nextPage == 0) // not deleted, not tombstone
             {
@@ -300,6 +304,10 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
 
         // Allocate space for the smaller page and move the first non-empty record to the front
         unsigned char newBuffer[PAGE_SIZE] = {0};
+		RBFM_PageIndexFooter* newFooter = getRBFMPageIndexFooter(newBuffer);
+
+		// Copy the old footer to the new buffer
+		memcpy(newFooter, oldFooter, sizeof(RBFM_PageIndexFooter));
 
         // Shift the record down by computing its size
         unsigned offset = 0;
@@ -350,12 +358,12 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
         }
 
         // Update the freespace offset for future insertions
-        footer->freeSpaceOffset -= footer->gapSize;
-        footer->gapSize = 0;
-        movePageToCorrectFreeSpaceList(fileHandle, footer);
+        newFooter->freeSpaceOffset -= newFooter->gapSize;
+        newFooter->gapSize = 0;
+        movePageToCorrectFreeSpaceList(fileHandle, newFooter);
 
         // Update the slot entries in the new page
-        memcpy(newBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (footer->numSlots * sizeof(PageIndexSlot)), offsets, (footer->numSlots * sizeof(PageIndexSlot)));
+        memcpy(newBuffer + PAGE_SIZE - sizeof(RBFM_PageIndexFooter) - (newFooter->numSlots * sizeof(PageIndexSlot)), offsets, (newFooter->numSlots * sizeof(PageIndexSlot)));
 
         // Push the changes to disk
         ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
