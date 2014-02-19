@@ -50,8 +50,6 @@ struct IndexLeafRecord
 	KeyValueData key;
 };
 
-
-
 class IX_ScanIterator;
 class IndexManager : public RecordBasedCoreManager {
  public:
@@ -95,7 +93,7 @@ class IndexManager : public RecordBasedCoreManager {
   virtual ~IndexManager  ();                    // Destructor
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
-  RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, KeyValueData& rightKey);
+  RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
   RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
