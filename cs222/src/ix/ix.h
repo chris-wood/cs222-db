@@ -105,7 +105,9 @@ class IndexManager : public RecordBasedCoreManager {
   virtual ~IndexManager  ();                    // Destructor
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
-  PageNum split(FileHandle& fileHandle, PageNum target);
+  RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
+  RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
+  RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
   int findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
   IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
