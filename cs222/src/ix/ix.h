@@ -49,7 +49,14 @@ struct IndexLeafRecord
 	KeyValueData key;
 };
 
-
+struct IndexRecordOverlap
+{
+    union
+    {
+        IndexNonLeafRecord nonleaf;
+        IndexLeafRecord leaf;
+    };
+};
 
 class IX_ScanIterator;
 class IndexManager : public RecordBasedCoreManager {
@@ -96,6 +103,7 @@ class IndexManager : public RecordBasedCoreManager {
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
   PageNum split(FileHandle& fileHandle, PageNum target);
   IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
+  RC mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage);
 
  private:
   static IndexManager *_index_manager;

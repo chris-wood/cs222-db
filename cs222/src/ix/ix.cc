@@ -400,6 +400,86 @@ IX_PageIndexFooter* IndexManager::getIXPageIndexFooter(void* pageBuffer)
 	return (IX_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
 }
 
+RC IndexManager::mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage)
+{
+    const unsigned numPages = fileHandle.getNumberOfPages();
+    if (leaf1Page >= numPages || leaf2Page >= numPages || destinationPage >= numPages)
+    {
+        return rc::PAGE_NUM_INVALID;
+    }
+
+    RC ret = rc::OK;
+    char page1Buffer[PAGE_SIZE] = {0};
+    char page2Buffer[PAGE_SIZE] = {0};
+
+    ret = fileHandle.readPage(leaf1Page, page1Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    ret = fileHandle.readPage(leaf2Page, page2Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Get the basic data about pages we are merging and ensure we have enough space
+    IX_PageIndexFooter* footer1 = getIXPageIndexFooter(page1Buffer);
+    IX_PageIndexFooter* footer2 = getIXPageIndexFooter(page2Buffer);
+
+    if (calculateFreespace(footer1->freeSpaceOffset + footer2->freeSpaceOffset, footer1->numSlots + footer2->numSlots) > PAGE_SIZE)
+    {
+        return rc::BTREE_CANNOT_MERGE_PAGES_TOO_FULL;
+    }
+
+    const bool isLeaf = footer1->isLeafPage;
+    if (isLeaf != footer2->isLeafPage)
+    {
+        return rc::BTREE_CANNOT_MERGE_LEAF_AND_NONLEAF;
+    }
+
+    // Get the information about the parents of the pages we're merging
+    char parent1Buffer[PAGE_SIZE] = {0};
+    char parent2Buffer[PAGE_SIZE] = {0};
+
+    ret = fileHandle.readPage(footer1->parent, parent1Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    ret = fileHandle.readPage(footer2->parent, parent2Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Grab the key that points to the left page
+    IndexRecordOverlap firstRecord1, firstRecord2;
+    const std::vector<Attribute>& recordDescriptor = isLeaf ? _indexLeafRecordDescriptor : _indexNonLeafRecordDescriptor;
+
+    ret = readRecord(fileHandle, recordDescriptor, footer1->firstRecord, &firstRecord1, page1Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    ret = readRecord(fileHandle, recordDescriptor, footer2->firstRecord, &firstRecord2, page2Buffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Find the RID of the parent record that points to the 2nd page
+
+
+    // Delete that RID, since we now only need the one pointing to the first page
+
+
+    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
 IX_ScanIterator::IX_ScanIterator()
 	: _fileHandle(NULL), 
 	_attribute(),
