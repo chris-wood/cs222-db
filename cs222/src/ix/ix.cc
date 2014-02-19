@@ -143,11 +143,37 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	}
 
 	// Extract the header
-	IX_PageIndexFooter* rootFooter = getIXPageIndexFooter(pageBuffer);
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
-	// If the root is absolutely empty, insert the first leaf entry into the root
-	// In this case, the new record is a leaf record
-	if (rootFooter->numSlots == 0)
+	// Traverse down the tree to the leaf, using non-leaves along the way
+	PageNum nextPage;
+	IndexNonLeafRecord currEntry;
+	while (footer->isLeafPage == false)
+	{
+		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Pull the designated page into memory
+		memset(pageBuffer, 0, PAGE_SIZE);
+		ret = fileHandle.readPage(nextPage, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Update the header
+		free(footer);
+		footer = getIXPageIndexFooter(pageBuffer);
+	}
+
+	// We're at a leaf now...
+	assert(footer->isLeafPage);
+
+	// If the leaf is absolutely empty, insert the first leaf entry
+	if (footer->numSlots == 0)
 	{
 		// Construct the new leaf record
 		IndexLeafRecord leaf;
@@ -165,7 +191,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		}
 		
 		// Update the header of the page to point to this new entry
-		rootFooter->firstRecord = newEntry;
+		footer->firstRecord = newEntry;
 		// cout << "inserted RID: " << newEntry.pageNum << "," << newEntry.slotNum << endl;
 
 		// Write the new page information to disk
@@ -175,11 +201,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return ret;
 		}
 	}
-	else if (rootFooter->isLeafPage) // else, search the height=1 tree (just a root page) and figure out where it should go
+	else 
 	{
 		bool found = false;
 		bool atEnd = false;
-		RID currRid = rootFooter->firstRecord;
+		RID currRid = footer->firstRecord;
 		RID prevRid;
 		IndexLeafRecord currEntry;
 		IndexLeafRecord prevEntry;
@@ -232,7 +258,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		leaf.key = keyData;
 
 		// Compute freespace left so as to determine if we'll be splitting or not
-		unsigned targetFreeSpace = calculateFreespace(rootFooter->freeSpaceOffset, rootFooter->numSlots);
+		unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 		unsigned entryRecordSize = calcRecordSize((unsigned char*)(&leaf));
 
 		// if we can squeeze on this page, put it in the right spot 
@@ -279,10 +305,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		{
 			return rc::FEATURE_NOT_YET_IMPLEMENTED;
 		}
-	}
-	else // else, the root is a non-leaf, and we have the general search here
-	{
-		return rc::FEATURE_NOT_YET_IMPLEMENTED;
 	}
 
     return rc::OK;
