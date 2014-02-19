@@ -36,18 +36,21 @@ struct KeyValueData
 	RC compare(AttrType type, const KeyValueData& that, int& result);
 };
 
-struct IndexNonLeafRecord
+struct IndexCommonRecord
 {
-	RID pagePointer; 
-	RID nextSlot;
-	KeyValueData key;
+    RID nextSlot;
+    KeyValueData key;
 };
 
-struct IndexLeafRecord
+struct IndexNonLeafRecord : public IndexCommonRecord
+{
+	RID pagePointer; 
+
+};
+
+struct IndexLeafRecord : public IndexCommonRecord
 {
 	RID dataRid;
-	RID nextSlot;
-	KeyValueData key;
 };
 
 struct IndexRecordOverlap
@@ -106,7 +109,9 @@ class IndexManager : public RecordBasedCoreManager {
   RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
   int findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
   IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
-  RC mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage);
+  RC mergePages(FileHandle& fileHandle, const Attribute &attribute, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage);
+  RC copyRecordsInplace(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, void* inputBuffer, void* outputBuffer, PageNum outputPageNum);
+  RC freePage(FileHandle& fileHandle, IX_PageIndexFooter* footer, void* pageBuffer);
 
  private:
   static IndexManager *_index_manager;

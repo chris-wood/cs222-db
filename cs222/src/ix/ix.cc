@@ -364,23 +364,21 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	{
 		return ret;
 	}
-	else
-	{
-		cout << "Entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
-		cout << "Data RID: " << dataRid.pageNum << "," << dataRid.slotNum << endl;
 
-		// Delete the entry from the index now
-		ret = deleteRecord(fileHandle, _indexLeafRecordDescriptor, entryRid);
-		if (ret != rc::OK)
-		{
-			cout << rc::rcToString(ret) << endl;
-			return ret;
-		}
+    cout << "Entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
+    cout << "Data RID: " << dataRid.pageNum << "," << dataRid.slotNum << endl;
 
-		// TODO: check for merge here
+    // Delete the entry from the index now
+    ret = deleteRecord(fileHandle, _indexLeafRecordDescriptor, entryRid);
+    if (ret != rc::OK)
+    {
+        cout << rc::rcToString(ret) << endl;
+        return ret;
+    }
 
-		return rc::OK;
-	}
+    // TODO: check for merge here
+
+    return rc::OK;
 }
 
 RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum)
@@ -585,7 +583,75 @@ IX_PageIndexFooter* IndexManager::getIXPageIndexFooter(void* pageBuffer)
 	return (IX_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
 }
 
-RC IndexManager::mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage)
+RC IndexManager::copyRecordsInplace(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, void* inputBuffer, void* outputBuffer, PageNum outputPageNum)
+{
+    IX_PageIndexFooter* inputFooter = getIXPageIndexFooter(inputBuffer);
+
+    unsigned numRecords = 0;
+    RID currentRid = inputFooter->firstRecord;
+    RID writtenRid;
+
+    IndexRecordOverlap currentRecord;
+    IndexCommonRecord* commonRecord = (IndexCommonRecord*)&currentRecord;
+
+    while(currentRid.pageNum != 0)
+    {
+        RC ret = readRecord(fileHandle, recordDescriptor, currentRid, &currentRecord, inputBuffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        // We assume inserting into a fresh page, so we know what the next slot will be
+        currentRid = commonRecord->nextSlot;
+        if (currentRid.pageNum == 0)
+        {
+            commonRecord->nextSlot.slotNum = 0;
+            commonRecord->nextSlot.pageNum = 0;
+        }
+        else
+        {
+            commonRecord->nextSlot.slotNum = numRecords + 1;
+            commonRecord->nextSlot.pageNum = outputPageNum;
+        }
+
+        ret = insertRecordInplace(recordDescriptor, &currentRecord, outputPageNum, outputBuffer, writtenRid);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+
+        ++numRecords;
+    }
+
+    return rc::OK;
+}
+
+RC IndexManager::freePage(FileHandle& fileHandle, IX_PageIndexFooter* footer, void* pageBuffer)
+{
+    PageNum pageNum = footer->pageNumber;
+    unsigned freespaceList = footer->freespaceList;
+
+    memset(pageBuffer, 0, PAGE_SIZE);
+    footer->pageNumber = pageNum;
+    footer->freespaceList = freespaceList;
+
+    RC ret = fileHandle.writePage(pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    return rc::OK;
+}
+
+RC IndexManager::mergePages(FileHandle& fileHandle, const Attribute &attribute, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage)
 {
     const unsigned numPages = fileHandle.getNumberOfPages();
     if (leaf1Page >= numPages || leaf2Page >= numPages || destinationPage >= numPages)
@@ -656,11 +722,71 @@ RC IndexManager::mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum l
         return ret;
     }
 
-    // Find the RID of the parent record that points to the 2nd page
+    // TODO: Fix up prev/next page pointers
 
 
-    // Delete that RID, since we now only need the one pointing to the first page
+    // Fill out the footer information for the output buffer
+    char outputBuffer[PAGE_SIZE] = {0};
+    IX_PageIndexFooter* outputFooter = getIXPageIndexFooter(outputBuffer);
+    outputFooter->firstRecord.pageNum = destinationPage;
+    outputFooter->firstRecord.slotNum = 0;
+    outputFooter->freeSpaceOffset = 0;
+    outputFooter->freespaceList = 0;
+    outputFooter->gapSize = 0;
+    outputFooter->isLeafPage = isLeaf;
+    outputFooter->leftChild = footer1->leftChild; // TODO: do we need to do anything with footer2->leftChild?
+    outputFooter->nextPage = footer2->nextPage;
+    outputFooter->prevPage = footer1->prevPage;
+    outputFooter->numSlots = 0;
+    outputFooter->pageNumber = destinationPage;
+    outputFooter->parent = footer1->parent;
 
+    // Bulk copy all records of the first page to the new output buffer
+    ret = copyRecordsInplace(fileHandle, recordDescriptor, page1Buffer, outputBuffer, destinationPage);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Bulk copy all records of the second page to the new output bufferr
+    ret = copyRecordsInplace(fileHandle, recordDescriptor, page2Buffer, outputBuffer, destinationPage);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Free up the pages
+    if (leaf1Page != destinationPage)
+    {
+        ret = freePage(fileHandle, footer1, page1Buffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+    }
+
+    if (leaf2Page != destinationPage)
+    {
+        ret = freePage(fileHandle, footer2, page2Buffer);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
+    }
+
+    // Write to the output buffer
+    ret = fileHandle.writePage(destinationPage, outputBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Ensure output buffer is on correct freepsace list (since our bulk insert did not update it
+    ret = movePageToCorrectFreeSpaceList(fileHandle, outputFooter);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }

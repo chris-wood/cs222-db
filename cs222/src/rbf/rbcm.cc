@@ -173,16 +173,8 @@ RC RecordBasedCoreManager::insertRecord(FileHandle &fileHandle, const vector<Att
     return insertRecordToPage(fileHandle, recordDescriptor, data, pageNum, rid);
 }
 
-RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid) 
+RC RecordBasedCoreManager::insertRecordInplace(const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, void* pageBuffer, RID &rid)
 {
-    // Read in the designated page
-    unsigned char pageBuffer[PAGE_SIZE] = {0};
-    RC ret = fileHandle.readPage(pageNum, pageBuffer);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
-
     // Recover the index header structure
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
 
@@ -190,7 +182,7 @@ RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vect
     unsigned recLength = 0;
     unsigned recHeaderSize = 0;
     unsigned* recHeader = NULL;
-    ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
+    RC ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
     if (ret != rc::OK)
     {
         free(recHeader);
@@ -229,8 +221,32 @@ RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vect
     footer->numSlots++;
     footer->freeSpaceOffset += recLength;
 
+    // Store the RID information and return
+    rid.pageNum = pageNum;
+    rid.slotNum = footer->numSlots - 1;
+
+    return rc::OK;
+}
+
+RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid) 
+{
+    // Read in the designated page
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNum, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    // Write out the record to our pageBuffer
+    ret = insertRecordInplace(recordDescriptor, data, pageNum, pageBuffer, rid);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
     // Update the position of this page in the freespace lists, if necessary
-    ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
+    ret = movePageToCorrectFreeSpaceList(fileHandle, getCorePageIndexFooter(pageBuffer));
     if (ret != rc::OK)
     {
         return ret;
@@ -242,10 +258,6 @@ RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vect
     {
         return ret;
     }
-
-    // Once the write is committed, store the RID information and return
-    rid.pageNum = pageNum;
-    rid.slotNum = footer->numSlots - 1;
 
     return rc::OK;
 }
