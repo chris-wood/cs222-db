@@ -734,15 +734,27 @@ RC RecordBasedCoreManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     return ret;
 }
 
-RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
-{    
+RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data)
+{
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    return readRecord(fileHandle, recordDescriptor, rid, data, pageBuffer);
+}
+
+RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data, void* pageBuffer)
+{    
+    RC ret = rc::OK;
+    CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+    if (footer->pageNumber != rid.pageNum)
+    {
+        return rc::PAGE_NUM_INVALID;
+    }
 
     // Find the slot where the record is stored, walking tombstone chain if needed - O(1)
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);

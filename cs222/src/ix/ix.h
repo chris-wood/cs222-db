@@ -16,6 +16,7 @@ struct IX_PageIndexFooter : public CorePageIndexFooter
 	bool isLeafPage;
 	RID firstRecord;
 	PageNum parent;
+  PageNum leftChild;
 };
 
 struct KeyValueData
@@ -37,7 +38,7 @@ struct KeyValueData
 
 struct IndexNonLeafRecord
 {
-	RID pagePointer;
+	RID pagePointer; 
 	RID nextSlot;
 	KeyValueData key;
 };
@@ -102,6 +103,8 @@ class IndexManager : public RecordBasedCoreManager {
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
   PageNum split(FileHandle& fileHandle, PageNum target);
+  RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
+  int findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
   IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
   RC mergePages(FileHandle& fileHandle, PageNum leaf1Page, PageNum leaf2Page, PageNum destinationPage);
 

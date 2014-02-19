@@ -104,6 +104,7 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf)
 	footer.numSlots = 0;
 	footer.gapSize = 0;
 	footer.pageNumber = pageNum;
+	footer.leftChild = 0;
 
 	// Append as many pages as needed (should be only 1)
 	unsigned requiredPages = pageNum - fileHandle.getNumberOfPages() + 1;
@@ -142,11 +143,37 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	}
 
 	// Extract the header
-	IX_PageIndexFooter* rootFooter = getIXPageIndexFooter(pageBuffer);
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
-	// If the root is absolutely empty, insert the first leaf entry into the root
-	// In this case, the new record is a leaf record
-	if (rootFooter->numSlots == 0)
+	// Traverse down the tree to the leaf, using non-leaves along the way
+	PageNum nextPage;
+	IndexNonLeafRecord currEntry;
+	while (footer->isLeafPage == false)
+	{
+		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Pull the designated page into memory
+		memset(pageBuffer, 0, PAGE_SIZE);
+		ret = fileHandle.readPage(nextPage, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Update the header
+		free(footer);
+		footer = getIXPageIndexFooter(pageBuffer);
+	}
+
+	// We're at a leaf now...
+	assert(footer->isLeafPage);
+
+	// If the leaf is absolutely empty, insert the first leaf entry
+	if (footer->numSlots == 0)
 	{
 		// Construct the new leaf record
 		IndexLeafRecord leaf;
@@ -164,7 +191,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		}
 		
 		// Update the header of the page to point to this new entry
-		rootFooter->firstRecord = newEntry;
+		footer->firstRecord = newEntry;
+		// cout << "inserted RID: " << newEntry.pageNum << "," << newEntry.slotNum << endl;
 
 		// Write the new page information to disk
 		ret = fileHandle.writePage(_rootPageNum, pageBuffer);
@@ -173,11 +201,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return ret;
 		}
 	}
-	else if (rootFooter->isLeafPage) // else, search the height=1 tree (just a root page) and figure out where it should go
+	else 
 	{
 		bool found = false;
 		bool atEnd = false;
-		RID currRid = rootFooter->firstRecord;
+		RID currRid = footer->firstRecord;
 		RID prevRid;
 		IndexLeafRecord currEntry;
 		IndexLeafRecord prevEntry;
@@ -230,7 +258,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		leaf.key = keyData;
 
 		// Compute freespace left so as to determine if we'll be splitting or not
-		unsigned targetFreeSpace = calculateFreespace(rootFooter->freeSpaceOffset, rootFooter->numSlots);
+		unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 		unsigned entryRecordSize = calcRecordSize((unsigned char*)(&leaf));
 
 		// if we can squeeze on this page, put it in the right spot 
@@ -278,17 +306,174 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return rc::FEATURE_NOT_YET_IMPLEMENTED;
 		}
 	}
-	else // else, the root is a non-leaf, and we have the general search here
-	{
-		return rc::FEATURE_NOT_YET_IMPLEMENTED;
-	}
 
     return rc::OK;
 }
 
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    // Pull in the root page
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(_rootPageNum, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Build the key struct for the index 
+	KeyValueData keyData;
+	ret = keyData.init(attribute.type, key);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Extract the header
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+
+	// Traverse down the tree to the leaf, using non-leaves along the way
+	PageNum nextPage;
+	IndexNonLeafRecord currEntry;
+	while (footer->isLeafPage == false)
+	{
+		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Pull the designated page into memory
+		memset(pageBuffer, 0, PAGE_SIZE);
+		ret = fileHandle.readPage(nextPage, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// Update the header
+		free(footer);
+		footer = getIXPageIndexFooter(pageBuffer);
+	}
+
+	// Now search along the leaf page
+	assert(footer->isLeafPage);
+	RID entryRid;
+	RID dataRid;
+	ret = findLeafIndexEntry(fileHandle, footer, attribute, &keyData, entryRid, dataRid);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+	else
+	{
+		cout << "Entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
+		cout << "Data RID: " << dataRid.pageNum << "," << dataRid.slotNum << endl;
+
+		// Delete the entry from the index now
+		ret = deleteRecord(fileHandle, _indexLeafRecordDescriptor, entryRid);
+		if (ret != rc::OK)
+		{
+			cout << rc::rcToString(ret) << endl;
+			return ret;
+		}
+
+		// TODO: check for merge here
+
+		return rc::OK;
+	}
+}
+
+RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum)
+{
+	RID targetRid;
+	RID prevRid;
+	int compareResult = -1;
+
+	// Extract the first record
+	RID currRid = footer->firstRecord;
+	IndexNonLeafRecord currEntry;
+	IndexNonLeafRecord prevEntry;
+
+	// Traverse the list of index entries on this non-leaf page
+	while (compareResult < 0 && currRid.pageNum > 0)
+	{
+		// Pull in the new entry and perform the comparison
+		readRecord(fileHandle, _indexNonLeafRecordDescriptor, currRid, &currEntry);
+		RC ret = key->compare(attribute.type, currEntry.key, compareResult);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		if (compareResult >= 0)
+		{
+			targetRid = currEntry.pagePointer;
+		}
+		else
+		{
+			prevRid = targetRid;
+			prevEntry = currEntry;
+			currRid = currEntry.nextSlot;
+		}
+	}
+
+	// Check to see if we traverse the list entirely, in which case the last index entry 
+	// contains the page pointer to which we point
+	if (currRid.pageNum == 0)
+	{
+		targetRid = prevEntry.pagePointer;
+	}
+
+	// Save the result and return OK
+	pageNum = targetRid.pageNum;
+	return rc::OK;
+}
+
+RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid)
+{
+	RID prevRid;
+	int compareResult = -1;
+
+	// Extract the first record
+	RID currRid = footer->firstRecord;
+	IndexLeafRecord currEntry;
+	IndexLeafRecord prevEntry;
+
+	// Traverse the list of index entries on this leaf page
+	while (compareResult < 0 && currRid.pageNum > 0)
+	{
+		// Pull in the new entry and perform the comparison
+		readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &currEntry);
+		RC ret = key->compare(attribute.type, currEntry.key, compareResult);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		// If we have a match, save it and return OK, otherwise keep traversing the entries on the leaf page
+		if (compareResult == 0)
+		{
+			entryRid = currRid;
+			targetRid = currEntry.dataRid;
+		}
+		else
+		{
+			prevRid = targetRid;
+			prevEntry = currEntry;
+			currRid = currEntry.nextSlot;
+		}
+	}
+
+	// Check to see if we traverse the list entirely, in which case the last index entry 
+	// contains the page pointer to which we point
+	if (currRid.pageNum == 0)
+	{
+		return rc::INDEX_LEAF_ENTRY_NOT_FOUND;
+	}
+	else
+	{
+		return rc::OK;
+	}
 }
 
 PageNum IndexManager::split(FileHandle& fileHandle, PageNum target)

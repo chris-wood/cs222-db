@@ -128,6 +128,7 @@ public:
 
   // Generalized record operations
   virtual RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
+  virtual RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data, void* pageBuffer);
   virtual RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
   virtual RC deleteRecords(FileHandle &fileHandle);
   virtual RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
