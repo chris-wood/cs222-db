@@ -16,7 +16,7 @@ IndexManager* IndexManager::instance()
 }
 
 IndexManager::IndexManager()
-	: RecordBasedCoreManager(sizeof(IX_PageIndexHeader)), _pfm(*PagedFileManager::instance())
+	: RecordBasedCoreManager(sizeof(IX_PageIndexFooter)), _pfm(*PagedFileManager::instance())
 {
 	// Index Non-Leaf Record
 	Attribute attr;
@@ -93,17 +93,17 @@ RC IndexManager::createFile(const string &fileName)
 
 RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf)
 {
-	IX_PageIndexHeader header;
-	header.isLeafPage = isLeaf; 
-	header.firstRecord.pageNum = pageNum;
-	header.firstRecord.slotNum = 0;
-	header.parent = 0;
-	header.core.prevPage = 0;
-	header.core.nextPage = 0;
-	header.core.freeSpaceOffset = 0;
-	header.core.numSlots = 0;
-	header.core.gapSize = 0;
-	header.core.pageNumber = pageNum;
+	IX_PageIndexFooter footer;
+	footer.isLeafPage = isLeaf; 
+	footer.firstRecord.pageNum = pageNum;
+	footer.firstRecord.slotNum = 0;
+	footer.parent = 0;
+	footer.prevPage = 0;
+	footer.nextPage = 0;
+	footer.freeSpaceOffset = 0;
+	footer.numSlots = 0;
+	footer.gapSize = 0;
+	footer.pageNumber = pageNum;
 
 	// Append as many pages as needed (should be only 1)
 	unsigned requiredPages = pageNum - fileHandle.getNumberOfPages() + 1;
@@ -111,7 +111,7 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf)
 	for (unsigned i = 0; i < requiredPages; i++)
 	{
 		memset(pageBuffer, 0, PAGE_SIZE);
-		writePageIndexFooter(pageBuffer, &header, sizeof(IX_PageIndexHeader));
+		writePageIndexFooter(pageBuffer, &footer);
 		RC ret = fileHandle.appendPage(pageBuffer);
 		if (ret != rc::OK)
 		{
@@ -135,29 +135,18 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Build the key struct for the index 
 	KeyValueData keyData;
-	switch (attribute.type)
+	ret = keyData.init(attribute.type, key);
+	if (ret != rc::OK)
 	{
-		case TypeInt:
-			keyData.size = sizeof(unsigned);
-			memcpy(&keyData.integer, key, sizeof(unsigned));
-		case TypeReal:
-			keyData.size = sizeof(float);
-			memcpy(&keyData.real, key, sizeof(float));
-			break;
-		case TypeVarChar:
-			memcpy(&keyData.size, key, sizeof(unsigned));
-			memcpy(&keyData.varchar, (char*)key + sizeof(unsigned), keyData.size);
-			break;
-		default:
-			return rc::ATTRIBUTE_INVALID_TYPE;
+		return ret;
 	}
 
 	// Extract the header
-	IX_PageIndexHeader* header = (IX_PageIndexHeader*)getPageIndexFooter(pageBuffer, sizeof(IX_PageIndexHeader));
+	IX_PageIndexFooter* rootFooter = getIXPageIndexFooter(pageBuffer);
 
 	// If the root is absolutely empty, insert the first leaf entry into the root
 	// In this case, the new record is a leaf record
-	if ((header->core).numSlots == 0) 
+	if (rootFooter->numSlots == 0)
 	{
 		// Construct the new leaf record
 		IndexLeafRecord leaf;
@@ -168,11 +157,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		
 		// Insert the new record into the root
 		RID newEntry;
-		insertRecord(fileHandle, _indexLeafRecordDescriptor, &leaf, newEntry);
+		ret = insertRecord(fileHandle, _indexLeafRecordDescriptor, &leaf, newEntry);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
 		
 		// Update the header of the page to point to this new entry
-		header->firstRecord = newEntry;
-		writePageIndexFooter(pageBuffer, &header, sizeof(IX_PageIndexHeader));
+		rootFooter->firstRecord = newEntry;
 
 		// Write the new page information to disk
 		ret = fileHandle.writePage(_rootPageNum, pageBuffer);
@@ -181,11 +173,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return ret;
 		}
 	}
-	else if (header->isLeafPage) // else, search the height=1 tree (just a root page) and figure out where it should go
+	else if (rootFooter->isLeafPage) // else, search the height=1 tree (just a root page) and figure out where it should go
 	{
 		bool found = false;
 		bool atEnd = false;
-		RID currRid = header->firstRecord;
+		RID currRid = rootFooter->firstRecord;
 		RID prevRid;
 		IndexLeafRecord currEntry;
 		IndexLeafRecord prevEntry;
@@ -193,40 +185,27 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		while (!found) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
-			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &currEntry);
-
-			// Do the comparison
-			switch (attribute.type)
+			ret = readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &currEntry);
+			if (ret != rc::OK)
 			{
-				case TypeInt:
-					if (keyData.integer < currEntry.key.integer)
-					{
-						found = true;
-					}
-					else // TODO: HANDLE EQUAL CASE
-					{
-					}
-					break;
-				case TypeReal:
-					if (keyData.real < currEntry.key.real)
-					{
-						found = true;
-					}
-					else // TODO: HANDLE EQUAL CASE
-					{
-					}
-					break;
-				case TypeVarChar:
-					if (strncmp(keyData.varchar, currEntry.key.varchar, keyData.size) < 0)
-					{
-						found = true;
-					}
-					else // TODO: HANDLE EQUAL CASE
-					{	
-					}
-					break;
-				default:
-					return rc::ATTRIBUTE_INVALID_TYPE;
+				return ret;
+			}
+
+			int compareResult = 0;
+			ret = keyData.compare(attribute.type, currEntry.key, compareResult);
+			if (ret != rc::OK)
+			{
+				return ret;
+			}
+
+			if (compareResult < 0)
+			{
+				found = true;
+			}
+			else if (compareResult == 0)
+			{
+				// TODO: HANDLE EQUAL CASE
+				found = true;
 			}
 
 			if (!found)
@@ -251,7 +230,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		leaf.key = keyData;
 
 		// Compute freespace left so as to determine if we'll be splitting or not
-		unsigned targetFreeSpace = calculateFreespace(header->core.freeSpaceOffset, header->core.numSlots, sizeof(IX_PageIndexHeader));
+		unsigned targetFreeSpace = calculateFreespace(rootFooter->freeSpaceOffset, rootFooter->numSlots);
 		unsigned entryRecordSize = calcRecordSize((unsigned char*)(&leaf));
 
 		// if we can squeeze on this page, put it in the right spot 
@@ -323,20 +302,20 @@ PageNum IndexManager::split(FileHandle& fileHandle, PageNum target)
 	}
 
 	// Extract the header
-	IX_PageIndexHeader* targetHeader = (IX_PageIndexHeader*)getPageIndexFooter(pageBuffer, sizeof(IX_PageIndexHeader));
-	assert(targetHeader->core.numSlots > 0); 
+	IX_PageIndexFooter* targetFooter = getIXPageIndexFooter(pageBuffer);
+	assert(targetFooter->numSlots > 0); 
 
 	// Allocate the new page
 	PageNum newPageNum = fileHandle.getNumberOfPages();
-	newPage(fileHandle, newPageNum, targetHeader->isLeafPage);
+	newPage(fileHandle, newPageNum, targetFooter->isLeafPage);
 
 	// Read in half of the entries from the target page and insert them onto the new page
-	RID currRid = targetHeader->firstRecord;
-	unsigned numToMove = (targetHeader->core.numSlots / 2);
+	RID currRid = targetFooter->firstRecord;
+	unsigned numToMove = (targetFooter->numSlots / 2);
 	for (unsigned i = 0; i < numToMove; i++)
 	{
 		// Skip over the first 'numToMove' RIDs since they stay in place
-		if (targetHeader->isLeafPage)
+		if (targetFooter->isLeafPage)
 		{
 			IndexLeafRecord lRecord;
 			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &lRecord);
@@ -356,11 +335,11 @@ PageNum IndexManager::split(FileHandle& fileHandle, PageNum target)
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
-	for (unsigned i = numToMove; i < targetHeader->core.numSlots; i++)
+	for (unsigned i = numToMove; i < targetFooter->numSlots; i++)
 	{
 		// Move the entry over to the new page
 		RID newEntry;
-		if (targetHeader->isLeafPage)
+		if (targetFooter->isLeafPage)
 		{
 			IndexLeafRecord lRecord;
 			readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &lRecord);
@@ -377,7 +356,7 @@ PageNum IndexManager::split(FileHandle& fileHandle, PageNum target)
 	}
 
 	// Make the disconnect by terminating the on-page list on the first (source) page
-	if (targetHeader->isLeafPage)
+	if (targetFooter->isLeafPage)
 	{
 		IndexLeafRecord lRecord;
 		readRecord(fileHandle, _indexLeafRecordDescriptor, splitRid, &lRecord);
@@ -414,6 +393,11 @@ RC IndexManager::scan(FileHandle &fileHandle,
     IX_ScanIterator &ix_ScanIterator)
 {
 	return ix_ScanIterator.init(&fileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+}
+
+IX_PageIndexFooter* IndexManager::getIXPageIndexFooter(void* pageBuffer)
+{
+	return (IX_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
 }
 
 IX_ScanIterator::IX_ScanIterator()
@@ -509,4 +493,59 @@ RC IX_ScanIterator::close()
 void IX_PrintError (RC rc)
 {
     std::cout << rc::rcToString(rc);
+}
+
+RC KeyValueData::init(AttrType type, const void* key)
+{
+	// Build the key struct for the index 
+	switch (type)
+	{
+		case TypeInt:
+			size = sizeof(unsigned);
+			memcpy(&integer, key, sizeof(unsigned));
+
+		case TypeReal:
+			size = sizeof(float);
+			memcpy(&real, key, sizeof(float));
+			break;
+
+		case TypeVarChar:
+			memcpy(&size, key, sizeof(unsigned));
+			memcpy(&varchar, (char*)key + sizeof(unsigned), size);
+			break;
+
+		default:
+			return rc::ATTRIBUTE_INVALID_TYPE;
+	}
+
+	return rc::OK;
+}
+
+RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
+{
+	switch (type)
+	{
+		case TypeInt:
+			result = integer - that.integer;
+			break;
+
+		case TypeReal:
+			if (real < that.real)
+				result = -1;
+			else if (real == that.real)
+				result = 0;
+			else
+				result = 1;
+			break;
+
+		case TypeVarChar:
+			// TODO: Handle "AAA" vs "AAAAA" where only lengths are unequal
+			result = strncmp(varchar, that.varchar, size);
+			break;
+
+		default:
+			return rc::ATTRIBUTE_INVALID_TYPE;
+	}
+
+	return rc::OK;
 }

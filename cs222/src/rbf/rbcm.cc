@@ -1158,6 +1158,11 @@ void RecordBasedCoreManager::writePageIndexSlot(void* pageBuffer, unsigned slotN
 	return writePageIndexSlot(pageBuffer, slotNum, _pageSlotOffset, slot);
 }
 
+void RecordBasedCoreManager::writePageIndexFooter(void* pageBuffer, void* footerBuffer)
+{
+	return writePageIndexFooter(pageBuffer, footerBuffer, _pageSlotOffset);
+}
+
 unsigned RecordBasedCoreManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)
 {
 	return calculateFreespace(freespaceOffset, numSlots, _pageSlotOffset);

@@ -11,14 +11,11 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IX_PageIndexHeader
+struct IX_PageIndexFooter : public CorePageIndexFooter
 {
-	unsigned isLeafPage;
+	bool isLeafPage;
 	RID firstRecord;
 	PageNum parent;
-
-  // Append the information maintained in the core footer
-  CorePageIndexFooter core;
 };
 
 struct KeyValueData
@@ -33,21 +30,26 @@ struct KeyValueData
         float real;
         char varchar[MAX_KEY_SIZE];
     };
+
+	RC init(AttrType type, const void* key);
+	RC compare(AttrType type, const KeyValueData& that, int& result);
 };
 
 struct IndexNonLeafRecord
 {
 	RID pagePointer;
 	RID nextSlot;
-  KeyValueData key;
+	KeyValueData key;
 };
 
 struct IndexLeafRecord
 {
 	RID dataRid;
 	RID nextSlot;
-  KeyValueData key;
+	KeyValueData key;
 };
+
+
 
 class IX_ScanIterator;
 class IndexManager : public RecordBasedCoreManager {
@@ -92,8 +94,8 @@ class IndexManager : public RecordBasedCoreManager {
   virtual ~IndexManager  ();                    // Destructor
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
-
   PageNum split(FileHandle& fileHandle, PageNum target);
+  IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
 
  private:
   static IndexManager *_index_manager;

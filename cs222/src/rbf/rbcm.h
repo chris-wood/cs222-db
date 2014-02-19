@@ -166,6 +166,7 @@ protected:
   CorePageIndexFooter* getCorePageIndexFooter(void* pageBuffer);
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
+  void writePageIndexFooter(void* pageBuffer, void* footerBuffer);
   virtual unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 private:
