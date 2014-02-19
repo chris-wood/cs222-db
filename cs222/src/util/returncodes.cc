@@ -45,6 +45,7 @@ namespace rc
 		case ATTRIBUTE_LENGTH_INVALID:				return "ATTRIBUTE_LENGTH_INVALID";
 		case INDEX_PAGE_INITIALIZATION_FAILED:		return "INDEX_PAGE_INITIALIZATION_FAILED";
         case INDEX_LEAF_ENTRY_NOT_FOUND:            return "INDEX_LEAF_ENTRY_NOT_FOUND";
+        case INDEX_PAGE_FULL:                       return "INDEX_PAGE_FULL";
 		case OUT_OF_MEMORY:							return "OUT_OF_MEMORY";
         }
 
