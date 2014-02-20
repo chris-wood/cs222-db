@@ -198,8 +198,8 @@ RC RecordBasedCoreManager::insertRecordInplace(const vector<Attribute> &recordDe
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedCoreManager::insertRecord: header.freeSpaceOffset = " << footer->freeSpaceOffset << "\n";
 
     // Write the offsets array and data to disk
-    memcpy(pageBuffer + footer->freeSpaceOffset, recHeader, recHeaderSize);
-    memcpy(pageBuffer + footer->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
+    memcpy((char*)pageBuffer + footer->freeSpaceOffset, recHeader, recHeaderSize);
+    memcpy((char*)pageBuffer + footer->freeSpaceOffset + recHeaderSize, data, recLength - recHeaderSize);
     free(recHeader);
 
     // Create a new index slot entry and prepend it to the list
@@ -317,9 +317,9 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
         index->numSlots = 0;
         index->gapSize = 0;
         index->pageNumber = fileHandle.getNumberOfPages();
-        index->prevPage = 0;
-        index->nextPage = 0;
         index->freespaceList = header.numFreespaceLists - 1; // This is an empty page right now, put it in the largest slot
+		index->freespacePrevPage = 0;
+        index->freespaceNextPage = 0;
 
         // Append this page to the list of free pages (into the beginning of the largest freespace slot)
         FreeSpaceList& oldFreeSpaceList = header.freespaceLists[index->freespaceList];
@@ -339,7 +339,7 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
             // Update the prev pointer of the previous head to be our page number
             CorePageIndexFooter *previousListFoot = getCorePageIndexFooter(listSwapBuffer);
-            previousListFoot->prevPage = index->pageNumber;
+            previousListFoot->freespacePrevPage = index->pageNumber;
 
             ret = fileHandle.writePage(previousListFoot->pageNumber, listSwapBuffer);
             if (ret != rc::OK)
@@ -350,7 +350,7 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 
             // Update the header info so the list points to the newly created page as the head
             oldFreeSpaceList.listHead = index->pageNumber;
-            index->nextPage = previousListFoot->pageNumber;
+            index->freespaceNextPage = previousListFoot->pageNumber;
         }
 
         // Append this new page to the file
@@ -422,10 +422,10 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 	}
 
     // Update prevPage to point to our nextPage
-    if (pageFooter->prevPage > 0)
+    if (pageFooter->freespacePrevPage > 0)
     {
         // Read in the next page
-        ret = fileHandle.readPage(pageFooter->prevPage, pageBuffer);
+        ret = fileHandle.readPage(pageFooter->freespacePrevPage, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
@@ -433,7 +433,7 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 
         // Update the prev pointer of the next page to our prev pointer
         CorePageIndexFooter *prevPageFooter = getCorePageIndexFooter(pageBuffer);
-        prevPageFooter->nextPage = pageFooter->nextPage;
+        prevPageFooter->freespaceNextPage = pageFooter->freespaceNextPage;
 
         ret = fileHandle.writePage(prevPageFooter->pageNumber, pageBuffer);
         if (ret != rc::OK)
@@ -444,15 +444,15 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
     else
     {
         // We were the beginning of the list, update the head pointer in the file header
-        header.freespaceLists[pageFooter->freespaceList].listHead = pageFooter->nextPage;
+        header.freespaceLists[pageFooter->freespaceList].listHead = pageFooter->freespaceNextPage;
     }
 
     // Update nextPage to point to our prevPage
-    if (pageFooter->nextPage > 0)
+    if (pageFooter->freespaceNextPage > 0)
     {
         // Read in the next page
 
-        ret = fileHandle.readPage(pageFooter->nextPage, pageBuffer);
+        ret = fileHandle.readPage(pageFooter->freespaceNextPage, pageBuffer);
         if (ret != rc::OK)
         {
             return ret;
@@ -460,7 +460,7 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 
         // Update the prev pointer of the next page to our prev pointer
         CorePageIndexFooter *nextPageFooter = getCorePageIndexFooter(pageBuffer);
-        nextPageFooter->prevPage = pageFooter->prevPage;
+        nextPageFooter->freespacePrevPage = pageFooter->freespacePrevPage;
 
         ret = fileHandle.writePage(nextPageFooter->pageNumber, pageBuffer);
         if (ret != rc::OK)
@@ -484,7 +484,7 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 
         // Update the prev pointer of the previous head to be our page number
         CorePageIndexFooter *listFirstPageFooter = getCorePageIndexFooter(pageBuffer);
-        listFirstPageFooter->prevPage = pageFooter->pageNumber;
+        listFirstPageFooter->freespacePrevPage = pageFooter->pageNumber;
 
         ret = fileHandle.writePage(listFirstPageFooter->pageNumber, pageBuffer);
         if (ret != rc::OK)
@@ -494,11 +494,11 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
     }
 
     // The next page for us is whatever was the previous 1st page
-    pageFooter->nextPage = destinationList.listHead;
+    pageFooter->freespaceNextPage = destinationList.listHead;
 
     // Update the header's 1st page to our page number
     destinationList.listHead = pageFooter->pageNumber;
-    pageFooter->prevPage = 0;
+    pageFooter->freespacePrevPage = 0;
 
     // Update our freespace index to the new list
     pageFooter->freespaceList = destinationListIndex;
@@ -790,7 +790,7 @@ RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
     // Copy the contents of the record into the data block - O(1)
     int fieldOffset = (recordDescriptor.size() * sizeof(unsigned)) + (2 * sizeof(unsigned));
-    memcpy(data, pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
+    memcpy(data, (char*)pageBuffer + slotIndex->pageOffset + fieldOffset, slotIndex->size - fieldOffset);
 
     dbg::out << dbg::LOG_EXTREMEDEBUG;
     dbg::out << "RecordBasedCoreManager::readRecord: RID = (" << rid.pageNum << ", " << rid.slotNum << ")\n";;
@@ -906,8 +906,8 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 		pageFooter->pageNumber = page;
 
 		// Place all pages on the 'full' freepsace list, all sequentially linked to each other
-		pageFooter->prevPage = page - 1;
-		pageFooter->nextPage = (page < header.numPages) ? (page + 1) : 0;
+		pageFooter->freespacePrevPage = page - 1;
+		pageFooter->freespaceNextPage = (page < header.numPages) ? (page + 1) : 0;
 		pageFooter->freespaceList = header.numFreespaceLists - 1;
 
 		// Write the page back out to disk

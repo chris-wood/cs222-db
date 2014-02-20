@@ -98,8 +98,8 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf)
 	footer.firstRecord.pageNum = pageNum;
 	footer.firstRecord.slotNum = 0;
 	footer.parent = 0;
-	footer.prevPage = 0;
-	footer.nextPage = 0;
+	footer.freespacePrevPage = 0;
+	footer.freespaceNextPage = 0;
 	footer.freeSpaceOffset = 0;
 	footer.numSlots = 0;
 	footer.gapSize = 0;
@@ -147,7 +147,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum nextPage = _rootPageNum;
-	IndexNonLeafRecord currEntry;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
@@ -285,7 +284,6 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum nextPage;
-	IndexNonLeafRecord currEntry;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
@@ -996,8 +994,8 @@ RC IndexManager::mergePages(FileHandle& fileHandle, const Attribute &attribute, 
     outputFooter->gapSize = 0;
     outputFooter->isLeafPage = isLeaf;
     outputFooter->leftChild = footer1->leftChild; // TODO: do we need to do anything with footer2->leftChild?
-    outputFooter->nextPage = footer2->nextPage;
-    outputFooter->prevPage = footer1->prevPage;
+    outputFooter->freespaceNextPage = footer2->freespaceNextPage;
+    outputFooter->freespacePrevPage = footer1->freespacePrevPage;
     outputFooter->numSlots = 0;
     outputFooter->pageNumber = destinationPage;
     outputFooter->parent = footer1->parent;

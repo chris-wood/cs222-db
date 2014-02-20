@@ -111,8 +111,8 @@ struct CorePageIndexFooter
 
   // Doubly linked list data for whichever freespace list we are attached to
   unsigned freespaceList;
-  PageNum prevPage;
-  PageNum nextPage;
+  PageNum freespacePrevPage;
+  PageNum freespaceNextPage;
 };
 
 class RecordBasedCoreManager
