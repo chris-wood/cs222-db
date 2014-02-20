@@ -151,8 +151,8 @@ private:
 	bool _lowKeyInclusive;
 	bool _highKeyInclusive;
 	
-	RID _lowRecordRid;
-	RID _highRecordRid;
+	RID _beginRecordRid;
+	RID _endRecordRid;
 	RID _currentRecordRid;
 };
 

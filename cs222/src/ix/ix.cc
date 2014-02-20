@@ -958,8 +958,8 @@ IX_ScanIterator::IX_ScanIterator()
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
 	_currentRecordRid(),
-	_lowRecordRid(),
-	_highRecordRid(),
+	_beginRecordRid(),
+	_endRecordRid(),
 	_pfm(*PagedFileManager::instance())
 {
 }
@@ -977,22 +977,36 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	if (attribute.length == 0)
 		return rc::ATTRIBUTE_LENGTH_INVALID;
 
+	RC ret = rc::OK;
+
 	_fileHandle = fileHandle;
 	_attribute = attribute;
 	_lowKeyInclusive = lowKeyInclusive;
 	_highKeyInclusive = highKeyInclusive;
 
+	// Traverse down the left pointers to find the lowest RID
+	RID lowestPossibleRid;
+	ret = IndexManager::findSmallestLeafIndexEntry(*_fileHandle, lowestPossibleRid);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
 	// Copy over the key values to local memory
 	if (lowKey)
 	{
-		RC ret = Attribute::allocateValue(attribute.type, lowKey, &_lowKeyValue);
+		ret = Attribute::allocateValue(attribute.type, lowKey, &_lowKeyValue);
 		if (ret != rc::OK)
 		{
+			if (_lowKeyValue)
+				free(_lowKeyValue);
+
+			_lowKeyValue = NULL;
 			return ret;
 		}
 
-		// Do a search to find the first lowRecord
-		
+		// TODO: Iterate through RIDs until we find something matching the _lowKeyValue
+		_beginRecordRid = lowestPossibleRid;
 	}
 	else
 	{
@@ -1000,9 +1014,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			free(_lowKeyValue);
 
 		_lowKeyValue = NULL;
-		
-		// Traverse down the left pointers to find the lowest RID
-
+		_beginRecordRid = lowestPossibleRid;
 	}
 
 	if (highKey)
@@ -1010,8 +1022,15 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		RC ret = Attribute::allocateValue(attribute.type, highKey, &_highKeyValue);
 		if (ret != rc::OK)
 		{
+			if (_highKeyValue)
+				free(_highKeyValue);
+
+			_highKeyValue = NULL;
 			return ret;
 		}
+
+		// TODO: Iterate through RIDs until we find something matching _highKeyValue
+		_endRecordRid = lowestPossibleRid;
 	}
 	else
 	{
@@ -1019,7 +1038,12 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			free(_highKeyValue);
 
 		_highKeyValue = NULL;
+		// TODO: Iterate through RIDs until we find the largest
+		_endRecordRid = lowestPossibleRid;
 	}
+
+	// Start at the beginning RID (keep track of beginRecordRid just for debug purposes for now)
+	_currentRecordRid = _beginRecordRid;
 
 	return rc::OK;
 }
@@ -1037,9 +1061,9 @@ RC IX_ScanIterator::close()
 	if (_highKeyValue)
 		free(_highKeyValue);
 
-	_fileHandle = NULL; 
+	_fileHandle = NULL;
 	_lowKeyValue = NULL;
-	_highKeyValue = NULL; 
+	_highKeyValue = NULL;
 
 	return rc::OK;
 }
