@@ -177,14 +177,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// cout << "leaf page = " << nextPage << endl;
 	ret = insertIntoLeaf(fileHandle, nextPage, attribute, keyData, rid);
-	if (ret != rc::OK && ret != rc::INDEX_PAGE_FULL)
+	if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 	{
 		cout << "failed: " << rc::rcToString(ret) << endl;
 		return ret;
 	}
 	else
 	{
-		while (ret == rc::INDEX_PAGE_FULL)
+		while (ret == rc::BTREE_INDEX_PAGE_FULL)
 		{
 			// Split the page (no difference between leaves and non-leaves)
 			PageNum leftPage = nextPage;
@@ -252,7 +252,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// Insert the right child into the parent of the left
 			PageNum parent = footer->parent;
 			ret = insertIntoNonLeaf(fileHandle, parent, attribute, rightKey, rightRid);
-			if (ret != rc::OK && ret != rc::INDEX_PAGE_FULL)
+			if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 			{
 				return ret;
 			}
@@ -327,7 +327,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
         return ret;
     }
 
-    // TODO: check for merge here
+    // TODO: Is this page completely empty? We should remove it otherwise it will mess up our scan (I think)
 
     return rc::OK;
 }
@@ -354,7 +354,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 	unsigned entryRecordSize = calcRecordSize((unsigned char*)(&entry));
 	if (entryRecordSize > targetFreeSpace)
 	{
-		return rc::INDEX_PAGE_FULL;
+		return rc::BTREE_INDEX_PAGE_FULL;
 	}
 	else // if we can fit, find the spot in the list where the new record will go
 	{
@@ -507,7 +507,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		unsigned entryRecordSize = calcRecordSize((unsigned char*)(&leaf));
 		if (entryRecordSize > targetFreeSpace)
 		{
-			return rc::INDEX_PAGE_FULL;
+			return rc::BTREE_INDEX_PAGE_FULL;
 		}
 		else // if we can fit, find the spot in the list where the new record will go
 		{
@@ -624,8 +624,13 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	while (compareResult < 0 && currRid.pageNum > 0)
 	{
 		// Pull in the new entry and perform the comparison
-		readRecord(fileHandle, _indexNonLeafRecordDescriptor, currRid, &currEntry);
-		RC ret = key->compare(attribute.type, currEntry.key, compareResult);
+		RC ret = IndexManager::instance()->readRecord(fileHandle, indexNonLeafRecordDescriptor(), currRid, &currEntry);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		ret = key->compare(attribute.type, currEntry.key, compareResult);
 		if (ret != rc::OK)
 		{
 			return ret;
@@ -655,6 +660,49 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	return rc::OK;
 }
 
+RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
+{
+	// Begin at the root
+	char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(1, pageBuffer);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Extract the first record's leftChild
+	IX_PageIndexFooter* footer = IndexManager::getIXPageIndexFooter(pageBuffer);
+	PageNum leftChild = footer->leftChild;
+
+	// Continue down all leftChild pointers until we hit a leaf
+	while(leftChild != 0 && !footer->isLeafPage)
+	{
+		// Load in the next page
+		ret = fileHandle.readPage(leftChild, pageBuffer);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		leftChild = footer->leftChild;
+	}
+
+	// If we didn't find a leaf, our BTree was corrupted
+	if (!footer->isLeafPage)
+	{
+		return rc::BTREE_CANNOT_FIND_LEAF;
+	}
+
+	// Get the first (smallest) element from this leaf
+	rid = footer->firstRecord;
+	if (rid.pageNum == 0)
+	{
+		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
+	}
+
+	return rc::OK;
+}
+
 RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid)
 {
 	RID prevRid;
@@ -669,8 +717,13 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 	while (compareResult < 0 && currRid.pageNum > 0)
 	{
 		// Pull in the new entry and perform the comparison
-		readRecord(fileHandle, _indexLeafRecordDescriptor, currRid, &currEntry);
-		RC ret = key->compare(attribute.type, currEntry.key, compareResult);
+		RC ret = IndexManager::instance()->readRecord(fileHandle, IndexManager::indexLeafRecordDescriptor(), currRid, &currEntry);
+		if (ret != rc::OK)
+		{
+			return ret;
+		}
+
+		ret = key->compare(attribute.type, currEntry.key, compareResult);
 		if (ret != rc::OK)
 		{
 			return ret;
@@ -694,7 +747,7 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 	// contains the page pointer to which we point
 	if (currRid.pageNum == 0)
 	{
-		return rc::INDEX_LEAF_ENTRY_NOT_FOUND;
+		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
 	}
 	else
 	{
@@ -850,7 +903,7 @@ RC IndexManager::scan(FileHandle &fileHandle,
 
 IX_PageIndexFooter* IndexManager::getIXPageIndexFooter(void* pageBuffer)
 {
-	return (IX_PageIndexFooter*)getCorePageIndexFooter(pageBuffer);
+	return (IX_PageIndexFooter*)getPageIndexFooter(pageBuffer, sizeof(IX_PageIndexFooter));
 }
 
 RC IndexManager::copyRecordsInplace(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, void* inputBuffer, void* outputBuffer, PageNum outputPageNum)
@@ -904,7 +957,9 @@ IX_ScanIterator::IX_ScanIterator()
 	_highKeyValue(NULL), 
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
-	_currentRid(),
+	_currentRecordRid(),
+	_lowRecordRid(),
+	_highRecordRid(),
 	_pfm(*PagedFileManager::instance())
 {
 }
@@ -927,10 +982,6 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	_lowKeyInclusive = lowKeyInclusive;
 	_highKeyInclusive = highKeyInclusive;
 
-	// TODO: Find the first record
-	_currentRid.pageNum = 1;
-	_currentRid.slotNum = 0;
-
 	// Copy over the key values to local memory
 	if (lowKey)
 	{
@@ -939,6 +990,9 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		{
 			return ret;
 		}
+
+		// Do a search to find the first lowRecord
+		
 	}
 	else
 	{
@@ -946,6 +1000,9 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			free(_lowKeyValue);
 
 		_lowKeyValue = NULL;
+		
+		// Traverse down the left pointers to find the lowest RID
+
 	}
 
 	if (highKey)

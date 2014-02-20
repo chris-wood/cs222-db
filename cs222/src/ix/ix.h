@@ -100,8 +100,16 @@ class IndexManager : public RecordBasedCoreManager {
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
 
-  const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
-  const std::vector<Attribute>& indexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
+  static IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
+  static const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return instance()->getIndexNonLeafRecordDescriptor(); }
+  static const std::vector<Attribute>& indexLeafRecordDescriptor() { return instance()->getIndexLeafRecordDescriptor(); }
+
+  const std::vector<Attribute>& getIndexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
+  const std::vector<Attribute>& getIndexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
+
+  static RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
+  static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
+  static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
 
  protected:
   IndexManager   ();                            // Constructor
@@ -111,17 +119,14 @@ class IndexManager : public RecordBasedCoreManager {
   RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
   RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
-  RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
-  int findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
-  IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
   RC copyRecordsInplace(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, void* inputBuffer, void* outputBuffer, PageNum outputPageNum);
 
  private:
-  static IndexManager *_index_manager;
+	static IndexManager *_index_manager;
 	
 	PagedFileManager& _pfm;
 
-  PageNum _rootPageNum;
+	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change
 	std::vector<Attribute> _indexNonLeafRecordDescriptor;
 	std::vector<Attribute> _indexLeafRecordDescriptor;
 };
@@ -145,8 +150,10 @@ private:
 	void* _highKeyValue;
 	bool _lowKeyInclusive;
 	bool _highKeyInclusive;
-
-	RID _currentRid;
+	
+	RID _lowRecordRid;
+	RID _highRecordRid;
+	RID _currentRecordRid;
 };
 
 // print out the error message for a given return code
