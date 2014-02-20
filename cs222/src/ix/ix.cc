@@ -169,7 +169,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		}
 
 		// Update the header
-		free(footer);
 		footer = getIXPageIndexFooter(pageBuffer);
 	}
 
@@ -304,7 +303,6 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		}
 
 		// Update the header
-		free(footer);
 		footer = getIXPageIndexFooter(pageBuffer);
 	}
 
