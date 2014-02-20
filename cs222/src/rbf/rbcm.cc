@@ -1135,11 +1135,6 @@ void* RecordBasedCoreManager::getPageIndexFooter(void* pageBuffer, unsigned page
 	return (void*)((char*)pageBuffer + PAGE_SIZE - pageSlotOffset);
 }
 
-void RecordBasedCoreManager::writePageIndexFooter(void* pageBuffer, void* footerBuffer, unsigned pageSlotOffset)
-{
-    memcpy((char*)pageBuffer + PAGE_SIZE - pageSlotOffset, footerBuffer, pageSlotOffset);
-}
-
 unsigned RecordBasedCoreManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset)
 {
 	const unsigned slotSize = numSlots * sizeof(PageIndexSlot);
@@ -1180,11 +1175,6 @@ PageIndexSlot* RecordBasedCoreManager::getPageIndexSlot(void* pageBuffer, unsign
 void RecordBasedCoreManager::writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot)
 {
 	return writePageIndexSlot(pageBuffer, slotNum, _pageSlotOffset, slot);
-}
-
-void RecordBasedCoreManager::writePageIndexFooter(void* pageBuffer, void* footerBuffer)
-{
-	return writePageIndexFooter(pageBuffer, footerBuffer, _pageSlotOffset);
 }
 
 unsigned RecordBasedCoreManager::calculateFreespace(unsigned freespaceOffset, unsigned numSlots)

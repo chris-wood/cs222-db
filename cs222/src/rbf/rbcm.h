@@ -145,7 +145,6 @@ public:
 
   static PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset);
   static void writePageIndexSlot(void* pageBuffer, unsigned slotNum, unsigned pageSlotOffset, PageIndexSlot* slot);
-  static void writePageIndexFooter(void* pageBuffer, void* footerBuffer, unsigned pageSlotOffset);
   static void* getPageIndexFooter(void* pageBuffer, unsigned pageSlotOffset);
   static unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots, unsigned pageSlotOffset);
 
@@ -168,7 +167,6 @@ protected:
   CorePageIndexFooter* getCorePageIndexFooter(void* pageBuffer);
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
-  void writePageIndexFooter(void* pageBuffer, void* footerBuffer);
   virtual unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
 
 private:

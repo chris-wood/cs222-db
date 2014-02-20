@@ -75,7 +75,7 @@ RC IndexManager::createFile(const string &fileName)
 
 	// Create the root page, mark it as a leaf, it's page 1
 	_rootPageNum = 1;
-	ret = newPage(fileHandle, _rootPageNum, true);
+	ret = newPage(fileHandle, _rootPageNum, true, 0);
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -91,32 +91,37 @@ RC IndexManager::createFile(const string &fileName)
 	return rc::OK;
 }
 
-RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf)
+RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage)
 {
-	IX_PageIndexFooter footer;
-	footer.isLeafPage = isLeaf; 
-	footer.firstRecord.pageNum = pageNum;
-	footer.firstRecord.slotNum = 0;
-	footer.parent = 0;
-	footer.freespacePrevPage = 0;
-	footer.freespaceNextPage = 0;
-	footer.freeSpaceOffset = 0;
-	footer.numSlots = 0;
-	footer.gapSize = 0;
-	footer.pageNumber = pageNum;
-	footer.leftChild = 0;
+	IX_PageIndexFooter footerTemplate;
+	footerTemplate.isLeafPage = isLeaf; 
+	footerTemplate.firstRecord.pageNum = pageNum;
+	footerTemplate.firstRecord.slotNum = 0;
+	footerTemplate.parent = 0;
+	footerTemplate.nextLeafPage = nextLeafPage;
+	footerTemplate.freespacePrevPage = 0;
+	footerTemplate.freespaceNextPage = 0;
+	footerTemplate.freeSpaceOffset = 0;
+	footerTemplate.numSlots = 0;
+	footerTemplate.gapSize = 0;
+	footerTemplate.pageNumber = pageNum;
+	footerTemplate.leftChild = 0;
+
+	// TODO: Check freespace list to see if there's a completely empty page available
 
 	// Append as many pages as needed (should be only 1)
 	unsigned requiredPages = pageNum - fileHandle.getNumberOfPages() + 1;
-	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	unsigned char pageBuffer[PAGE_SIZE];
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+
 	for (unsigned i = 0; i < requiredPages; i++)
 	{
 		memset(pageBuffer, 0, PAGE_SIZE);
-		writePageIndexFooter(pageBuffer, &footer);
+		memcpy(footer, &footerTemplate, sizeof(footerTemplate));
+
 		RC ret = fileHandle.appendPage(pageBuffer);
 		if (ret != rc::OK)
 		{
-			cout << "FAIL" << endl;
 			return ret;
 		}
 	}
@@ -200,7 +205,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			{
 				PageNum oldRoot = _rootPageNum;
 				_rootPageNum = fileHandle.getNumberOfPages();
-				ret = newPage(fileHandle, fileHandle.getNumberOfPages(), false);
+				ret = newPage(fileHandle, fileHandle.getNumberOfPages(), false, 0);
 				if (ret != rc::OK)
 				{
 					return ret;
@@ -215,7 +220,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				}
 				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
 				tempFooter->parent = _rootPageNum;
-				writePageIndexFooter(tempBuffer, tempFooter, sizeof(IX_PageIndexFooter));
 
 				// Re-update the reference to the new footer to be used in the -final- insertion
 				footer = tempFooter;
@@ -235,7 +239,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				}
 				tempFooter = getIXPageIndexFooter(tempBuffer);
 				tempFooter->parent = _rootPageNum;
-				writePageIndexFooter(tempBuffer, tempFooter, sizeof(IX_PageIndexFooter));
 
 				// Write the new page information to disk
 				ret = fileHandle.writePage(rightPage, tempBuffer);
@@ -717,7 +720,17 @@ RC IndexManager::split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& 
 
 	// Allocate the new page and save its reference
 	newPageNum = fileHandle.getNumberOfPages();
-	newPage(fileHandle, newPageNum, targetFooter->isLeafPage);
+	ret = newPage(fileHandle, newPageNum, targetFooter->isLeafPage, targetFooter->nextLeafPage);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
+
+	// Update the nextLeaf pointer if needed
+	if (targetFooter->isLeafPage)
+	{
+		targetFooter->nextLeafPage = newPageNum;
+	}
 
 	// Save the parent of the new footer
 	unsigned char newPageBuffer[PAGE_SIZE] = {0};
@@ -726,9 +739,9 @@ RC IndexManager::split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& 
 	{
 		return ret;
 	}
+
 	IX_PageIndexFooter* newFooter = getIXPageIndexFooter(newPageBuffer);
 	newFooter->parent = targetFooter->parent;
-	writePageIndexFooter(newPageBuffer, newFooter, sizeof(IX_PageIndexFooter));
 
 	// Write the new page information to disk
 	ret = fileHandle.writePage(newPageNum, newPageBuffer);
@@ -886,6 +899,7 @@ RC IndexManager::copyRecordsInplace(FileHandle& fileHandle, const std::vector<At
     return rc::OK;
 }
 
+/*
 RC IndexManager::freePage(FileHandle& fileHandle, IX_PageIndexFooter* footer, void* pageBuffer)
 {
     PageNum pageNum = footer->pageNumber;
@@ -993,12 +1007,14 @@ RC IndexManager::mergePages(FileHandle& fileHandle, const Attribute &attribute, 
     outputFooter->freespaceList = 0;
     outputFooter->gapSize = 0;
     outputFooter->isLeafPage = isLeaf;
-    outputFooter->leftChild = footer1->leftChild; // TODO: do we need to do anything with footer2->leftChild?
-    outputFooter->freespaceNextPage = footer2->freespaceNextPage;
-    outputFooter->freespacePrevPage = footer1->freespacePrevPage;
+    outputFooter->leftChild = footer1->leftChild;
+    outputFooter->freespaceNextPage = 0;
+    outputFooter->freespacePrevPage = 0;
     outputFooter->numSlots = 0;
     outputFooter->pageNumber = destinationPage;
     outputFooter->parent = footer1->parent;
+	outputFooter->nextLeafPage = footer2->nextLeafPage;
+	outputFooter->prevLeafPage = footer1->prevLeafPage;
 
     // Bulk copy all records of the first page to the new output buffer
     ret = copyRecordsInplace(fileHandle, recordDescriptor, page1Buffer, outputBuffer, destinationPage);
@@ -1049,6 +1065,7 @@ RC IndexManager::mergePages(FileHandle& fileHandle, const Attribute &attribute, 
 
     return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
+*/
 
 IX_ScanIterator::IX_ScanIterator()
 	: _fileHandle(NULL), 

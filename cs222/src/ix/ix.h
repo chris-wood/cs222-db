@@ -15,7 +15,10 @@ struct IX_PageIndexFooter : public CorePageIndexFooter
 {
 	bool isLeafPage;
 	RID firstRecord;
+
+	// Tree pointers
 	PageNum parent;
+	PageNum nextLeafPage; // ignored by non-leaf pages
   PageNum leftChild;
 };
 
@@ -45,7 +48,6 @@ struct IndexCommonRecord
 struct IndexNonLeafRecord : public IndexCommonRecord
 {
 	RID pagePointer; 
-
 };
 
 struct IndexLeafRecord : public IndexCommonRecord
@@ -53,6 +55,7 @@ struct IndexLeafRecord : public IndexCommonRecord
 	RID dataRid;
 };
 
+// For passing around the data of either a leaf or a nonleaf record
 struct IndexRecordOverlap
 {
     union
@@ -104,7 +107,7 @@ class IndexManager : public RecordBasedCoreManager {
   IndexManager   ();                            // Constructor
   virtual ~IndexManager  ();                    // Destructor
 
-  RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf);
+  RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage);
   RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
   RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
