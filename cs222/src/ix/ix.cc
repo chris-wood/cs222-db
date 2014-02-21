@@ -359,27 +359,21 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			ret = keyData.compare(attribute.type, currEntry.key, compareResult);
 			RETURN_ON_ERR(ret);
 
-			if (compareResult < 0)
+            if (compareResult >= 0)
 			{
-				found = true;
-			}
-			else if (compareResult == 0)
-			{
-				// TODO: HANDLE EQUAL CASE
 				found = true;
 			}
 
+            // update for next iteration
+            prevRid = currRid;
+            prevEntry = currEntry;
+            currRid = currEntry.nextSlot;
+
+            // Check to see if we reached the end of the list
 			if (!found)
 			{
-				// Check to see if we reached the end of the list
-				if (currEntry.nextSlot.pageNum != 0) 
-				{
-					atEnd = true;
-					found = true;
-				}
-				prevRid = currRid;
-				prevEntry = currEntry;
-				currRid = currEntry.nextSlot;
+                atEnd = true;
+                found = true;
 			}
 		}
 
@@ -495,6 +489,8 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 
 			while (!found) // second condition implies the end of the chain
 			{
+
+
 				// Pull in the next entry
 				ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 				RETURN_ON_ERR(ret);
@@ -503,27 +499,21 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 				ret = keyData.compare(attribute.type, currEntry.key, compareResult);
 				RETURN_ON_ERR(ret);
 
-				if (compareResult < 0)
+                if (compareResult >= 0)
 				{
-					found = true;
-				}
-				else if (compareResult == 0)
-				{
-					// TODO: HANDLE EQUAL CASE
 					found = true;
 				}
 
-				if (!found)
+                // Update for next iteration
+                prevRid = currRid;
+                prevEntry = currEntry;
+                currRid = currEntry.nextSlot;
+
+                // Check to see if we reached the end of the list
+                if (!found && currEntry.nextSlot.pageNum == 0)
 				{
-					// Check to see if we reached the end of the list
-					if (currEntry.nextSlot.pageNum == 0) 
-					{
-						atEnd = true;
-						found = true;
-					}
-					prevRid = currRid;
-					prevEntry = currEntry;
-					currRid = currEntry.nextSlot;
+                    atEnd = true;
+                    found = true;
 				}
 			}
 
