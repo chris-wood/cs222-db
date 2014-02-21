@@ -78,15 +78,21 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h" />
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.h" />
+    <ClInclude Include="..\..\cs222\src\ix\ix.h" />
+    <ClInclude Include="..\..\cs222\src\ix\ixtest_util.h" />
+    <ClInclude Include="..\..\cs222\src\rbf\rbcm.h" />
     <ClInclude Include="..\..\cs222\src\rm\rm.h" />
     <ClInclude Include="..\..\cs222\src\rm\test_util.h" />
     <ClInclude Include="..\..\cs222\src\util\dbgout.h" />
+    <ClInclude Include="..\..\cs222\src\util\hash.h" />
     <ClInclude Include="..\..\cs222\src\util\returncodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
-    <ClCompile Include="..\..\cs222\src\rm\combined_tests.cc" />
+    <ClCompile Include="..\..\cs222\src\ix\ix.cc" />
+    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc" />
+    <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc" />
     <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />
     <ClCompile Include="..\..\cs222\src\util\returncodes.cc" />

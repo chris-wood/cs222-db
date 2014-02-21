@@ -31,6 +31,12 @@
     <Filter Include="Source Files\rm">
       <UniqueIdentifier>{73c8e844-049a-4559-9277-3f1cb8919c5c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ix">
+      <UniqueIdentifier>{fac5e37f-b120-451c-9c0f-17989494ae75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ix">
+      <UniqueIdentifier>{d6409bcb-07ba-4bd3-a276-bb241d2bf096}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h">
@@ -51,6 +57,18 @@
     <ClInclude Include="..\..\cs222\src\rm\test_util.h">
       <Filter>Header Files\rm</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\cs222\src\rbf\rbcm.h">
+      <Filter>Header Files\rbf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\ix\ix.h">
+      <Filter>Header Files\ix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\ix\ixtest_util.h">
+      <Filter>Header Files\ix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\util\hash.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc">
@@ -68,8 +86,14 @@
     <ClCompile Include="..\..\cs222\src\rm\rm.cc">
       <Filter>Source Files\rm</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\rm\combined_tests.cc">
-      <Filter>Source Files\rm</Filter>
+    <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc">
+      <Filter>Source Files\rbf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\ix\ix.cc">
+      <Filter>Source Files\ix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc">
+      <Filter>Source Files\ix</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
