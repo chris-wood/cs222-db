@@ -1215,8 +1215,17 @@ RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
 			break;
 
 		case TypeVarChar:
-			// TODO: Handle "AAA" vs "AAAAA" where only lengths are unequal
 			result = strncmp(varchar, that.varchar, size);
+			if (result == 0)
+			{
+				if (size < that.size)
+					return -1;
+
+				if (size > that.size)
+					return 1;
+
+				return 0;
+			}
 			break;
 
 		default:
