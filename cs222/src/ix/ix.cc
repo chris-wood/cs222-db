@@ -512,7 +512,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid)
 {
-	// Pull in the root page and then extract the header
+	// Pull in the page and then extract the header
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	RC ret = fileHandle.readPage(page, pageBuffer);
 	if (ret != rc::OK)
@@ -1187,7 +1187,7 @@ RC KeyValueData::init(AttrType type, const void* key)
 
 		case TypeVarChar:
 			memcpy(&size, key, sizeof(unsigned));
-			memcpy(&varchar, (char*)key + sizeof(unsigned), size);
+			memcpy(varchar, key, size + sizeof(unsigned));
 		break;
 
 		default:
