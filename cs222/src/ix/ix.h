@@ -26,52 +26,26 @@ struct IX_PageIndexFooter
 
 struct KeyValueData
 {
-  int size;
+	int size;
 
-  // This is a super lazy way to not have to dynamically malloc based on the size every time
-  // Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
-  union
-  {
-      int integer;
-      float real;
-  };
+	// This is a super lazy way to not have to dynamically malloc based on the size every time
+	// Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
+	union
+	{
+		int integer;
+		float real;
+		char varchar[MAX_KEY_SIZE];
+	};
 
 	RC init(AttrType type, const void* key);
 	RC compare(AttrType type, const KeyValueData& that, int& result);
 };
 
-struct VarCharKeyValueData
+struct IndexRecord
 {
-  int size;
-  char varchar[MAX_KEY_SIZE];
-  // RC init(AttrType type, const void* key);
-  // RC compare(AttrType type, const KeyValueData& that, int& result);
-};
-
-struct IndexCommonRecord
-{
-    RID nextSlot;
+	RID nextSlot;
+	RID rid; // Leaf==dataRid, Non-Leaf==pageRid
     KeyValueData key;
-};
-
-struct IndexNonLeafRecord : public IndexCommonRecord
-{
-	RID pagePointer; 
-};
-
-struct IndexLeafRecord : public IndexCommonRecord
-{
-	RID dataRid;
-};
-
-// For passing around the data of either a leaf or a nonleaf record
-struct IndexRecordOverlap
-{
-    union
-    {
-        IndexNonLeafRecord nonleaf;
-        IndexLeafRecord leaf;
-    };
 };
 
 class IX_ScanIterator;
@@ -110,12 +84,7 @@ class IndexManager : public RecordBasedCoreManager {
       IX_ScanIterator &ix_ScanIterator);
 
   static IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
-  static const std::vector<Attribute>& indexNonLeafRecordDescriptor() { return instance()->getIndexNonLeafRecordDescriptor(); }
-  static const std::vector<Attribute>& indexLeafRecordDescriptor() { return instance()->getIndexLeafRecordDescriptor(); }
-
-  const std::vector<Attribute>& getIndexNonLeafRecordDescriptor() { return _indexNonLeafRecordDescriptor; }
-  const std::vector<Attribute>& getIndexLeafRecordDescriptor() { return _indexLeafRecordDescriptor; }
-
+  static const std::vector<Attribute>& getIndexRecordDescriptor(AttrType type);
   static RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid);
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
@@ -126,10 +95,9 @@ class IndexManager : public RecordBasedCoreManager {
   virtual ~IndexManager  ();                    // Destructor
 
   RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage, PageNum leftChild);
-  RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
+  RC split(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
   RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
-  RC copyRecordsInplace(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, void* inputBuffer, void* outputBuffer, PageNum outputPageNum);
 
  private:
 	static IndexManager *_index_manager;
@@ -137,9 +105,10 @@ class IndexManager : public RecordBasedCoreManager {
 	PagedFileManager& _pfm;
 
 	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change
-	std::vector<Attribute> _indexNonLeafRecordDescriptor;
-	std::vector<Attribute> _indexLeafRecordDescriptor;
-  std::vector<Attribute> _indexVarCharLeafRecordDescriptor;
+
+	std::vector<Attribute> _indexIntRecordDescriptor;
+	std::vector<Attribute> _indexRealRecordDescriptor;
+	std::vector<Attribute> _indexVarCharRecordDescriptor;
 };
 
 class IX_ScanIterator {
