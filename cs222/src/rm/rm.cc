@@ -85,18 +85,12 @@ RC RelationManager::loadSystemTables()
     // Attempt to open the system catalog if it already exists
     _catalog[SYSTEM_TABLE_CATALOG_NAME] = TableMetaData();
     ret = _rbfm->openFile(SYSTEM_TABLE_CATALOG_NAME, _catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Attempt to open the attribute table if it exists
     _catalog[SYSTEM_TABLE_ATTRIUBE_NAME] = TableMetaData();
     ret = _rbfm->openFile(SYSTEM_TABLE_ATTRIUBE_NAME, _catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     return rc::OK;
 }
@@ -107,29 +101,17 @@ RC RelationManager::createSystemTables()
 
     // Create the system tables
     ret = createCatalogEntry(SYSTEM_TABLE_CATALOG_NAME, _systemTableRecordDescriptor);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     ret = createCatalogEntry(SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Write out entries in the system tables for the system data
     ret = insertTableMetadata(true, SYSTEM_TABLE_CATALOG_NAME, _systemTableRecordDescriptor);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     ret = insertTableMetadata(true, SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     return rc::OK;
 }
@@ -137,18 +119,12 @@ RC RelationManager::createSystemTables()
 RC RelationManager::createCatalogEntry(const string &tableName, const vector<Attribute> &attrs)
 {
     RC ret = _rbfm->createFile(tableName);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Save a file handle for the table
     _catalog[tableName] = TableMetaData();
     ret = _rbfm->openFile(tableName, _catalog[tableName].fileHandle);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Copy over the given record descriptor to local memory
     for (vector<Attribute>::const_iterator it = attrs.begin(); it != attrs.end(); ++it)
@@ -183,10 +159,7 @@ RC RelationManager::insertTableMetadata(bool isSystemTable, const string &tableN
     memcpy(newRow.tableName + sizeof(int), tableName.c_str(), tableNameLen);
 
     RC ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Store the RID of this row in the in-memory catalog for easy access
     _catalog[tableName].rowRID = _lastTableRID;
@@ -218,38 +191,26 @@ RC RelationManager::insertTableMetadata(bool isSystemTable, const string &tableN
 
         // Write out the record with the attribute data
         ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, &attrRec, attributeRID);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
+        RETURN_ON_ERR(ret);
     }
 
     // Update the row data with the pointer to its first attribute and store the RID so we have an easy way to delete later on
     newRow.firstAttribute = attributeRID;
     ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &newRow, _lastTableRID);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // If there was a previous row, we need to update its next pointer
     if (prevLastRID.pageNum > 0)
     {
         TableMetadataRow prevRow;
         ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, prevLastRID, &prevRow);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
+        RETURN_ON_ERR(ret);
 
         prevRow.nextRow.pageNum = _lastTableRID.pageNum;
         prevRow.nextRow.slotNum = _lastTableRID.slotNum;
 
         ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &prevRow, prevLastRID);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
+        RETURN_ON_ERR(ret);
     }
 
     return rc::OK;
@@ -268,16 +229,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	// Delete any existing table to create a fresh one
     _rbfm->destroyFile(tableName);
     ret = createCatalogEntry(tableName, attrs);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     ret = insertTableMetadata(false, tableName, attrs);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     return rc::OK;
 }
@@ -293,10 +248,7 @@ RC RelationManager::loadTableMetadata()
 	currentRID.slotNum = 0;
     _catalog[SYSTEM_TABLE_CATALOG_NAME].rowRID = currentRID;
     ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
     // Load in all of the system table rows
 	while (currentRID.pageNum > 0)
@@ -304,10 +256,7 @@ RC RelationManager::loadTableMetadata()
 		// Read in the next row metadata
 		memset(&currentRow, 0, sizeof(currentRow));
         ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, currentRID, &currentRow);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
         // Clear out any old data we have about this table
         const std::string tableName((char*)(currentRow.tableName + sizeof(int)));
@@ -315,19 +264,13 @@ RC RelationManager::loadTableMetadata()
 
         // Load in the attribute table data for this row
 		ret = loadTableColumnMetadata(currentRow.numAttributes, currentRow.firstAttribute, _catalog[tableName].recordDescriptor);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
         // Open a file handle for the table
         if (tableName != SYSTEM_TABLE_CATALOG_NAME && tableName != SYSTEM_TABLE_ATTRIUBE_NAME)
         {
             ret = _rbfm->openFile(tableName, _catalog[tableName].fileHandle);
-            if (ret != rc::OK)
-            {
-                return ret;
-            }
+            RETURN_ON_ERR(ret);
         }
 
 		// Store the RID in our in-memory catalog for easy access
@@ -354,10 +297,7 @@ RC RelationManager::loadTableColumnMetadata(int numAttributes, RID firstAttribut
 
 		// Read in the attribute record
         ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, currentRID, &attrRec);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Copy over the data into a regular attribute and add this attribute to the recordDescriptor 
 		Attribute attr;
@@ -390,24 +330,15 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 
 	RC ret = _rbfm->closeFile(it->second.fileHandle);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	ret = _rbfm->destroyFile(tableName);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	// Load in the row that is to be deleted
 	TableMetadataRow currentRow;
     ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	// Delete the attributes stored along with this table
 	int deletedAttributes = 0;
@@ -420,18 +351,12 @@ RC RelationManager::deleteTable(const string &tableName)
 
 		// Read in the attribute so we can continue along the chain
 		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid, &attributeBuffer);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Delete the current attribute
 		++deletedAttributes;
 		ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Determine the next attribute
 		attributeRid = attributeBuffer.nextAttribute;
@@ -442,18 +367,12 @@ RC RelationManager::deleteTable(const string &tableName)
 	{
 		TableMetadataRow prevRow;
         ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, currentRow.prevRow, &prevRow);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Previous row will point to whatever our next row is
 		prevRow.nextRow = currentRow.nextRow;
         ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &prevRow, currentRow.prevRow);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 	}
 
 	// Load in the next row, we will need to update its prev pointer
@@ -461,18 +380,12 @@ RC RelationManager::deleteTable(const string &tableName)
 	{
 		TableMetadataRow nextRow;
         ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, currentRow.nextRow, &nextRow);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Next row will point to whatever our previous row was
 		nextRow.prevRow = currentRow.prevRow;
         ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &nextRow, currentRow.nextRow);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 	}
 
 	// If this row was the last one, update our lastTableRID
@@ -483,10 +396,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	
 	// Now delete the old table record from disk
     ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
     // TODO: Delete stuff from the SYSTEM_TABLE_ATTRIBUTE_NAME table also
 

@@ -100,11 +100,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 
         // Initialize the FileHandle
         RC ret = fileHandle.loadFile(fileName, file);
-        if (ret != rc::OK)
-        {
-            // Note: we only hit this case if fseek() fails
-            return ret;
-        }
+		RETURN_ON_ERR(ret);
 
         // Mark the file as open, or increment the count if already open
         string fname = std::string(fileName);
@@ -193,12 +189,9 @@ RC FileHandle::unloadFile()
 RC FileHandle::readPage(PageNum pageNum, void *data)
 {
     RC ret = updatePageCount();
-    if (ret != rc::OK)
-    {
-        // Note: we will only his this case if fseek() fails
-        return ret;
-    }
-    else if (pageNum < _numPages)
+    RETURN_ON_ERR(ret);
+
+    if (pageNum < _numPages)
     {
         // Read the data from disk into the user buffer
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
@@ -223,12 +216,9 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
     RC ret = updatePageCount();
-    if (ret != rc::OK)
-    {
-        // Note: we will only his this case if fseek() fails
-        return ret;
-    }
-    else if (pageNum < _numPages)
+    RETURN_ON_ERR(ret);
+
+    if (pageNum < _numPages)
     {
         // Flush the content in the user buffer to disk and update the page entry
         int result = fseek(_file, PAGE_SIZE * pageNum, SEEK_SET);
@@ -275,4 +265,3 @@ unsigned FileHandle::getNumberOfPages()
     updatePageCount();
     return _numPages;
 }
-

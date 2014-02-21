@@ -1,6 +1,15 @@
 #ifndef _returncodes_h_
 #define _returncodes_h_
 
+//#define ASSERT_ON_BAD_RETURN
+
+#ifdef ASSERT_ON_BAD_RETURN
+	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {assert(false); return ret;}}
+#else
+	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {return ret;}}
+#endif
+
+
 namespace rc
 {
     enum ReturnCode

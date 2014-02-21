@@ -37,10 +37,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
     // Find the attribute index sought after by the caller
     int attrIndex = 1; // offset by 1 to start to skip over the #attributes slot in the record header
@@ -191,10 +188,7 @@ RC RecordBasedFileManager::reorganizeBufferedPage(FileHandle &fileHandle, const 
 
         // Push the changes to disk
         ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
+        RETURN_ON_ERR(ret);
     }
     else
     {
@@ -209,10 +203,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(pageNumber, pageBuffer);
-    if (ret != rc::OK)
-    {
-        return ret;
-    }
+    RETURN_ON_ERR(ret);
 
 	return reorganizeBufferedPage(fileHandle, recordDescriptor, pageNumber, pageBuffer);
 }
@@ -221,10 +212,7 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 {
 	PFHeader header;
 	RC ret = readHeader(fileHandle, &header);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	std::vector< int > freespace;
@@ -234,10 +222,7 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 	for (unsigned page=0; page<header.numPages; ++page)
 	{
 		fileHandle.readPage(page, pageBuffer);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		// Reorganize the page to 
 		reorganizeBufferedPage(fileHandle, recordDescriptor, page, pageBuffer);
@@ -282,10 +267,7 @@ RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageN
 
 	PFHeader header;
 	RC ret = readHeader(fileHandle, &header);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	if (pageNum > header.numPages)
 	{
@@ -294,10 +276,7 @@ RC RecordBasedFileManager::freespaceOnPage(FileHandle& fileHandle, PageNum pageN
 
 	char pageBuffer[PAGE_SIZE] = {0};
 	ret = fileHandle.readPage(pageNum, pageBuffer);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
     RBFM_PageIndexFooter *pageIndexFooter = getRBFMPageIndexFooter(pageBuffer);
 	freespace = calculateFreespace(pageIndexFooter->freeSpaceOffset, pageIndexFooter->numSlots);
@@ -328,10 +307,7 @@ RC RBFM_ScanIterator::init(FileHandle& fileHandle, const vector<Attribute> &reco
 	if (compOp != NO_OP)
 	{
 		findAttributeByName(recordDescriptor, conditionAttributeString, _conditionAttributeIndex);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 	}
 
 	// Save data we will need for future comparasion operations
@@ -352,10 +328,7 @@ RC RBFM_ScanIterator::init(FileHandle& fileHandle, const vector<Attribute> &reco
 	{
 		unsigned index;
 		ret = findAttributeByName(recordDescriptor, *it, index);
-		if (ret != rc::OK)
-		{
-			return ret;
-		}
+		RETURN_ON_ERR(ret);
 
 		_returnAttributeIndices.push_back(index);
 		_returnAttributeTypes.push_back( recordDescriptor[index].type );
@@ -415,10 +388,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	char pageBuffer[PAGE_SIZE] = {0};
 	PageNum loadedPage = _nextRid.pageNum;
     RC ret = _fileHandle->readPage(loadedPage, pageBuffer);
-	if (ret != rc::OK)
-	{
-		return ret;
-	}
+	RETURN_ON_ERR(ret);
 
 	// Pull in the header preemptively
     RBFM_PageIndexFooter* pageFooter = (RBFM_PageIndexFooter*)RecordBasedCoreManager::getPageIndexFooter(pageBuffer, sizeof(RBFM_PageIndexFooter));
@@ -436,10 +406,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 		{
 			loadedPage = _nextRid.pageNum;
             ret = _fileHandle->readPage(loadedPage, pageBuffer);
-			if (ret != rc::OK)
-			{
-				return ret;
-			}
+			RETURN_ON_ERR(ret);
 		}
 
 		// Attempt to read in the next record
@@ -458,10 +425,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
             while (slot->nextPage > 0 || slot->nextSlot > 0) // walk the forward pointers
             {
                 ret = _fileHandle->readPage(slot->nextPage, tempPageBuffer);
-                if (ret != rc::OK)
-                {
-                    return ret;
-                }
+				RETURN_ON_ERR(ret);
 
                 slot = RecordBasedCoreManager::getPageIndexSlot(tempPageBuffer, slot->nextSlot, sizeof(RBFM_PageIndexFooter));
                 memcpy(pageBuffer, tempPageBuffer, PAGE_SIZE);
