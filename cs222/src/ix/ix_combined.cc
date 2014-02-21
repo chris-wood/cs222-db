@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 
+#include <assert.h>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -29,10 +30,11 @@ int main()
     g_nGradExtraPoint = 0;
     g_nUndergradPoint = 0;
     g_nUndergradExtraPoint = 0;
+
+	testCustom();
+
     test1();
     test2();
-
-    testCustom();
 
     cout << "\n\ngrad-point: " << g_nGradPoint << "\ngrad-extra-point: " << g_nGradExtraPoint << endl;
     return 0;
@@ -2148,7 +2150,91 @@ void test2()
     return;
 }
 
+void testSinglePageEntries(const int numEntries)
+{
+	const string filename = "testStringIndex_SinglePage";
+	Attribute attr;
+	attr.length = 2000;
+	attr.name = "StringValue";
+	attr.type = TypeVarChar;
+
+    RC ret;
+    FileHandle fileHandle;
+
+	std::cout << "Testing: " << filename << "..." << std::endl;
+	indexManager->destroyFile(filename);
+    ret = indexManager->createFile(filename);
+	assert(ret == success);
+
+    ret = indexManager->openFile(filename, fileHandle);
+    assert(ret == success);
+
+	std::cout << " Inserting some small keys" << std::endl;
+	char stringBuffer[2004] = {0};
+	char* c = stringBuffer + 4;
+	int strlen = 1;
+	RID rid;
+	for (int i=0; i<numEntries; ++i)
+	{
+		rid.pageNum = 99999;
+		rid.slotNum = i;
+		*c = 'a' + i;
+		memcpy(stringBuffer, &strlen, sizeof(strlen));
+
+		ret = indexManager->insertEntry(fileHandle, attr, stringBuffer, rid);
+		assert(ret == success);
+	}
+
+	std::cout << " Delete half of the keys (the even ones)" << std::endl;
+	for (int i=0; i<numEntries; i+=2)
+	{
+		rid.pageNum = 99999;
+		rid.slotNum = i;
+		*c = 'a' + i;
+		memcpy(stringBuffer, &strlen, sizeof(strlen));
+
+		ret = indexManager->deleteEntry(fileHandle, attr, stringBuffer, rid);
+	}
+
+	std::cout << " Initializing iterator" << std::endl;
+	IX_ScanIterator iter;
+	ret = indexManager->scan(fileHandle, attr, NULL, NULL, true, true, iter);
+	assert(ret == success);
+
+	std::cout << " Scanning through the keys to verify they're correct" << std::endl;
+	RID scannedRid;
+	char stringCompareBuffer[2004] = {0};
+	for (int i=1; i<numEntries; i+=2)
+	{
+		rid.pageNum = 99999;
+		rid.slotNum = i;
+		*c = 'a' + i;
+		memcpy(stringBuffer, &strlen, sizeof(strlen));
+
+		ret = iter.getNextEntry(scannedRid, stringCompareBuffer);
+		assert(ret == success);
+
+		assert (rid.pageNum == scannedRid.pageNum);
+		assert (rid.slotNum == scannedRid.slotNum);
+		
+		int* expectedSize = (int*)stringBuffer;
+		int* resultingSize = (int*)stringCompareBuffer;
+		
+		assert(*expectedSize == *resultingSize);
+		assert(strncmp(stringBuffer+4, stringCompareBuffer+4, *expectedSize)==0);
+	}
+
+	std::cout << " Checking that iterator is done, and can close" << std::endl;
+	ret = iter.getNextEntry(scannedRid, stringCompareBuffer);
+	assert(ret != success);
+
+	ret = iter.close();
+	assert(ret == success);
+
+	std::cout << " basic test on string keys passed!" << std::endl;
+}
+
 void testCustom()
 {
-    std::cout << "No custom tests yet" << std::endl;
+    testSinglePageEntries(3);
 }
