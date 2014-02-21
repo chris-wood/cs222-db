@@ -1071,7 +1071,7 @@ IX_ScanIterator::~IX_ScanIterator()
 
 RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
 {
-	if (!fileHandle)
+	if (!fileHandle || !fileHandle->hasFile())
 		return rc::FILE_HANDLE_NOT_INITIALIZED;
 
 	if (attribute.length == 0)
