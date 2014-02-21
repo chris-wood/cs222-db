@@ -11,32 +11,41 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IX_PageIndexFooter : public CorePageIndexFooter
+struct IX_PageIndexFooter 
 {
+  CorePageIndexFooter core;
 	bool isLeafPage;
 	RID firstRecord;
 
 	// Tree pointers
 	PageNum parent;
 	PageNum nextLeafPage; // ignored by non-leaf pages
+  // PageNum rightChild;
   PageNum leftChild;
 };
 
 struct KeyValueData
 {
-    int size;
+  int size;
 
-    // This is a super lazy way to not have to dynamically malloc based on the size every time
-    // Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
-    union
-    {
-        int integer;
-        float real;
-        char varchar[MAX_KEY_SIZE];
-    };
+  // This is a super lazy way to not have to dynamically malloc based on the size every time
+  // Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
+  union
+  {
+      int integer;
+      float real;
+  };
 
 	RC init(AttrType type, const void* key);
 	RC compare(AttrType type, const KeyValueData& that, int& result);
+};
+
+struct VarCharKeyValueData
+{
+  int size;
+  char varchar[MAX_KEY_SIZE];
+  // RC init(AttrType type, const void* key);
+  // RC compare(AttrType type, const KeyValueData& that, int& result);
 };
 
 struct IndexCommonRecord
@@ -74,7 +83,7 @@ class IndexManager : public RecordBasedCoreManager {
   virtual RC createFile(const string &fileName);
 
 	// From RecordBasedCoreManager
-	virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
+	// virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 	virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data);
 	virtual RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
 
@@ -116,7 +125,7 @@ class IndexManager : public RecordBasedCoreManager {
   IndexManager   ();                            // Constructor
   virtual ~IndexManager  ();                    // Destructor
 
-  RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage);
+  RC newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage, PageNum leftChild);
   RC split(FileHandle& fileHandle, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey);
   RC insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
   RC insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Attribute &attribute, KeyValueData keyData, RID rid);
@@ -130,6 +139,7 @@ class IndexManager : public RecordBasedCoreManager {
 	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change
 	std::vector<Attribute> _indexNonLeafRecordDescriptor;
 	std::vector<Attribute> _indexLeafRecordDescriptor;
+  std::vector<Attribute> _indexVarCharLeafRecordDescriptor;
 };
 
 class IX_ScanIterator {
