@@ -660,6 +660,26 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	return rc::OK;
 }
 
+RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
+{
+    // Begin at the root
+    char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(1, pageBuffer);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
+
+    IX_PageIndexFooter* footer = IndexManager::getIXPageIndexFooter(pageBuffer);
+
+    // Traverse down to the rightmost leaf
+    while(!footer->isLeafPage)
+    {
+        // Iterate through records to find the last one on this page
+
+    }
+}
+
 RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
 {
 	// Begin at the root
