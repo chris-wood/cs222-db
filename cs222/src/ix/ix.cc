@@ -259,8 +259,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				{
 					return ret;
 				}
-
-				assert(false);
 			}
 
 			// Insert the right child into the parent of the left
@@ -1216,10 +1214,10 @@ RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
 				result = 1;
 			break;
 
-		// case TypeVarChar:
-		// 	// TODO: Handle "AAA" vs "AAAAA" where only lengths are unequal
-		// 	result = strncmp(varchar, that.varchar, size);
-		// 	break;
+		case TypeVarChar:
+			// TODO: Handle "AAA" vs "AAAAA" where only lengths are unequal
+			result = strncmp(varchar, that.varchar, size);
+			break;
 
 		default:
 			return rc::ATTRIBUTE_INVALID_TYPE;
