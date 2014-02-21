@@ -246,7 +246,8 @@ RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vect
     }
 
     // Update the position of this page in the freespace lists, if necessary
-    ret = movePageToCorrectFreeSpaceList(fileHandle, getCorePageIndexFooter(pageBuffer));
+    CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+    ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
     if (ret != rc::OK)
     {
         return ret;
@@ -588,6 +589,7 @@ RC RecordBasedCoreManager::updateRecord(FileHandle &fileHandle, const vector<Att
         if (rid.slotNum == realFooter->numSlots - 1)
         {
             realFooter->freeSpaceOffset = realSlot->pageOffset + recLength;    
+            memcpy(pageBuffer + PAGE_SIZE - sizeof(CorePageIndexFooter), realFooter, sizeof(CorePageIndexFooter));
         }
         realSlot->size = recLength;
 
