@@ -145,15 +145,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
-	PageNum nextPage = _rootPageNum;
+	PageNum insertDestination = _rootPageNum;
 	while (footer->isLeafPage == false)
 	{
-		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
+		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
 		RETURN_ON_ERR(ret);
 
 		// Pull the designated page into memory and refresh the footer
 		memset(pageBuffer, 0, PAGE_SIZE);
-		ret = fileHandle.readPage(nextPage, pageBuffer);
+		ret = fileHandle.readPage(insertDestination, pageBuffer);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -163,7 +163,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	ret = insertIntoLeaf(fileHandle, nextPage, attribute, keyData, rid);
+	ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 	if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 	{
 		RETURN_ON_ERR(ret);
@@ -171,6 +171,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	}
 	else
 	{
+		bool needsToInsert = ret != rc::OK;
+		PageNum nextPage = insertDestination;
+		insertDestination = 0;
+
+		// TODO: Verify cascading works
 		while (ret == rc::BTREE_INDEX_PAGE_FULL)
 		{
 			// Split the page (no difference between leaves and non-leaves)
@@ -181,6 +186,12 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			RID rightRid;
 			ret = split(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
 			RETURN_ON_ERR(ret);
+
+			// Our first split will tell us where to put or original value
+			if (insertDestination == 0)
+			{
+				insertDestination = rightRid.pageNum;
+			}
 
 			// Check to see if we need to grow by one level, and if so, add a new page with enough space to 
 			// hold the new index entry
@@ -234,6 +245,13 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				RETURN_ON_ERR(ret);
 			}
 			nextPage = parent;
+		}
+
+		// Don't forget to insert the actual item we were trying to insert in the first place!
+		if (needsToInsert)
+		{
+			ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
+			RETURN_ON_ERR(ret);
 		}
 	}
 	
