@@ -483,15 +483,32 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
+	// Set up the leaf data struct
+	IndexRecord leaf;
+	leaf.rid = rid;
+	leaf.nextSlot.pageNum = 0;
+	leaf.nextSlot.slotNum = 0;
+	leaf.key = keyData;
+
+	// Compute the record length
+	unsigned recLength = 0;
+	unsigned recHeaderSize = 0;
+	unsigned* recHeader = NULL;
+	ret = generateRecordHeader(recordDescriptor, &leaf, recHeader, recLength, recHeaderSize);
+
+	// Determine if we can fit on this page
+	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
+	if (recLength > targetFreeSpace)
+	{
+		if (footer->numSlots == 0)
+			return rc::BTREE_KEY_TOO_LARGE;
+
+		return rc::BTREE_INDEX_PAGE_FULL;
+	}
+
 	// Special case if the leaf is empty
 	if (footer->numSlots == 0)
 	{
-		IndexRecord leaf;
-		leaf.rid = rid;
-		leaf.nextSlot.pageNum = 0;
-		leaf.nextSlot.slotNum = 0;
-		leaf.key = keyData;
-
 		// Insert the new record into the root
 		RID newEntry;
 		ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
@@ -517,111 +534,90 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	}
 	else
 	{
-		IndexRecord leaf;
-		leaf.rid = rid;
-		leaf.nextSlot.pageNum = 0;
-		leaf.nextSlot.slotNum = 0;
-		leaf.key = keyData;
+		bool found = false;
+		bool atEnd = false;
+		RID currRid = footer->firstRecord;
+		RID prevRid;
+		RID targetPrevRid;
+		RID targetRid;
+		IndexRecord targetPrevEntry;
+		IndexRecord targetEntry;
+		IndexRecord currEntry;
+		IndexRecord prevEntry;
 
-		// Compute the record length
-		unsigned recLength = 0;
-	    unsigned recHeaderSize = 0;
-	    unsigned* recHeader = NULL;
-	    ret = generateRecordHeader(recordDescriptor, &leaf, recHeader, recLength, recHeaderSize);
-
-		// Determine if we can fit on this page
-		unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
-		if (recLength > targetFreeSpace)
+		int index = 0;
+		int target = 0;
+		while (currRid.pageNum > 0) // second condition implies the end of the chain
 		{
-			return rc::BTREE_INDEX_PAGE_FULL;
-		}
-		else // if we can fit, find the spot in the list where the new record will go
-		{
-			bool found = false;
-			bool atEnd = false;
-			RID currRid = footer->firstRecord;
-			RID prevRid;
-			RID targetPrevRid;
-			RID targetRid;
-			IndexRecord targetPrevEntry;
-			IndexRecord targetEntry;
-			IndexRecord currEntry;
-			IndexRecord prevEntry;
+			// Pull in the next entry
+			ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
+			RETURN_ON_ERR(ret);
 
-			int index = 0;
-			int target = 0;
-			while (currRid.pageNum > 0) // second condition implies the end of the chain
+			int compareResult = 0;
+			ret = keyData.compare(attribute.type, currEntry.key, compareResult);
+			RETURN_ON_ERR(ret);
+
+            if (compareResult >= 0)
 			{
-				// Pull in the next entry
-				ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
-				RETURN_ON_ERR(ret);
-
-				int compareResult = 0;
-				ret = keyData.compare(attribute.type, currEntry.key, compareResult);
-				RETURN_ON_ERR(ret);
-
-                if (compareResult >= 0)
-				{
-					target = index;
-					targetPrevRid = prevRid;
-					targetRid = currRid;
-					targetEntry = currEntry;
-					targetPrevEntry = prevEntry;
-				}
-				index++;
+				target = index;
+				targetPrevRid = prevRid;
+				targetRid = currRid;
+				targetEntry = currEntry;
+				targetPrevEntry = prevEntry;
+			}
+			index++;
 				
-				// prevRid = targetRid;
-				// prevEntry = currEntry;
-				// currRid = currEntry.nextSlot;
+			// prevRid = targetRid;
+			// prevEntry = currEntry;
+			// currRid = currEntry.nextSlot;
                 
-                // Update for next iteration
-                prevRid = currRid;
-                prevEntry = currEntry;
-                currRid = currEntry.nextSlot;
+            // Update for next iteration
+            prevRid = currRid;
+            prevEntry = currEntry;
+            currRid = currEntry.nextSlot;
 
-    //             // Check to see if we reached the end of the list
-    //             if (currEntry.nextSlot.pageNum == 0)
-				// {
-    //                 atEnd = true;
-    //                 found = true;
-				// }
-			}
+//             // Check to see if we reached the end of the list
+//             if (currEntry.nextSlot.pageNum == 0)
+			// {
+//                 atEnd = true;
+//                 found = true;
+			// }
+		}
 
-			// Drop the record into the right spot in the on-page list
-			atEnd = (target + 1) == footer->numSlots;
-			if (!atEnd) // start or middle of list
-			{
-				// Insert the new record into the root, and make it point to the current RID
-				leaf.nextSlot = targetRid;
-				RID newEntry;
-				ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
-				RETURN_ON_ERR(ret);
+		// Drop the record into the right spot in the on-page list
+		atEnd = (target + 1) == footer->numSlots;
+		if (!atEnd) // start or middle of list
+		{
+			// Insert the new record into the root, and make it point to the current RID
+			leaf.nextSlot = targetRid;
+			RID newEntry;
+			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
+			RETURN_ON_ERR(ret);
 
-				// Update the previous entry to point to the new entry (it's in the middle now)
-				targetPrevEntry.nextSlot = newEntry;
-				ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
-				RETURN_ON_ERR(ret);
-			}
-			else // append the RID to the end of the on-page list 
-			{
-				// Insert the new record into the root
-				RID newEntry;
-				ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
-				RETURN_ON_ERR(ret);
+			// Update the previous entry to point to the new entry (it's in the middle now)
+			targetPrevEntry.nextSlot = newEntry;
+			ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
+			RETURN_ON_ERR(ret);
+		}
+		else // append the RID to the end of the on-page list 
+		{
+			// Insert the new record into the root
+			RID newEntry;
+			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
+			RETURN_ON_ERR(ret);
 
-				// ret = fileHandle.writePage(page, pageBuffer);
-				// RETURN_ON_ERR(ret);
-
-				// Update the previous entry to point to the new entry
-				targetEntry.nextSlot = newEntry;
-				ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
-				RETURN_ON_ERR(ret);
-			}
-
-			// Write the new page information to disk
 			// ret = fileHandle.writePage(page, pageBuffer);
 			// RETURN_ON_ERR(ret);
+
+			// Update the previous entry to point to the new entry
+			targetEntry.nextSlot = newEntry;
+			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
+			RETURN_ON_ERR(ret);
 		}
+
+		// Write the new page information to disk
+		// ret = fileHandle.writePage(page, pageBuffer);
+		// RETURN_ON_ERR(ret);
 	}
 
 	return rc::OK;
