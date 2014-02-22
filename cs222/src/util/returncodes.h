@@ -1,10 +1,13 @@
 #ifndef _returncodes_h_
 #define _returncodes_h_
 
-//#define ASSERT_ON_BAD_RETURN
+#include <iostream>
+using namespace std;
+
+#define ASSERT_ON_BAD_RETURN
 
 #ifdef ASSERT_ON_BAD_RETURN
-	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {assert(false); return ret;}}
+	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {cout << rc::rcToString(ret) << endl; assert(false); return ret;}}
 #else
 	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {return ret;}}
 #endif

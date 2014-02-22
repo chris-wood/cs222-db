@@ -45,7 +45,7 @@ struct IndexRecord
 {
 	RID nextSlot;
 	RID rid; // Leaf==dataRid, Non-Leaf==pageRid
-    KeyValueData key;
+  KeyValueData key;
 };
 
 class IX_ScanIterator;
@@ -104,7 +104,7 @@ class IndexManager : public RecordBasedCoreManager {
 	
 	PagedFileManager& _pfm;
 
-	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change
+	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change ---- Yes, most definitely
 
 	std::vector<Attribute> _indexIntRecordDescriptor;
 	std::vector<Attribute> _indexRealRecordDescriptor;

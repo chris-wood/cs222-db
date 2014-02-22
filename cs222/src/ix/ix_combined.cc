@@ -2156,7 +2156,8 @@ void testSinglePageEntries(const int numEntries)
 	Attribute attr;
 	attr.length = 2000;
 	attr.name = "StringValue";
-	attr.type = TypeVarChar;
+	// attr.type = TypeVarChar;
+    attr.type = TypeInt;
 
     RC ret;
     FileHandle fileHandle;
@@ -2181,7 +2182,8 @@ void testSinglePageEntries(const int numEntries)
 		*c = 'a' + i;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
-		ret = indexManager->insertEntry(fileHandle, attr, stringBuffer, rid);
+        std::cout << "INSERTING: " << i << std::endl;
+		ret = indexManager->insertEntry(fileHandle, attr, &i, rid);
 		assert(ret == success);
 	}
 
@@ -2193,7 +2195,8 @@ void testSinglePageEntries(const int numEntries)
 		*c = 'a' + i;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
-		ret = indexManager->deleteEntry(fileHandle, attr, stringBuffer, rid);
+        cout << "DELETING: " << i << endl;
+		ret = indexManager->deleteEntry(fileHandle, attr, &i, rid);
 	}
 
 	std::cout << " Initializing iterator" << std::endl;
@@ -2211,6 +2214,7 @@ void testSinglePageEntries(const int numEntries)
 		*c = 'a' + i;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
+        std::cout << "testing " << i << std::endl;
 		ret = iter.getNextEntry(scannedRid, stringCompareBuffer);
 		assert(ret == success);
 
@@ -2236,5 +2240,5 @@ void testSinglePageEntries(const int numEntries)
 
 void testCustom()
 {
-    testSinglePageEntries(3);
+    testSinglePageEntries(250);
 }
