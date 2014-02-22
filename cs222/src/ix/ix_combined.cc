@@ -2264,23 +2264,23 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	ret = indexManager->destroyFile(filename);
     assert(ret == success);
 
-	std::cout << " basic test on string keys passed!" << std::endl;
+	// std::cout << " basic test on string keys passed!" << std::endl;
 }
 
 void testCustom()
 {
-	std::cout << "====Testing single insert/delete on integers====" << std::endl;
-    testSimpleAddDeleteIndex(50, false);
-	std::cout << "====Testing single insert/delete on strings====" << std::endl;
-	//testSimpleAddDeleteIndex(50, true);
+	// std::cout << "====Testing single insert/delete on integers====" << std::endl;
+ //    testSimpleAddDeleteIndex(50, false);
+	// std::cout << "====Testing single insert/delete on strings====" << std::endl;
+	// testSimpleAddDeleteIndex(50, true);
 
-	std::cout << "====Testing single split insert/delete on integers====" << std::endl;
-    testSimpleAddDeleteIndex(75, false);
-	std::cout << "====Testing single split insert/delete on strings====" << std::endl;
-	//testSimpleAddDeleteIndex(75, true);
+	// std::cout << "====Testing single split insert/delete on integers====" << std::endl;
+ //    testSimpleAddDeleteIndex(75, false);
+	// std::cout << "====Testing single split insert/delete on strings====" << std::endl;
+	// testSimpleAddDeleteIndex(75, true);
 
-	std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
-    testSimpleAddDeleteIndex(250, false);
+	// std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
+    // testSimpleAddDeleteIndex(10000, false);
 	std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
-	//testSimpleAddDeleteIndex(250, true);
+	testSimpleAddDeleteIndex(250, true);
 }
