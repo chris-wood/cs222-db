@@ -631,7 +631,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum)
 {
 	RID targetRid;
-	int compareResult = -1;
+	int compareResult = 1;
 
 	// Extract the first record
 	RID currRid = footer->firstRecord;
@@ -645,9 +645,11 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 	RETURN_ON_ERR(ret);
 
-	// cout << "insert,compare = " << currEntry.key.varchar << "," << key->varchar << endl;
-	ret = key->compare(attribute.type, currEntry.key, compareResult);
-	RETURN_ON_ERR(ret);
+	if (key)
+	{
+		ret = key->compare(attribute.type, currEntry.key, compareResult);
+		RETURN_ON_ERR(ret);
+	}
 
 	if (compareResult < 0)
 	{
@@ -663,8 +665,11 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 			RETURN_ON_ERR(ret);
 
-			ret = key->compare(attribute.type, currEntry.key, compareResult);
-			RETURN_ON_ERR(ret);
+			if (key)
+			{
+				ret = key->compare(attribute.type, currEntry.key, compareResult);
+				RETURN_ON_ERR(ret);
+			}
 
 			if (compareResult >= 0)
 			{
@@ -681,23 +686,59 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	return rc::OK;
 }
 
-RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
+RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid)
 {
-    // Begin at the root
-    char pageBuffer[PAGE_SIZE] = {0};
-    RC ret = fileHandle.readPage(1, pageBuffer);
-    RETURN_ON_ERR(ret);
+	// Pull in the root page
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(1, pageBuffer); // TODO: Look for root page
+	RETURN_ON_ERR(ret);
 
-    IX_PageIndexFooter* footer = IndexManager::getIXPageIndexFooter(pageBuffer);
+	// Extract the header
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
-    // Traverse down to the rightmost leaf
-    while(!footer->isLeafPage)
-    {
-        // Iterate through records to find the last one on this page
+	// Extract the first record
+	RID currRid = footer->firstRecord;
+	IndexRecord currEntry;
 
-    }
+	// Determine what type of record descriptor we need
+	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	// Traverse down the tree to the rightmost leaf, using non-leaves along the way
+	PageNum currentPage = 1;
+	while (footer->isLeafPage == false)
+	{
+		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, NULL, currentPage);
+		RETURN_ON_ERR(ret);
+
+		// Pull the designated page into memory and refresh the footer
+		memset(pageBuffer, 0, PAGE_SIZE);
+		ret = fileHandle.readPage(currentPage, pageBuffer);
+		RETURN_ON_ERR(ret);
+	}
+
+	// We're at a leaf now...
+	assert(footer->isLeafPage);
+
+	// Find the largest record on this leaf
+	currRid = footer->firstRecord;
+	RID largestRid = currRid;
+
+	while(currRid.pageNum != 0)
+	{
+		largestRid = currRid;
+
+		// Pull in the record
+		RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
+		RETURN_ON_ERR(ret);
+
+		// Advance to the next record
+		currRid = currEntry.nextSlot;
+	}
+
+	// Return the largest record we found
+	rid = largestRid;
+
+	return rc::OK;
 }
 
 RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
@@ -741,6 +782,17 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 {
 	RID nextEntryRid;
 	RID prevEntryRid;
+	return findLeafIndexEntry(fileHandle, footer, attribute, key, entryRid, prevEntryRid, nextEntryRid, dataRid);
+}
+
+RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid)
+{
+	// Begin at the root
+	char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(1, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	IX_PageIndexFooter* footer = IndexManager::getIXPageIndexFooter(pageBuffer);
 	return findLeafIndexEntry(fileHandle, footer, attribute, key, entryRid, prevEntryRid, nextEntryRid, dataRid);
 }
 
@@ -1034,20 +1086,43 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	// Copy over the key values to local memory
 	if (lowKey)
 	{
-		ret = Attribute::allocateValue(attribute.type, lowKey, &_lowKeyValue);
-		if (ret != rc::OK)
-		{
-			if (_lowKeyValue)
+		if (_lowKeyValue)
 				free(_lowKeyValue);
 
-			_lowKeyValue = NULL;
+		_lowKeyValue = new KeyValueData();
+		if (!_lowKeyValue)
+		{
+			return rc::OUT_OF_MEMORY;
+		}
 
+		// Copy over the key that we will be comparing against on the low end
+		ret = _lowKeyValue->init(attribute.type, lowKey);
+		if (ret != rc::OK)
+		{
+			free(_lowKeyValue);
+			_lowKeyValue = NULL;
 			RETURN_ON_ERR(ret);
 			assert(false);
 		}
 
-		// TODO: Iterate through RIDs until we find something matching the _lowKeyValue
-		_beginRecordRid = lowestPossibleRid;
+		// Look for something that matches our low end
+		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
+		ret = IndexManager::findLeafIndexEntry(*fileHandle, attribute, _lowKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
+		RETURN_ON_ERR(ret);
+
+		if (entryRid.pageNum == 0)
+		{
+			// TODO: When is this true?
+			_beginRecordRid = lowestPossibleRid;
+		}
+		else if (_lowKeyInclusive)
+		{
+			_beginRecordRid = entryRid;
+		}
+		else
+		{
+			_beginRecordRid = nextEntryRid;
+		}
 	}
 	else
 	{
@@ -1060,20 +1135,39 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 	if (highKey)
 	{
-		RC ret = Attribute::allocateValue(attribute.type, highKey, &_highKeyValue);
-		if (ret != rc::OK)
-		{
-			if (_highKeyValue)
+		if (_highKeyValue)
 				free(_highKeyValue);
 
+		_highKeyValue = new KeyValueData();
+		if (!_highKeyValue)
+		{
+			return rc::OUT_OF_MEMORY;
+		}
+
+		ret = _highKeyValue->init(attribute.type, highKey);
+		if (ret != rc::OK)
+		{
+			free(_highKeyValue);
 			_highKeyValue = NULL;
-			
 			RETURN_ON_ERR(ret);
 			assert(false);
 		}
 
-		// TODO: Iterate through RIDs until we find something matching _highKeyValue
-		_endRecordRid = lowestPossibleRid;
+		// Look for something that matches our high end
+		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
+		ret = IndexManager::findLeafIndexEntry(*fileHandle, attribute, _highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
+		RETURN_ON_ERR(ret);
+
+		if (entryRid.pageNum == 0)
+		{
+			// TODO: When is this true?
+			ret = IndexManager::findLargestLeafIndexEntry(*fileHandle, attribute, _endRecordRid);
+			RETURN_ON_ERR(ret);
+		}
+		else
+		{
+			_endRecordRid = entryRid;
+		}
 	}
 	else
 	{
@@ -1081,8 +1175,8 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			free(_highKeyValue);
 
 		_highKeyValue = NULL;
-		// TODO: Iterate through RIDs until we find the largest
-		_endRecordRid = lowestPossibleRid;
+		ret = IndexManager::findLargestLeafIndexEntry(*fileHandle, attribute, _endRecordRid);
+		RETURN_ON_ERR(ret);
 	}
 
 	// Start at the beginning RID (keep track of beginRecordRid just for debug purposes for now)

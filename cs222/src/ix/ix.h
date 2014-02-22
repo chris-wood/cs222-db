@@ -85,10 +85,11 @@ class IndexManager : public RecordBasedCoreManager {
   static IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
   static const std::vector<Attribute>& getIndexRecordDescriptor(AttrType type);
   static RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
+  static RC findLeafIndexEntry(FileHandle& fileHandle, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& dataRid);
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
-  static RC findLargestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
+  static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
 
  protected:
   IndexManager   ();                            // Constructor
@@ -126,8 +127,8 @@ private:
 
 	FileHandle* _fileHandle;
 	Attribute _attribute;
-	void* _lowKeyValue;
-	void* _highKeyValue;
+	KeyValueData* _lowKeyValue;
+	KeyValueData* _highKeyValue;
 	bool _lowKeyInclusive;
 	bool _highKeyInclusive;
 	
