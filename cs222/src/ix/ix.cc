@@ -589,7 +589,6 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	// Extract the first record
 	RID currRid = footer->firstRecord;
 	IndexRecord currEntry;
-	IndexRecord prevEntry;
 
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
@@ -609,7 +608,6 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	else
 	{
 		// Traverse the list of index entries on this non-leaf page
-		int index = 0;
 		while (currRid.pageNum > 0)
 		{
 			// Pull in the new entry and perform the comparison
@@ -622,21 +620,10 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			if (compareResult >= 0)
 			{
 				targetRid = currEntry.rid;
-				break;
 			}
-			index++;
 			
-			prevEntry = currEntry;
 			currRid = currEntry.nextSlot;
 		}
-
-		// Check to see if we traverse the list entirely, in which case the last index entry 
-		// contains the page pointer to which we point
-		// TODO: Not sure about this
-		//if (currRid.pageNum == 0)
-		//{
-			//targetRid = prevEntry.rid;
-		//}
 
 		// Save the result and return OK
 		pageNum = targetRid.pageNum;
@@ -770,8 +757,6 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 
 RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey)
 {
-	std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
-
 	// Read in the page to be split
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	RC ret = fileHandle.readPage(targetPageNum, pageBuffer);
@@ -785,6 +770,8 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	newPageNum = fileHandle.getNumberOfPages();
 	ret = newPage(fileHandle, newPageNum, targetFooter->isLeafPage, targetFooter->nextLeafPage, 0);
 	RETURN_ON_ERR(ret);
+
+	std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
 
 	// Update the nextLeaf pointer if needed
 	if (targetFooter->isLeafPage)
@@ -818,7 +805,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		currRid = tempRecord.nextSlot;
 
 		std::cout << " Keep on LEFT: ";
-		tempRecord.key.print(TypeVarChar);
+		tempRecord.key.print(TypeInt);
 		std::cout << std::endl;
 	}
 
@@ -829,7 +816,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 
 	std::cout << " Break connection on LEFT: ";
-		tempRecord.key.print(TypeVarChar);
+		tempRecord.key.print(TypeInt);
 		std::cout << std::endl;
 
 	tempRecord.nextSlot.pageNum = 0;
@@ -843,6 +830,10 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		// Load in the entry
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
+
+		std::cout << " LEAF split, so RIGHT will have a leftChild = ";
+		tempRecord.key.print(TypeInt);
+		std::cout << std::endl;
 
 		// and delete it from the initial page
 		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, prevRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
@@ -861,7 +852,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	RETURN_ON_ERR(ret);
 
 	std::cout << " Break connection on RIGHT: ";
-		rightKey.print(TypeVarChar);
+		rightKey.print(TypeInt);
 		std::cout << std::endl;
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
@@ -900,7 +891,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RETURN_ON_ERR(ret);
 
 		std::cout << " Put on RIGHT: ";
-		tempRecord.key.print(TypeVarChar);
+		tempRecord.key.print(TypeInt);
 		std::cout << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
 	}
 
