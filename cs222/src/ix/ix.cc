@@ -1120,6 +1120,7 @@ RC KeyValueData::init(AttrType type, const void* key)
 			break;
 
 		case TypeVarChar:
+			size = *((unsigned*)(key));
 			memcpy(&size, key, sizeof(unsigned));
 			memcpy(varchar, key, size + sizeof(unsigned));
 		break;
