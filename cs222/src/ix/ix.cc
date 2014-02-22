@@ -909,22 +909,39 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
+	RID nextSlot;
+	nextSlot.pageNum = newPageNum;
+	nextSlot.slotNum = 0;
 	for (; i < targetFooter->numSlots; i++)
 	{
 		// Move the entry over to the new page
 		RID newEntry;
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
-		ret = insertRecordInplace(recordDescriptor, &tempRecord, newPageNum, newPageBuffer, newEntry);
-		RETURN_ON_ERR(ret);
-
-		std::cout << "Put on on page1: " << tempRecord.key.integer << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
 
 		// Delete the entry from the old page
 		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
 		RETURN_ON_ERR(ret);
 
+		// Advance to the next record to read
 		currRid = tempRecord.nextSlot;
+
+		// We know what the slot numbers will be because the page is empty
+		if (i == targetFooter->numSlots - 1)
+		{
+			nextSlot.slotNum = 0;
+		}
+		else
+		{
+			nextSlot.slotNum++;
+		}
+		
+		// Insert key into the right page
+		tempRecord.nextSlot = nextSlot;
+		ret = insertRecordInplace(recordDescriptor, &tempRecord, newPageNum, newPageBuffer, newEntry);
+		RETURN_ON_ERR(ret);
+
+		std::cout << "Put on on page1: " << tempRecord.key.integer << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
 	}
 
 	// Write out the new page buffers
