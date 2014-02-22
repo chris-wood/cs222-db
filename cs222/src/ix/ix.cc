@@ -340,9 +340,13 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 	if (recLength >= targetFreeSpace)
 	{
+		if (footer->numSlots == 0)
+			return rc::BTREE_KEY_TOO_LARGE;
+
 		return rc::BTREE_INDEX_PAGE_FULL;
 	}
-	else if (footer->numSlots == 0)
+
+	if (footer->numSlots == 0)
 	{
 		// Insert the new record into the root
 		RID newEntry;
@@ -377,13 +381,10 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		RID prevRid;
 		IndexRecord currEntry;
 		IndexRecord prevEntry;
-		// RID prevRid;
 		RID targetPrevRid;
 		RID targetRid;
 		IndexRecord targetPrevEntry;
 		IndexRecord targetEntry;
-		// IndexRecord currEntry;
-		// IndexRecord prevEntry;
 
 		int index = 0;
 		int target = 0;
@@ -407,32 +408,11 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 				targetPrevEntry = prevEntry;
 			}
 			index++;
-			
-			// prevRid = targetRid;
-			// prevEntry = currEntry;
-			// currRid = currEntry.nextSlot;
-            
+
             // Update for next iteration
             prevRid = currRid;
             prevEntry = currEntry;
             currRid = currEntry.nextSlot;
-
-   //          if (compareResult >= 0)
-			// {
-			// 	found = true;
-			// }
-
-   //          // update for next iteration
-   //          prevRid = currRid;
-   //          prevEntry = currEntry;
-   //          currRid = currEntry.nextSlot;
-
-   //          // Check to see if we reached the end of the list
-			// if (!found)
-			// {
-   //              atEnd = true;
-   //              found = true;
-			// }
 		}
 
 		// Drop the record into the right spot in the on-page list
@@ -462,10 +442,6 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
-
-		// Write the new page information to disk
-		// ret = fileHandle.writePage(page, pageBuffer);
-		// RETURN_ON_ERR(ret);
 	}
 
 	return rc::OK;
@@ -566,22 +542,11 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 				targetPrevEntry = prevEntry;
 			}
 			index++;
-				
-			// prevRid = targetRid;
-			// prevEntry = currEntry;
-			// currRid = currEntry.nextSlot;
-                
+
             // Update for next iteration
             prevRid = currRid;
             prevEntry = currEntry;
             currRid = currEntry.nextSlot;
-
-//             // Check to see if we reached the end of the list
-//             if (currEntry.nextSlot.pageNum == 0)
-			// {
-//                 atEnd = true;
-//                 found = true;
-			// }
 		}
 
 		// Drop the record into the right spot in the on-page list
@@ -606,18 +571,11 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
 			RETURN_ON_ERR(ret);
 
-			// ret = fileHandle.writePage(page, pageBuffer);
-			// RETURN_ON_ERR(ret);
-
 			// Update the previous entry to point to the new entry
 			targetEntry.nextSlot = newEntry;
 			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
-
-		// Write the new page information to disk
-		// ret = fileHandle.writePage(page, pageBuffer);
-		// RETURN_ON_ERR(ret);
 	}
 
 	return rc::OK;
