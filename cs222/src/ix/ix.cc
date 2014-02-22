@@ -126,7 +126,6 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, P
 		RETURN_ON_ERR(ret);
 	}
 
-
 	return rc::OK;
 }
 
@@ -264,7 +263,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
-	PageNum nextPage;
+	PageNum nextPage = _rootPageNum;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
@@ -841,6 +840,8 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 
 RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey)
 {
+	std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
+
 	// Read in the page to be split
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	RC ret = fileHandle.readPage(targetPageNum, pageBuffer);
@@ -876,129 +877,82 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	RETURN_ON_ERR(ret);
 
 	// Read in half of the entries from the target page and insert them onto the new page
-	RID currRid = targetFooter->firstRecord;
+	IndexRecord tempRecord;
+	RID tempRid, currRid = targetFooter->firstRecord;
 	unsigned numToMove = (targetFooter->core.numSlots / 2);
-	for (unsigned i = 0; i < numToMove; i++)
+	unsigned i = 0;
+	for (i = 0; i < numToMove; i++)
 	{
 		// Skip over the first 'numToMove' RIDs since they stay in place
-		if (targetFooter->isLeafPage)
+		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
+		RETURN_ON_ERR(ret);
+		tempRid = tempRecord.nextSlot;
+
+		// Break the nextSlot connection on the very last element of this old page
+		if (i == numToMove - 1)
 		{
-			IndexRecord lRecord;
-			readRecord(fileHandle, recordDescriptor, currRid, &lRecord);
-			currRid = lRecord.nextSlot;
+			tempRecord.nextSlot.pageNum = 0;
+			tempRecord.nextSlot.slotNum = 0;
+			ret = updateRecord(fileHandle, recordDescriptor, &tempRecord, currRid);
+			RETURN_ON_ERR(ret);
 		}
-		else
-		{
-			IndexRecord nlRecord;	
-			readRecord(fileHandle, recordDescriptor, currRid, &nlRecord);
-			currRid = nlRecord.nextSlot;
-		}	
+
+		currRid = tempRid;
 	}
 
 	// Save a reference to the split spot so the disconnect can be made later
 	RID splitRid = currRid;
 
 	// Read in the first entry in the second half - this entry now points to the left
-	if (targetFooter->isLeafPage)
+	if (!targetFooter->isLeafPage)
 	{
-		IndexRecord lRecord;
-		readRecord(fileHandle, recordDescriptor, currRid, &lRecord);
-		currRid = lRecord.nextSlot;
-		numToMove--; // make sure we don't skip entries 
-	}
-	else
-	{
-		IndexRecord nlRecord;	
-		readRecord(fileHandle, recordDescriptor, currRid, &nlRecord);
-		currRid = nlRecord.nextSlot;
-		newFooter->leftChild = currRid.pageNum;
-	}
+		// Load in the entry
+		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
+		RETURN_ON_ERR(ret);
 
-	RID deleteStart = currRid;
+		// and delete it from the initial page
+		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
+		RETURN_ON_ERR(ret);
+
+		// Copy over the page pointer into the footer
+		currRid = tempRecord.nextSlot;
+		newFooter->leftChild = currRid.pageNum;
+		++i;
+	}
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
-	for (unsigned i = numToMove + 1; i < targetFooter->core.numSlots; i++)
+	for (; i < targetFooter->core.numSlots; i++)
 	{
 		// Move the entry over to the new page
 		RID newEntry;
-		if (targetFooter->isLeafPage)
-		{
-			IndexRecord lRecord;
-			readRecord(fileHandle, recordDescriptor, currRid, &lRecord);
-			insertRecord(fileHandle, recordDescriptor, &lRecord, newEntry);
-			currRid = lRecord.nextSlot;
+		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
+		RETURN_ON_ERR(ret);
+		ret = insertRecord(fileHandle, recordDescriptor, &tempRecord, newEntry);
+		RETURN_ON_ERR(ret);
 
-			// Save the new key
-			if (i == (numToMove + 1))
-			{
-				// rightRid = newEntry;
-				rightKey = lRecord.key;
-			}
-		}
-		else
-		{
-			IndexRecord nlRecord;	
-			readRecord(fileHandle, recordDescriptor, currRid, &nlRecord);
-			insertRecord(fileHandle, recordDescriptor, &nlRecord, newEntry);
-			currRid = nlRecord.nextSlot;
+		// Delete the entry from the old page
+		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
+		RETURN_ON_ERR(ret);
 
-			// Save the new key
-			if (i == numToMove)
-			{
-				// rightRid = newEntry;
-				rightKey = nlRecord.key;
-			}
+		currRid = tempRecord.nextSlot;
+		// Save the new key
+		if (i == numToMove)
+		{
+			// rightRid = newEntry;
+			rightKey = tempRecord.key;
 		}
 	}
 
-	// Delete the ones that were moved...
-	// TODO: can this be done above?
-	// currRid = deleteStart;
-	// for (unsigned i = numToMove + 1; i < targetFooter->core.numSlots; i++)
-	// {
-	// 	// Skip over the first 'numToMove' RIDs since they stay in place
-	// 	if (targetFooter->isLeafPage)
-	// 	{
-	// 		IndexRecord lRecord;
-	// 		readRecord(fileHandle, recordDescriptor, currRid, &lRecord);
-	// 		ret = deleteRecord(fileHandle, recordDescriptor, currRid);
-	// 		currRid = lRecord.nextSlot;
-	// 	}
-	// 	else
-	// 	{
-	// 		IndexRecord nlRecord;
-	// 		readRecord(fileHandle, recordDescriptor, currRid, &nlRecord);
-	// 		ret = deleteRecord(fileHandle, recordDescriptor, currRid);
-	// 		currRid = nlRecord.nextSlot;
-	// 	}
-	// }
-
-	// Make the disconnect by terminating the on-page list on the first (source) page
-	if (targetFooter->isLeafPage)
-	{
-		IndexRecord lRecord;
-		readRecord(fileHandle, recordDescriptor, splitRid, &lRecord);
-		lRecord.nextSlot.pageNum = 0;
-		lRecord.nextSlot.slotNum = 0;
-		ret = updateRecord(fileHandle, recordDescriptor, &lRecord, splitRid);
-		RETURN_ON_ERR(ret);
-	}
-	else
-	{
-		IndexRecord nlRecord;	
-		readRecord(fileHandle, recordDescriptor, splitRid, &nlRecord);
-		nlRecord.nextSlot.pageNum = 0;
-		nlRecord.nextSlot.slotNum = 0;
-		ret = updateRecord(fileHandle, recordDescriptor, &nlRecord, splitRid);
-		RETURN_ON_ERR(ret);
-	}
+	// Write out the old page that only has half the records now
+	ret = fileHandle.writePage(targetPageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
 
 	// Read in the page to be split
 	ret = fileHandle.readPage(targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
 
-	// Extract the header
+	// Extract the header to verify we didn't mess something up
 	targetFooter = getIXPageIndexFooter(pageBuffer);
 	assert(targetFooter->core.numSlots > 0); 
 
