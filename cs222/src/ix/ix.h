@@ -32,18 +32,19 @@ struct KeyValueData
 	{
 		int integer;
 		float real;
-		char varchar[MAX_KEY_SIZE];
+		char varchar[MAX_KEY_SIZE+sizeof(unsigned)];
 	};
 
 	RC init(AttrType type, const void* key);
 	RC compare(AttrType type, const KeyValueData& that, int& result);
+	void print(AttrType type);
 };
 
 struct IndexRecord
 {
 	RID nextSlot;
 	RID rid; // Leaf==dataRid, Non-Leaf==pageRid
-  KeyValueData key;
+	KeyValueData key;
 };
 
 class IX_ScanIterator;

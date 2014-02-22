@@ -155,7 +155,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		memset(pageBuffer, 0, PAGE_SIZE);
 		ret = fileHandle.readPage(nextPage, pageBuffer);
 		RETURN_ON_ERR(ret);
-		footer = getIXPageIndexFooter(pageBuffer);
 	}
 
 	// We're at a leaf now...
@@ -501,8 +500,6 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		// Pull in the updated footer
 		ret = fileHandle.readPage(page, pageBuffer);
 		RETURN_ON_ERR(ret);
-
-		footer = getIXPageIndexFooter(pageBuffer);
 		
 		// Update the header of the page to point to this new entry
 		footer->firstRecord = newEntry;
@@ -867,7 +864,9 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 		currRid = tempRecord.nextSlot;
 
-		std::cout << "Keep on page1: " << tempRecord.key.integer << std::endl;
+		std::cout << " Keep on LEFT: ";
+		tempRecord.key.print(TypeVarChar);
+		std::cout << std::endl;
 	}
 
 	// Break the nextSlot connection on the very last element of this old page
@@ -875,7 +874,10 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	ret = readRecord(fileHandle, recordDescriptor, lastLeftPageRid, &tempRecord);
 	RETURN_ON_ERR(ret);
 
-	std::cout << "Break connection on page0: " << tempRecord.key.integer << std::endl;
+
+	std::cout << " Break connection on LEFT: ";
+		tempRecord.key.print(TypeVarChar);
+		std::cout << std::endl;
 
 	tempRecord.nextSlot.pageNum = 0;
 	tempRecord.nextSlot.slotNum = 0;
@@ -905,7 +907,9 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
 	RETURN_ON_ERR(ret);
 
-	std::cout << "first key on page1: " << rightKey.integer << std::endl;
+	std::cout << " Break connection on RIGHT: ";
+		rightKey.print(TypeVarChar);
+		std::cout << std::endl;
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
@@ -941,7 +945,9 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		ret = insertRecordInplace(recordDescriptor, &tempRecord, newPageNum, newPageBuffer, newEntry);
 		RETURN_ON_ERR(ret);
 
-		std::cout << "Put on on page1: " << tempRecord.key.integer << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
+		std::cout << " Put on RIGHT: ";
+		tempRecord.key.print(TypeVarChar);
+		std::cout << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
 	}
 
 	// Write out the new page buffers
@@ -1150,7 +1156,7 @@ RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
 			break;
 
 		case TypeVarChar:
-			result = strncmp(varchar, that.varchar, size);
+			result = strncmp(varchar + sizeof(unsigned), that.varchar + sizeof(unsigned), size);
 			if (result == 0)
 			{
 				if (size < that.size)
@@ -1168,4 +1174,31 @@ RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
 	}
 
 	return rc::OK;
+}
+
+void KeyValueData::print(AttrType type)
+{
+	switch (type)
+	{
+		case TypeInt:
+			std::cout << integer;
+			break;
+
+		case TypeReal:
+			std::cout << real;
+			break;
+
+		case TypeVarChar:
+			{
+				char stringBuffer[MAX_KEY_SIZE+1] = {0};
+				memcpy(stringBuffer, varchar+4, size);
+				std::string s(stringBuffer);
+
+				std::cout << "(" << size << ") '" << s << "'";
+			}
+			break;
+
+		default:
+			std::cout << "????";
+	}
 }
