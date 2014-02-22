@@ -2150,14 +2150,22 @@ void test2()
     return;
 }
 
-void testSinglePageEntries(const int numEntries)
+void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 {
-	const string filename = "testStringIndex_SinglePage";
+	const string filename = strings ? "testAddDelete_StringIndex" : "testAddDelete_IntegerIndex";
 	Attribute attr;
-	attr.length = 2000;
-	attr.name = "StringValue";
-	// attr.type = TypeVarChar;
-    attr.type = TypeInt;
+	if (strings)
+	{
+		attr.length = 1;
+		attr.name = "StringValue";
+		attr.type = TypeVarChar;
+	}
+	else
+	{
+		attr.length = 4;
+		attr.name = "IntegerValue";
+		attr.type = TypeInt;
+	}
 
     RC ret;
     FileHandle fileHandle;
@@ -2174,8 +2182,11 @@ void testSinglePageEntries(const int numEntries)
 	char stringBuffer[2004] = {0};
 	char* c = stringBuffer + 4;
 	int strlen = 1;
+	int i = 0;
+	void* data = strings ? (void*)stringBuffer : (void*)&i;
+
 	RID rid;
-	for (int i=0; i<numEntries; ++i)
+	for (i=0; i<numEntries; ++i)
 	{
 		rid.pageNum = 99999;
 		rid.slotNum = i;
@@ -2183,12 +2194,12 @@ void testSinglePageEntries(const int numEntries)
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
         std::cout << "INSERTING: " << i << std::endl;
-		ret = indexManager->insertEntry(fileHandle, attr, &i, rid);
+		ret = indexManager->insertEntry(fileHandle, attr, data, rid);
 		assert(ret == success);
 	}
 
 	std::cout << " Delete half of the keys (the even ones)" << std::endl;
-	for (int i=0; i<numEntries; i+=2)
+	for (i=0; i<numEntries; i+=2)
 	{
 		rid.pageNum = 99999;
 		rid.slotNum = i;
@@ -2196,9 +2207,11 @@ void testSinglePageEntries(const int numEntries)
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
         cout << "DELETING: " << i << endl;
-		ret = indexManager->deleteEntry(fileHandle, attr, &i, rid);
+		ret = indexManager->deleteEntry(fileHandle, attr, data, rid);
 	}
 
+	// TODO: Re-enable scan iterator once it's finished
+	/*
 	std::cout << " Initializing iterator" << std::endl;
 	IX_ScanIterator iter;
 	ret = indexManager->scan(fileHandle, attr, NULL, NULL, true, true, iter);
@@ -2206,7 +2219,7 @@ void testSinglePageEntries(const int numEntries)
 
 	std::cout << " Scanning through the keys to verify they're correct" << std::endl;
 	RID scannedRid;
-	char stringCompareBuffer[2004] = {0};
+	char compareBuffer[2004] = {0};
 	for (int i=1; i<numEntries; i+=2)
 	{
 		rid.pageNum = 99999;
@@ -2215,30 +2228,59 @@ void testSinglePageEntries(const int numEntries)
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
         std::cout << "testing " << i << std::endl;
-		ret = iter.getNextEntry(scannedRid, stringCompareBuffer);
+		ret = iter.getNextEntry(scannedRid, compareBuffer);
 		assert(ret == success);
 
 		assert (rid.pageNum == scannedRid.pageNum);
 		assert (rid.slotNum == scannedRid.slotNum);
 		
-		int* expectedSize = (int*)stringBuffer;
-		int* resultingSize = (int*)stringCompareBuffer;
+		if (strings)
+		{
+			int* expectedSize = (int*)stringBuffer;
+			int* resultingSize = (int*)compareBuffer;
 		
-		assert(*expectedSize == *resultingSize);
-		assert(strncmp(stringBuffer+4, stringCompareBuffer+4, *expectedSize)==0);
+			assert(*expectedSize == *resultingSize);
+			assert(strncmp(stringBuffer+4, compareBuffer+4, *expectedSize)==0);
+		}
+		else
+		{
+			int result = *(int*)compareBuffer;
+			assert(i == result);
+		}
 	}
 
 	std::cout << " Checking that iterator is done, and can close" << std::endl;
-	ret = iter.getNextEntry(scannedRid, stringCompareBuffer);
+	ret = iter.getNextEntry(scannedRid, compareBuffer);
 	assert(ret != success);
 
 	ret = iter.close();
 	assert(ret == success);
+	*/
+
+	// Clean up
+	ret = indexManager->closeFile(fileHandle);
+    assert(ret == success);
+
+	ret = indexManager->destroyFile(filename);
+    assert(ret == success);
 
 	std::cout << " basic test on string keys passed!" << std::endl;
 }
 
 void testCustom()
 {
-    testSinglePageEntries(250);
+	std::cout << "====Testing single insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(50, false);
+	std::cout << "====Testing single insert/delete on strings====" << std::endl;
+	//testSimpleAddDeleteIndex(50, true);
+
+	std::cout << "====Testing single split insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(75, false);
+	std::cout << "====Testing single split insert/delete on strings====" << std::endl;
+	//testSimpleAddDeleteIndex(75, true);
+
+	std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(250, false);
+	std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
+	//testSimpleAddDeleteIndex(250, true);
 }

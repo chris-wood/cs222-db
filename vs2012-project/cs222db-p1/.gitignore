@@ -23,3 +23,5 @@ combined_tests
 rmtest_1
 rmtest_2
 rmtest_extra
+testAddDelete_StringIndex
+testAddDelete_IntegerIndex
