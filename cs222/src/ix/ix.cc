@@ -281,20 +281,31 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Now search along the leaf page
 	assert(footer->isLeafPage);
-	RID entryRid;
-	RID dataRid;
-	ret = findLeafIndexEntry(fileHandle, footer, attribute, &keyData, entryRid, dataRid);
+	RID entryRid, prevEntryRid, nextEntryRid, dataRid;
+	ret = findLeafIndexEntry(fileHandle, footer, attribute, &keyData, entryRid, prevEntryRid, nextEntryRid, dataRid);
 	RETURN_ON_ERR(ret);
 
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
+	IndexRecord record;
 	if (entryRid.slotNum == footer->firstRecord.slotNum)
 	{
-		IndexRecord firstRecord;
-		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &firstRecord);
+		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
 		RETURN_ON_ERR(ret);
-		footer->firstRecord = firstRecord.nextSlot;
+		footer->firstRecord = record.nextSlot;
 		memcpy(pageBuffer + PAGE_SIZE - sizeof(IX_PageIndexFooter), footer, sizeof(IX_PageIndexFooter));
 		ret = fileHandle.writePage(nextPage, pageBuffer);
+		RETURN_ON_ERR(ret);
+	}
+
+	// Update the next pointer of our previous record if it exists
+	if (prevEntryRid.pageNum != 0)
+	{
+		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, prevEntryRid, &record);
+		RETURN_ON_ERR(ret);
+
+		record.nextSlot = nextEntryRid;
+
+		ret = IndexManager::instance()->updateRecord(fileHandle, recordDescriptor, &record, prevEntryRid);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -761,15 +772,30 @@ RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
 	return rc::OK;
 }
 
-RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& targetRid)
+RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& dataRid)
 {
-	RID prevRid;
+	RID nextEntryRid;
+	RID prevEntryRid;
+	return findLeafIndexEntry(fileHandle, footer, attribute, key, entryRid, prevEntryRid, nextEntryRid, dataRid);
+}
+
+RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid)
+{
+	assert(&entryRid != &prevEntryRid);
+	assert(&entryRid != &nextEntryRid);
+	assert(&nextEntryRid != &prevEntryRid);
+
 	int compareResult = -1;
+
+	// zero out RID data 
+	entryRid.pageNum = entryRid.slotNum = 0;
+	prevEntryRid.pageNum = prevEntryRid.slotNum = 0;
+	nextEntryRid.pageNum = nextEntryRid.slotNum = 0;
+	dataRid.pageNum = dataRid.slotNum = 0;
 
 	// Extract the first record
 	RID currRid = footer->firstRecord;
 	IndexRecord currEntry;
-	IndexRecord prevEntry;
 
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
@@ -788,13 +814,12 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 		if (compareResult == 0)
 		{
 			entryRid = currRid;
-			targetRid = currEntry.rid;
+			dataRid = currEntry.rid;
 			break;
 		}
 		else
 		{
-			prevRid = targetRid;
-			prevEntry = currEntry;
+			prevEntryRid = currRid;
 			currRid = currEntry.nextSlot;
 		}
 	}
@@ -807,6 +832,9 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 	}
 	else
 	{
+		// Pull in the next RID after our current one
+		nextEntryRid = currEntry.nextSlot;
+
 		return rc::OK;
 	}
 }
