@@ -626,7 +626,6 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum)
 {
 	RID targetRid;
-	RID prevRid;
 	int compareResult = -1;
 
 	// Extract the first record
@@ -669,7 +668,6 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			}
 			index++;
 			
-			prevRid = targetRid;
 			prevEntry = currEntry;
 			currRid = currEntry.nextSlot;
 		}
@@ -849,7 +847,8 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	// Read in half of the entries from the target page and insert them onto the new page
 	IndexRecord tempRecord;
 	RID prevRid, currRid = targetFooter->firstRecord;
-	unsigned numToMove = (targetFooter->numSlots / 2);
+	const unsigned numRecords = targetFooter->numSlots;
+	const unsigned numToMove = (targetFooter->numSlots / 2);
 	unsigned i = 0;
 	for (i = 0; i < numToMove; i++)
 	{
@@ -912,7 +911,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	RID nextSlot;
 	nextSlot.pageNum = newPageNum;
 	nextSlot.slotNum = 0;
-	for (; i < targetFooter->numSlots; i++)
+	for (; i < numRecords; i++)
 	{
 		// Move the entry over to the new page
 		RID newEntry;
@@ -923,18 +922,19 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
 		RETURN_ON_ERR(ret);
 
-		// Advance to the next record to read
-		currRid = tempRecord.nextSlot;
-
 		// We know what the slot numbers will be because the page is empty
-		if (i == targetFooter->numSlots - 1)
+		if (i == numRecords - 1)
 		{
 			nextSlot.slotNum = 0;
+			nextSlot.pageNum = 0;
 		}
 		else
 		{
 			nextSlot.slotNum++;
 		}
+		
+		// Advance to the next record to read before we modify tempRecord
+		currRid = tempRecord.nextSlot;
 		
 		// Insert key into the right page
 		tempRecord.nextSlot = nextSlot;
