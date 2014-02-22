@@ -101,14 +101,14 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, P
 	footerTemplate.firstRecord.slotNum = 0;
 	footerTemplate.parent = 0;
 	footerTemplate.nextLeafPage = nextLeafPage;
-	footerTemplate.core.freespacePrevPage = 0;
-	footerTemplate.core.freespaceNextPage = 0;
-	footerTemplate.core.freeSpaceOffset = 0;
-	footerTemplate.core.numSlots = 0;
-	footerTemplate.core.gapSize = 0;
-	footerTemplate.core.pageNumber = pageNum;
+	footerTemplate.freespacePrevPage = 0;
+	footerTemplate.freespaceNextPage = 0;
+	footerTemplate.freeSpaceOffset = 0;
+	footerTemplate.numSlots = 0;
+	footerTemplate.gapSize = 0;
+	footerTemplate.pageNumber = pageNum;
 	footerTemplate.leftChild = leftChild;
-	footerTemplate.core.freespaceList = NUM_FREESPACE_LISTS - 1;
+	footerTemplate.freespaceList = NUM_FREESPACE_LISTS - 1;
 
 	// TODO: Check freespace list to see if there's a completely empty page available
 
@@ -200,9 +200,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
 				tempFooter->parent = _rootPageNum;
 
-				// Re-update the reference to the new footer to be used in the -final- insertion
-				footer = tempFooter;
-
 				// Write the new page information to disk
 				ret = fileHandle.writePage(leftPage, tempBuffer);
 				RETURN_ON_ERR(ret);
@@ -219,15 +216,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = fileHandle.writePage(rightPage, tempBuffer);
 				RETURN_ON_ERR(ret);
 
+				// Read the new non-leaf page back in
+				memset(tempBuffer, 0, PAGE_SIZE);
 				RC ret = fileHandle.readPage(_rootPageNum, tempBuffer);
 				RETURN_ON_ERR(ret);
-
-				// Extract the header
 				tempFooter = getIXPageIndexFooter(tempBuffer);
 				assert(tempFooter->isLeafPage == false);
-				RID firstRid = tempFooter->firstRecord;
-				IndexRecord rec;
-				readRecord(fileHandle, recordDescriptor, firstRid, &rec);
+
+				// Update the footer to point left to the left page
+				tempFooter->leftChild = leftPage;
 			}
 
 			// Insert the right child into the parent of the left
@@ -344,12 +341,12 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
     ret = generateRecordHeader(recordDescriptor, &entry, recHeader, recLength, recHeaderSize);
 
 	// Determine if we can fit on this page
-	unsigned targetFreeSpace = calculateFreespace(footer->core.freeSpaceOffset, footer->core.numSlots);
+	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 	if (recLength >= targetFreeSpace)
 	{
 		return rc::BTREE_INDEX_PAGE_FULL;
 	}
-	else if (footer->core.numSlots == 0)
+	else if (footer->numSlots == 0)
 	{
 		// Insert the new record into the root
 		RID newEntry;
@@ -443,7 +440,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		}
 
 		// Drop the record into the right spot in the on-page list
-		atEnd = (target + 1) == footer->core.numSlots;
+		atEnd = (target + 1) == footer->numSlots;
 		if (!atEnd) // start or middle of list
 		{
 			// Insert the new record into the root, and make it point to the current RID
@@ -491,7 +488,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
 	// Special case if the leaf is empty
-	if (footer->core.numSlots == 0)
+	if (footer->numSlots == 0)
 	{
 		IndexRecord leaf;
 		leaf.rid = rid;
@@ -539,7 +536,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	    ret = generateRecordHeader(recordDescriptor, &leaf, recHeader, recLength, recHeaderSize);
 
 		// Determine if we can fit on this page
-		unsigned targetFreeSpace = calculateFreespace(footer->core.freeSpaceOffset, footer->core.numSlots);
+		unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 		if (recLength > targetFreeSpace)
 		{
 			return rc::BTREE_INDEX_PAGE_FULL;
@@ -597,7 +594,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			}
 
 			// Drop the record into the right spot in the on-page list
-			atEnd = (target + 1) == footer->core.numSlots;
+			atEnd = (target + 1) == footer->numSlots;
 			if (!atEnd) // start or middle of list
 			{
 				// Insert the new record into the root, and make it point to the current RID
@@ -650,7 +647,7 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	if (footer->core.numSlots == 1)
+	if (footer->numSlots == 1)
 	{
 		RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 		RETURN_ON_ERR(ret);
@@ -849,7 +846,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 	// Extract the header
 	IX_PageIndexFooter* targetFooter = getIXPageIndexFooter(pageBuffer);
-	assert(targetFooter->core.numSlots > 0); 
+	assert(targetFooter->numSlots > 0); 
 
 	// Allocate the new page and save its reference
 	newPageNum = fileHandle.getNumberOfPages();
@@ -879,7 +876,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	// Read in half of the entries from the target page and insert them onto the new page
 	IndexRecord tempRecord;
 	RID tempRid, currRid = targetFooter->firstRecord;
-	unsigned numToMove = (targetFooter->core.numSlots / 2);
+	unsigned numToMove = (targetFooter->numSlots / 2);
 	unsigned i = 0;
 	for (i = 0; i < numToMove; i++)
 	{
@@ -920,9 +917,13 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		++i;
 	}
 
+	// Save the 1st key that will be on the right page for later
+	ret = readRecord(fileHandle, recordDescriptor, currRid, &rightKey);
+	RETURN_ON_ERR(ret);
+
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
-	for (; i < targetFooter->core.numSlots; i++)
+	for (; i < targetFooter->numSlots; i++)
 	{
 		// Move the entry over to the new page
 		RID newEntry;
@@ -936,12 +937,6 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RETURN_ON_ERR(ret);
 
 		currRid = tempRecord.nextSlot;
-		// Save the new key
-		if (i == numToMove)
-		{
-			// rightRid = newEntry;
-			rightKey = tempRecord.key;
-		}
 	}
 
 	// Write out the old page that only has half the records now
@@ -954,7 +949,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 	// Extract the header to verify we didn't mess something up
 	targetFooter = getIXPageIndexFooter(pageBuffer);
-	assert(targetFooter->core.numSlots > 0); 
+	assert(targetFooter->numSlots > 0); 
 
 	return rc::OK;
 }

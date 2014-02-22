@@ -11,17 +11,15 @@
 
 #define MAX_KEY_SIZE 2048
 
-struct IX_PageIndexFooter 
+struct IX_PageIndexFooter : CorePageIndexFooter
 {
-  CorePageIndexFooter core;
 	bool isLeafPage;
 	RID firstRecord;
 
 	// Tree pointers
 	PageNum parent;
 	PageNum nextLeafPage; // ignored by non-leaf pages
-  // PageNum rightChild;
-  PageNum leftChild;
+	PageNum leftChild;
 };
 
 struct KeyValueData
