@@ -270,9 +270,6 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		memset(pageBuffer, 0, PAGE_SIZE);
 		ret = fileHandle.readPage(nextPage, pageBuffer);
 		RETURN_ON_ERR(ret);
-
-		// Update the header
-		footer = getIXPageIndexFooter(pageBuffer);
 	}
 
 	// Now search along the leaf page
@@ -647,28 +644,22 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	if (footer->numSlots == 1)
+	// Is our comparision value less than all of the keys on this page?
+	assert(footer->numSlots >= 1);
+	RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
+	RETURN_ON_ERR(ret);
+
+	ret = key->compare(attribute.type, currEntry.key, compareResult);
+	RETURN_ON_ERR(ret);
+
+	if (compareResult < 0)
 	{
-		RC ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
-		RETURN_ON_ERR(ret);
-
-		ret = key->compare(attribute.type, currEntry.key, compareResult);
-		RETURN_ON_ERR(ret);
-
-		if (compareResult >= 0)
-		{
-			pageNum = currEntry.rid.pageNum;
-		}
-		else
-		{
-			pageNum = footer->leftChild;
-		}
+		pageNum = footer->leftChild;
 	}
 	else
 	{
 		// Traverse the list of index entries on this non-leaf page
 		int index = 0;
-		int target = 0;
 		while (currRid.pageNum > 0)
 		{
 			// Pull in the new entry and perform the comparison
@@ -680,8 +671,8 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 			if (compareResult >= 0)
 			{
-				target = index;
 				targetRid = currEntry.rid;
+				break;
 			}
 			index++;
 			
@@ -690,23 +681,16 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			currRid = currEntry.nextSlot;
 		}
 
-		if (target == 0)
-		{
-			pageNum = footer->leftChild;
-		}
-		else
-		{
-			// Check to see if we traverse the list entirely, in which case the last index entry 
-			// contains the page pointer to which we point
-			if (currRid.pageNum == 0)
-			{
-				// targetRid.pageNum = footer->rightChild;
-				targetRid = prevEntry.rid;
-			}
+		// Check to see if we traverse the list entirely, in which case the last index entry 
+		// contains the page pointer to which we point
+		// TODO: Not sure about this
+		//if (currRid.pageNum == 0)
+		//{
+			//targetRid = prevEntry.rid;
+		//}
 
-			// Save the result and return OK
-			pageNum = targetRid.pageNum;
-		}
+		// Save the result and return OK
+		pageNum = targetRid.pageNum;
 	}
 
 	return rc::OK;
@@ -875,30 +859,32 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 	// Read in half of the entries from the target page and insert them onto the new page
 	IndexRecord tempRecord;
-	RID tempRid, currRid = targetFooter->firstRecord;
+	RID prevRid, currRid = targetFooter->firstRecord;
 	unsigned numToMove = (targetFooter->numSlots / 2);
 	unsigned i = 0;
 	for (i = 0; i < numToMove; i++)
 	{
 		// Skip over the first 'numToMove' RIDs since they stay in place
+		prevRid = currRid;
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
-		tempRid = tempRecord.nextSlot;
 
-		// Break the nextSlot connection on the very last element of this old page
-		if (i == numToMove - 1)
-		{
-			tempRecord.nextSlot.pageNum = 0;
-			tempRecord.nextSlot.slotNum = 0;
-			ret = updateRecord(fileHandle, recordDescriptor, &tempRecord, currRid);
-			RETURN_ON_ERR(ret);
-		}
+		currRid = tempRecord.nextSlot;
 
-		currRid = tempRid;
+		std::cout << "Keep on page1: " << tempRecord.key.integer << std::endl;
 	}
 
-	// Save a reference to the split spot so the disconnect can be made later
-	RID splitRid = currRid;
+	// Break the nextSlot connection on the very last element of this old page
+	const RID lastLeftPageRid = prevRid;
+	ret = readRecord(fileHandle, recordDescriptor, lastLeftPageRid, &tempRecord);
+	RETURN_ON_ERR(ret);
+
+	std::cout << "Break connection on page0: " << tempRecord.key.integer << std::endl;
+
+	tempRecord.nextSlot.pageNum = 0;
+	tempRecord.nextSlot.slotNum = 0;
+	ret = updateRecord(fileHandle, recordDescriptor, &tempRecord, lastLeftPageRid);
+	RETURN_ON_ERR(ret);
 
 	// Read in the first entry in the second half - this entry now points to the left
 	if (!targetFooter->isLeafPage)
@@ -908,7 +894,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RETURN_ON_ERR(ret);
 
 		// and delete it from the initial page
-		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
+		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, prevRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
 		RETURN_ON_ERR(ret);
 
 		// Copy over the page pointer into the footer
@@ -918,8 +904,12 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	}
 
 	// Save the 1st key that will be on the right page for later
-	ret = readRecord(fileHandle, recordDescriptor, currRid, &rightKey);
+	const RID firstRightPageRid = currRid;
+	ret = readRecord(fileHandle, recordDescriptor, firstRightPageRid, &tempRecord);
+	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
 	RETURN_ON_ERR(ret);
+
+	std::cout << "first key on page1: " << rightKey.integer << std::endl;
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
@@ -929,8 +919,10 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RID newEntry;
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
-		ret = insertRecord(fileHandle, recordDescriptor, &tempRecord, newEntry);
+		ret = insertRecordToPage(fileHandle, recordDescriptor, &tempRecord, newPageNum, newEntry);
 		RETURN_ON_ERR(ret);
+
+		std::cout << "Put on on page1: " << tempRecord.key.integer << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
 
 		// Delete the entry from the old page
 		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
