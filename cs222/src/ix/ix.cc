@@ -853,10 +853,6 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	assert(newFooter->isLeafPage == targetFooter->isLeafPage);
 	newFooter->parent = targetFooter->parent;
 
-	// Write the new page information to disk
-	ret = fileHandle.writePage(newPageNum, newPageBuffer);
-	RETURN_ON_ERR(ret);
-
 	// Read in half of the entries from the target page and insert them onto the new page
 	IndexRecord tempRecord;
 	RID prevRid, currRid = targetFooter->firstRecord;
@@ -919,7 +915,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RID newEntry;
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
-		ret = insertRecordToPage(fileHandle, recordDescriptor, &tempRecord, newPageNum, newEntry);
+		ret = insertRecordInplace(recordDescriptor, &tempRecord, newPageNum, newPageBuffer, newEntry);
 		RETURN_ON_ERR(ret);
 
 		std::cout << "Put on on page1: " << tempRecord.key.integer << " @ " << newEntry.pageNum << " + " << newEntry.slotNum << std::endl;
@@ -931,17 +927,11 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		currRid = tempRecord.nextSlot;
 	}
 
-	// Write out the old page that only has half the records now
+	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
-
-	// Read in the page to be split
-	ret = fileHandle.readPage(targetPageNum, pageBuffer);
+	ret = fileHandle.writePage(newPageNum, newPageBuffer);
 	RETURN_ON_ERR(ret);
-
-	// Extract the header to verify we didn't mess something up
-	targetFooter = getIXPageIndexFooter(pageBuffer);
-	assert(targetFooter->numSlots > 0); 
 
 	return rc::OK;
 }
