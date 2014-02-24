@@ -873,6 +873,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	RETURN_ON_ERR(ret);
 
 	std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
+	std::cout << "Leaf? " << targetFooter->isLeafPage << endl;
 
 	// Update the nextLeaf pointer if needed
 	if (targetFooter->isLeafPage)
