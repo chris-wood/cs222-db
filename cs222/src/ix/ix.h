@@ -96,7 +96,7 @@ class IndexManager : public RecordBasedCoreManager {
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
 
-  static RC printIndex(FileHandle& fileHandle, const Attribute& attribute);
+  static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended);
 
  protected:
   IndexManager   ();                            // Constructor

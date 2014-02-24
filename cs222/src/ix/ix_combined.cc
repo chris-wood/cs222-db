@@ -2199,7 +2199,7 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 		if (i==101)
 		{
 			std::cout << "\n\n";
-			indexManager->printIndex(fileHandle, attr);
+			indexManager->printIndex(fileHandle, attr, true);
 			std::cout << std::endl;
 		}
 
@@ -2266,9 +2266,6 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	ret = iter.close();
 	assert(ret == success);
 	*/
-
-	ret = indexManager->printIndex(fileHandle, attr);
-	assert(ret == success);
 
 	// Clean up
 	ret = indexManager->closeFile(fileHandle);

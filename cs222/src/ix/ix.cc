@@ -1366,7 +1366,7 @@ void IndexRecord::print(AttrType type, bool isLeaf)
 		std::cout << "\tpage=" << rid;
 }
 
-RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
+RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended)
 {
 	IndexManager* im = IndexManager::instance();
 
@@ -1398,21 +1398,70 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
 		std::cout << "---Page: " << currentPage << "  " << *footer;
 		std::cout << std::endl;
 
-		// Print out all records on this page
-		RID curRid = footer->firstRecord;
-		while (curRid.pageNum > 0)
+		std::cout << "Record List: ";
 		{
-			ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
-			RETURN_ON_ERR(ret);
+			// Print out all records pointed to on this page
+			RID curRid = footer->firstRecord;
+			while (curRid.pageNum > 0)
+			{
+				ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
+				RETURN_ON_ERR(ret);
 
-			std::cout << "s=" << curRid.slotNum << "\tkey=";
-			currEntry.print(attribute.type, footer->isLeafPage);
-			std::cout << std::endl;
-
-			curRid = currEntry.nextSlot;
+				std::cout << curRid.slotNum << " > ";
+				curRid = currEntry.nextSlot;
+			}
 		}
-		std::cout << std::endl;
 
+		std::cout << "x" << std::endl;
+		if (extended)
+		{
+			// Print out all the slots on this page
+			RID curRid;
+			curRid.pageNum = footer->pageNumber;
+			curRid.slotNum = 0;
+
+			while(curRid.slotNum < footer->numSlots)
+			{
+				ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
+				if (ret != rc::OK)
+				{
+					if (ret == rc::RECORD_DELETED)
+					{
+						std::cout << "s=" << curRid.slotNum << "\tDELETED\n";
+						curRid.slotNum++;
+						continue;
+					}
+					else
+					{
+						RETURN_ON_ERR(ret);
+					}
+				}
+
+				std::cout << "s=" << curRid.slotNum << "\tkey=";
+				currEntry.print(attribute.type, footer->isLeafPage);
+				std::cout << std::endl;
+
+				curRid.slotNum++;
+			}
+		}
+		else
+		{
+			// Print out all records pointed to on this page
+			RID curRid = footer->firstRecord;
+			while (curRid.pageNum > 0)
+			{
+				ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
+				RETURN_ON_ERR(ret);
+
+				std::cout << "s=" << curRid.slotNum << "\tkey=";
+				currEntry.print(attribute.type, footer->isLeafPage);
+				std::cout << std::endl;
+
+				curRid = currEntry.nextSlot;
+			}
+		}
+
+		std::cout << std::endl;
 		++currentPage;
 	}
 
