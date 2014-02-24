@@ -163,6 +163,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
+	cout << "Insert entry going into leaf: " << nextPage << endl;
 	ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 	if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 	{
@@ -972,6 +973,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	for (; i < numRecords && currRid.pageNum > 0; i++)
 	{
 		numInserted++;
+
 		// Move the entry over to the new page
 		RID newEntry;
 		cout << "Reading for deletion: " << currRid.pageNum << "," << currRid.slotNum << endl;
