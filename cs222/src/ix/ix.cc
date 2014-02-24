@@ -1018,6 +1018,8 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	}
 	cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << numInserted << endl;
 
+	// cout << "Left slots = " << (getIXPageIndexFooter(pageBuffer)->)
+
 	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
