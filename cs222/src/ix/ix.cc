@@ -903,12 +903,13 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
 
+		std::cout << " Keep on LEFT: " << currRid.pageNum << "," << currRid.slotNum << endl;
+
 		currRid = tempRecord.nextSlot;
 
-		std::cout << " Keep on LEFT: ";
 		// tempRecord.key.print(TypeInt);
-		std::cout << i;
-		std::cout << std::endl;
+		// std::cout << i;
+		// std::cout << std::endl;
 	}
 
 	// Break the nextSlot connection on the very last element of this old page
