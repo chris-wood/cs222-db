@@ -1343,12 +1343,14 @@ std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f)
 		os << "Leaf Page: ";
 		os << "firstRecord: " << f.firstRecord;
 		os << " Parent=" << f.parent << " leftChild=" << f.leftChild << " nextLeafPage=" << f.nextLeafPage;
+		os << " gap=" << f.gapSize << " free=" << IndexManager::instance()->calculateFreespace(f.freeSpaceOffset, f.numSlots, sizeof(IX_PageIndexFooter)) << " slots=" << f.numSlots;
 	}
 	else
 	{
 		os << "Non-Leaf Page: ";
 		os << "firstRecord=" << f.firstRecord;
 		os << " Parent=" << f.parent << " leftChild=" << f.leftChild;
+		os << " gap=" << f.gapSize << " free=" << IndexManager::instance()->calculateFreespace(f.freeSpaceOffset, f.numSlots, sizeof(IX_PageIndexFooter)) << " slots=" << f.numSlots;
 	}
 
 	return os;
@@ -1357,11 +1359,11 @@ std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f)
 void IndexRecord::print(AttrType type, bool isLeaf)
 {
 	key.print(type);
-	std::cout << " next=" << nextSlot << " ";
+	std::cout << "\tnext=" << nextSlot << " ";
 	if (isLeaf)
-		std::cout << "data=" << rid;
+		std::cout << "\tdata=" << rid;
 	else
-		std::cout << "page=" << rid;
+		std::cout << "\tpage=" << rid;
 }
 
 RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
@@ -1403,6 +1405,7 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
 			ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
 			RETURN_ON_ERR(ret);
 
+			std::cout << "s=" << curRid.slotNum << "\tkey=";
 			currEntry.print(attribute.type, footer->isLeafPage);
 			std::cout << std::endl;
 
