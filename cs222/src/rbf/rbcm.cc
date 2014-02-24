@@ -1211,3 +1211,23 @@ RC Attribute::allocateValue(AttrType attributeType, const void* valueIn, void** 
 
     return rc::OK;
 }
+
+std::ostream& operator<<(std::ostream& os, const RID& r)
+{
+	os << "[" << r.pageNum << "@" << r.slotNum << "]";
+	return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Attribute& a)
+{
+	os << "\"" << a.name << "\" {";
+	switch(a.type)
+	{
+		case TypeInt: os << "Int"; break;
+		case TypeReal: os << "Real"; break;
+		case TypeVarChar: os << "VarChar(" << a.length << ")";
+	}
+	os << "}";
+
+	return os;
+}

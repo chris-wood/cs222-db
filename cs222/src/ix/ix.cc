@@ -1320,3 +1320,84 @@ void KeyValueData::print(AttrType type)
 			std::cout << "????";
 	}
 }
+
+std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f)
+{
+	if (f.isLeafPage)
+	{
+		os << "Leaf Page: ";
+		os << "firstRecord: " << f.firstRecord;
+		os << " Parent=" << f.parent << " leftChild=" << f.leftChild << " nextLeafPage=" << f.nextLeafPage;
+	}
+	else
+	{
+		os << "Non-Leaf Page: ";
+		os << "firstRecord=" << f.firstRecord;
+		os << " Parent=" << f.parent << " leftChild=" << f.leftChild;
+	}
+
+	return os;
+}
+
+void IndexRecord::print(AttrType type, bool isLeaf)
+{
+	key.print(type);
+	std::cout << " next=" << nextSlot << " ";
+	if (isLeaf)
+		std::cout << "data=" << rid;
+	else
+		std::cout << "page=" << rid;
+}
+
+RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
+{
+	IndexManager* im = IndexManager::instance();
+
+	std::cout << "BEGIN==============" << fileHandle.getFilename() << "==============" << std::endl;
+	
+	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
+	std::cout << "RecordDescriptor: [ ";
+	for (std::vector<Attribute>::const_iterator it=recordDescriptor.begin(); it!=recordDescriptor.end(); ++it)
+	{
+		std::cout << (*it) << " ";
+	}
+	std::cout << "]\n" << std::endl;
+	
+	std::cout << "Pages: " << fileHandle.getNumberOfPages();
+	std::cout << "\tRoot: " << im->_rootPageNum << "\n" << std::endl;
+
+	PageNum currentPage = 1;
+	IndexRecord currEntry;
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+
+	// Loop through all pages and print a summary of the data
+	while(currentPage < fileHandle.getNumberOfPages())
+	{
+		RC ret = fileHandle.readPage(currentPage, pageBuffer);
+		RETURN_ON_ERR(ret);
+
+		// Print out page basics
+		std::cout << "---Page: " << currentPage << "  " << *footer;
+		std::cout << std::endl;
+
+		// Print out all records on this page
+		RID curRid = footer->firstRecord;
+		while (curRid.pageNum > 0)
+		{
+			ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
+			RETURN_ON_ERR(ret);
+
+			currEntry.print(attribute.type, footer->isLeafPage);
+			std::cout << std::endl;
+
+			curRid = currEntry.nextSlot;
+		}
+		std::cout << std::endl;
+
+		++currentPage;
+	}
+
+	std::cout << "==============" << fileHandle.getFilename() << "==============END" << std::endl;
+	return rc::OK;
+}

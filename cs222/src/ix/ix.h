@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include "../rbf/rbcm.h"
 
@@ -20,6 +21,8 @@ struct IX_PageIndexFooter : CorePageIndexFooter
 	PageNum parent;
 	PageNum nextLeafPage; // ignored by non-leaf pages
 	PageNum leftChild;
+
+	friend std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f);
 };
 
 struct KeyValueData
@@ -45,6 +48,8 @@ struct IndexRecord
 	RID nextSlot;
 	RID rid; // Leaf==dataRid, Non-Leaf==pageRid
 	KeyValueData key;
+
+	void print(AttrType type, bool isLeaf);
 };
 
 class IX_ScanIterator;
@@ -90,6 +95,8 @@ class IndexManager : public RecordBasedCoreManager {
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& dataRid);
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
+
+  static RC printIndex(FileHandle& fileHandle, const Attribute& attribute);
 
  protected:
   IndexManager   ();                            // Constructor
@@ -139,6 +146,5 @@ private:
 
 // print out the error message for a given return code
 void IX_PrintError (RC rc);
-
 
 #endif

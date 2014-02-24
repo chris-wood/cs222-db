@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <iostream>
 
 #include "pfm.h"
 #include "../util/dbgout.h"
@@ -51,6 +52,8 @@ struct RID
   unsigned slotNum;
 
   RID() : pageNum(0), slotNum(0) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const RID& r);
 };
 
 // Page index slot entry
@@ -74,6 +77,8 @@ struct Attribute {
 
   static unsigned sizeInBytes(AttrType type, const void* value);
   static RC allocateValue(AttrType attributeType, const void* valueIn, void** valueOut);
+
+  friend std::ostream& operator<<(std::ostream& os, const Attribute& a);
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)

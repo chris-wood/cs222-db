@@ -2193,6 +2193,13 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 		*c = 'a' + i;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
+		if (i==168)
+		{
+			std::cout << "\n\n";
+			indexManager->printIndex(fileHandle, attr);
+			std::cout << std::endl;
+		}
+
         std::cout << "INSERTING: " << i << std::endl;
 		ret = indexManager->insertEntry(fileHandle, attr, data, rid);
 		assert(ret == success);
@@ -2256,6 +2263,9 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	ret = iter.close();
 	assert(ret == success);
 	*/
+
+	ret = indexManager->printIndex(fileHandle, attr);
+	assert(ret == success);
 
 	// Clean up
 	ret = indexManager->closeFile(fileHandle);
