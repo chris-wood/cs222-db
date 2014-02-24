@@ -894,7 +894,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	IndexRecord tempRecord;
 	RID prevRid, currRid = targetFooter->firstRecord;
 	const unsigned numRecords = targetFooter->numSlots;
-	const unsigned numToMove = (targetFooter->numSlots / 2);
+	const unsigned numToMove = ((targetFooter->numSlots - 1) / 2);
 	unsigned i = 0;
 	for (i = 0; i < numToMove; i++)
 	{
@@ -952,6 +952,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 	// Save the 1st key that will be on the right page for later
 	const RID firstRightPageRid = currRid;
+	cout << "Right key: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
 	ret = readRecord(fileHandle, recordDescriptor, firstRightPageRid, &tempRecord);
 	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
 	RETURN_ON_ERR(ret);
