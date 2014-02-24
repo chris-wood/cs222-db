@@ -513,6 +513,8 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 
 	// Determine if we can fit on this page
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
+	cout << "New entry size = " << recLength << endl;
+	cout << "Target freespace = " << targetFreeSpace << endl;
 	if (recLength > targetFreeSpace)
 	{
 		if (footer->numSlots == 0)
