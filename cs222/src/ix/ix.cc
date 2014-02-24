@@ -984,7 +984,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RETURN_ON_ERR(ret);
 
 		// Refresh the page buffer
-		ret = fileHandle.readPage(pageNum, pageBuffer);
+		ret = fileHandle.readPage(targetPageNum, pageBuffer);
 		RETURN_ON_ERR(ret);
 
 		// We know what the slot numbers will be because the page is empty
