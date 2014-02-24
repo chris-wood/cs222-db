@@ -33,8 +33,8 @@ bool FileExists(string fileName)
 #define TEST_FN_POSTFIX(msg) { ++numPassed; cout << ' ' << numTests << ") OK: " << msg << endl; } \
                         else { cout << ' ' << numTests << ") FAIL: " << msg << "<" << rc::rcToString(rc) << ">" << endl; }
 
-#define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)
-#define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg)
+#define TEST_FN_EQ(expected,fn,msg) TEST_FN_PREFIX {if((rc=(fn)) == expected) TEST_FN_POSTFIX(msg)}
+#define TEST_FN_NEQ(expected,fn,msg) TEST_FN_PREFIX { ASSERT_ON_BAD_RETURN=0; if((rc=(fn)) != expected) TEST_FN_POSTFIX(msg) ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN; }
 
 #define ALL_MIN_SKIP 2
 #define ALL_MAX_SKIP 50

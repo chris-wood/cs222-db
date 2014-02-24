@@ -4,14 +4,10 @@
 #include <iostream>
 using namespace std;
 
-#define ASSERT_ON_BAD_RETURN
+#define GLOBAL_ASSERT_ON_BAD_RETURN true
+extern bool ASSERT_ON_BAD_RETURN;
 
-#ifdef ASSERT_ON_BAD_RETURN
-	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {cout << rc::rcToString(ret) << endl; assert(false); return ret;}}
-#else
-	#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {return ret;}}
-#endif
-
+#define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {cout << rc::rcToString(ret) << endl; assert(!ASSERT_ON_BAD_RETURN || false); return ret;}}
 
 namespace rc
 {

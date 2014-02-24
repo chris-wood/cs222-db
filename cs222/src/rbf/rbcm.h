@@ -45,11 +45,13 @@ struct PFHeader
 
 // Record ID
 // Uniquely identifies the location in the file where the record is stored
-typedef struct
+struct RID
 {
   PageNum pageNum;
   unsigned slotNum;
-} RID;
+
+  RID() : pageNum(0), slotNum(0) {}
+};
 
 // Page index slot entry
 // Data required to find, and copy the exact amount of size required for a record
@@ -168,6 +170,7 @@ protected:
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   virtual unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
+  RC reorganizeBufferedPage(FileHandle &fileHandle, unsigned footerSize, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 
 private:
 	PagedFileManager& _pfm;

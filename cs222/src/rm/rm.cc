@@ -51,8 +51,10 @@ RelationManager::RelationManager()
 	_systemTableAttributeRecordDescriptor.push_back(attr);
 	
 	// Generate the system table which will hold data about all other created tables
+	ASSERT_ON_BAD_RETURN = false;
     if (loadSystemTables() != rc::OK)
     {
+		ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
         RC ret = createSystemTables();
         assert(ret == rc::OK);
     }

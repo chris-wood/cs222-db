@@ -68,7 +68,11 @@ RC IndexManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &
 
 RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNumber, pageBuffer);
+    RETURN_ON_ERR(ret);
+
+	return reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, pageNumber, pageBuffer);
 }
 
 RC IndexManager::createFile(const string &fileName)
@@ -1018,7 +1022,9 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	}
 	cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << numInserted << endl;
 
-	// cout << "Left slots = " << (getIXPageIndexFooter(pageBuffer)->)
+	// Reorganize the left page, because the deletes may have left holes
+	ret = reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, targetPageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
 
 	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, pageBuffer);
