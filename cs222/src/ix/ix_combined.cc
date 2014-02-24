@@ -8,6 +8,7 @@
 
 #include "ix.h"
 #include "ixtest_util.h"
+#include "../util/returncodes.h"
 
 using namespace std;
 
@@ -33,8 +34,10 @@ int main()
 
 	testCustom();
 
+	ASSERT_ON_BAD_RETURN = false;
     test1();
     test2();
+	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
     cout << "\n\ngrad-point: " << g_nGradPoint << "\ngrad-extra-point: " << g_nGradExtraPoint << endl;
     return 0;
@@ -2190,10 +2193,10 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	{
 		rid.pageNum = 99999;
 		rid.slotNum = i;
-		*c = 'a' + i;
+		*c = '!' + i%92;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
-		if (i==168)
+		if (i==101)
 		{
 			std::cout << "\n\n";
 			indexManager->printIndex(fileHandle, attr);
@@ -2210,7 +2213,7 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	{
 		rid.pageNum = 99999;
 		rid.slotNum = i;
-		*c = 'a' + i;
+		*c = '!' + i%92;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
         cout << "DELETING: " << i << endl;
@@ -2231,7 +2234,7 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	{
 		rid.pageNum = 99999;
 		rid.slotNum = i;
-		*c = 'a' + i;
+		*c = '!' + i%92;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
         std::cout << "testing " << i << std::endl;

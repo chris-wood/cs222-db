@@ -711,7 +711,7 @@ RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribu
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
 	// Traverse down the tree to the rightmost leaf, using non-leaves along the way
-	PageNum currentPage = 1;
+	PageNum currentPage = IndexManager::instance()->_rootPageNum;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, NULL, currentPage);
@@ -1312,7 +1312,22 @@ void KeyValueData::print(AttrType type)
 				memcpy(stringBuffer, varchar+4, size);
 				std::string s(stringBuffer);
 
-				std::cout << "(" << size << ") '" << s << "'";
+				if (size==1)
+				{
+					std::cout << "'" << s << "'(";
+
+					if (s[0] < 0)
+						std::cout << ((int)s[0]+256);
+					else
+						std::cout << ((int)s[0]);
+
+					std::cout << ")";
+				}
+				else
+				{
+					std::cout << "(" << size << ")'" << s << "'";
+				}
+				
 			}
 			break;
 
@@ -1361,7 +1376,7 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute)
 	{
 		std::cout << (*it) << " ";
 	}
-	std::cout << "]\n" << std::endl;
+	std::cout << "]" << std::endl;
 	
 	std::cout << "Pages: " << fileHandle.getNumberOfPages();
 	std::cout << "\tRoot: " << im->_rootPageNum << "\n" << std::endl;
