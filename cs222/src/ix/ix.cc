@@ -163,7 +163,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	cout << "Insert entry going into leaf: " << nextPage << endl;
+	cout << "Insert entry going into leaf: " << insertDestination << endl;
 	ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 	if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 	{
