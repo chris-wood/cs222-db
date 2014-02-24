@@ -983,6 +983,10 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
 		RETURN_ON_ERR(ret);
 
+		// Refresh the page buffer
+		ret = fileHandle.readPage(pageNum, pageBuffer);
+		RETURN_ON_ERR(ret);
+
 		// We know what the slot numbers will be because the page is empty
 		if (i == numRecords - 1 || tempRecord.nextSlot.pageNum == 0)
 		{
