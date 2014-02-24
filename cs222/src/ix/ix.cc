@@ -1022,6 +1022,10 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	}
 	cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << numInserted << endl;
 
+	// Reorganize the left page, because the deletes may have left holes
+	ret = reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, targetPageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
+
 	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
