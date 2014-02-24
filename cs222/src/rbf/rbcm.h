@@ -170,6 +170,7 @@ protected:
   PageIndexSlot* getPageIndexSlot(void* pageBuffer, unsigned slotNum);
   void writePageIndexSlot(void* pageBuffer, unsigned slotNum, PageIndexSlot* slot);
   virtual unsigned calculateFreespace(unsigned freespaceOffset, unsigned numSlots);
+  RC reorganizeBufferedPage(FileHandle &fileHandle, unsigned footerSize, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
 
 private:
 	PagedFileManager& _pfm;

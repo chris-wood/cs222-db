@@ -68,7 +68,11 @@ RC IndexManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &
 
 RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+    unsigned char pageBuffer[PAGE_SIZE] = {0};
+    RC ret = fileHandle.readPage(pageNumber, pageBuffer);
+    RETURN_ON_ERR(ret);
+
+	return reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, pageNumber, pageBuffer);
 }
 
 RC IndexManager::createFile(const string &fileName)

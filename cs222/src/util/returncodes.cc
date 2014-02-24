@@ -1,5 +1,7 @@
 #include "returncodes.h"
 
+bool ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
+
 namespace rc
 {
     const char* rcToString(int rc)

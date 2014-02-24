@@ -81,8 +81,6 @@ protected:
 	RecordBasedFileManager();
 	virtual ~RecordBasedFileManager();
 	
-	RC reorganizeBufferedPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer);
-
 	RBFM_PageIndexFooter* getRBFMPageIndexFooter(void* pageBuffer);
 
 private:
