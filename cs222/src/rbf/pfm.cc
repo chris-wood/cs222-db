@@ -158,6 +158,7 @@ FileHandle::~FileHandle()
 
 RC FileHandle::updatePageCount()
 {
+	assert(_file);
     if (fseek(_file, 0, SEEK_END) != 0)
     {
         return rc::FILE_SEEK_FAILED;
