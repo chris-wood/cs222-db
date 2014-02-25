@@ -261,7 +261,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
 			{
 				cout << "splitting again: " << parent << "," << _rootPageNum << endl;
-				assert(false);
+				// assert(false);
 			}
 			nextPage = parent;
 		}
@@ -317,7 +317,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		return ret;
 	}
 
-	printIndex(fileHandle, attribute, true);
+	// printIndex(fileHandle, attribute, true);
 	cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
 
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
@@ -437,7 +437,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		IndexRecord targetPrevEntry;
 		IndexRecord targetEntry;
 
-		printIndex(fileHandle, attribute, true);
+		// printIndex(fileHandle, attribute, true);
 
 		int numEntries = 0;
 		int target = 0;
@@ -445,6 +445,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		while (currRid.pageNum > 0) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
+			cout << "Reading: " << currRid.pageNum << "," << currRid.slotNum << endl;
 			ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 			RETURN_ON_ERR(ret);
 
