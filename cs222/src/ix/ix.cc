@@ -207,7 +207,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			// printIndex(fileHandle, attribute, true);
 
-			ret = split(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
+			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
 			RETURN_ON_ERR(ret);
 
 			// Our first split will tell us where to put or original value
@@ -457,7 +457,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		while (currRid.pageNum > 0) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
-			cout << "Reading: " << currRid.pageNum << "," << currRid.slotNum << endl;
+			//cout << "Reading: " << currRid.pageNum << "," << currRid.slotNum << endl;
 			ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 			RETURN_ON_ERR(ret);
 
@@ -619,7 +619,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		while (currRid.pageNum > 0) 
 		{
 			// Pull in the next entry
-			cout << "Reading: " << currRid.pageNum << "," << currRid.slotNum << endl;
+			//cout << "Reading: " << currRid.pageNum << "," << currRid.slotNum << endl;
 			ret = readRecord(fileHandle, recordDescriptor, currRid, &currEntry);
 			RETURN_ON_ERR(ret);
 
