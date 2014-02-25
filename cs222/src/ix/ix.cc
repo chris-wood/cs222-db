@@ -78,7 +78,10 @@ RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> 
 RC IndexManager::createFile(const string &fileName)
 {
 	RC ret = _pfm.createFile(fileName.c_str());
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// Open up the file so we can initialize it with some data
 	FileHandle fileHandle;
@@ -306,7 +309,10 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	assert(footer->isLeafPage);
 	RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 	ret = findLeafIndexEntry(fileHandle, footer, attribute, &keyData, entryRid, prevEntryRid, nextEntryRid, dataRid);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
 	IndexRecord record;
@@ -522,6 +528,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	unsigned recHeaderSize = 0;
 	unsigned* recHeader = NULL;
 	ret = generateRecordHeader(recordDescriptor, &leaf, recHeader, recLength, recHeaderSize);
+	RETURN_ON_ERR(ret);
 
 	// Determine if we can fit on this page
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
@@ -928,12 +935,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		RETURN_ON_ERR(ret);
 
 		std::cout << " Keep on LEFT: " << currRid.pageNum << "," << currRid.slotNum << endl;
-
 		currRid = tempRecord.nextSlot;
-
-		// tempRecord.key.print(TypeInt);
-		// std::cout << i;
-		// std::cout << std::endl;
 	}
 
 	// Break the nextSlot connection on the very last element of this old page
@@ -983,8 +985,8 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	RETURN_ON_ERR(ret);
 
 	std::cout << " Break connection on RIGHT: ";
-		rightKey.print(TypeInt);
-		std::cout << std::endl;
+	rightKey.print(TypeInt);
+	std::cout << std::endl;
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
@@ -992,6 +994,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	nextSlot.pageNum = newPageNum;
 	nextSlot.slotNum = 0;
 	int numInserted = 0;
+	IX_PageIndexFooter* leftFooter = getIXPageIndexFooter(pageBuffer);
 	for (; i < numRecords && currRid.pageNum > 0; i++)
 	{
 		numInserted++;
@@ -1004,12 +1007,13 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 
 		// Delete the entry from the old page
 		cout << "Deleting: " << currRid.pageNum << "," << currRid.slotNum << endl;
-		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), getIXPageIndexFooter(pageBuffer), pageBuffer);
+		ret = deleteRid(fileHandle, currRid, getPageIndexSlot(pageBuffer, currRid.slotNum), leftFooter, pageBuffer);
 		RETURN_ON_ERR(ret);
 
 		// Refresh the page buffer
 		ret = fileHandle.readPage(targetPageNum, pageBuffer);
 		RETURN_ON_ERR(ret);
+		leftFooter = getIXPageIndexFooter(pageBuffer);
 
 		// We know what the slot numbers will be because the page is empty
 		if (i == numRecords - 1 || tempRecord.nextSlot.pageNum == 0)
@@ -1038,9 +1042,14 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	}
 	cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << numInserted << endl;
 
+	cout << "Before reorg " << targetPageNum << ": " << leftFooter->numSlots << "," << leftFooter->freeSpaceOffset << endl;
+
 	// Reorganize the left page, because the deletes may have left holes
 	ret = reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
+	leftFooter = getIXPageIndexFooter(pageBuffer);
+
+	cout << "After reorg " << targetPageNum << ": " << leftFooter->numSlots << "," << leftFooter->freeSpaceOffset << endl;
 
 	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, pageBuffer);

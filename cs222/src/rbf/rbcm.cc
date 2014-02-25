@@ -58,11 +58,13 @@ RC RecordBasedCoreManager::createFile(const string &fileName) {
     return rc::OK;
 }
 
-RC RecordBasedCoreManager::destroyFile(const string &fileName) {
+RC RecordBasedCoreManager::destroyFile(const string &fileName) 
+{
     return _pfm.destroyFile(fileName.c_str());
 }
 
-RC RecordBasedCoreManager::openFile(const string &fileName, FileHandle &fileHandle) {
+RC RecordBasedCoreManager::openFile(const string &fileName, FileHandle &fileHandle) 
+{
     RC ret = _pfm.openFile(fileName.c_str(), fileHandle);
     RETURN_ON_ERR(ret);
 
@@ -76,7 +78,8 @@ RC RecordBasedCoreManager::openFile(const string &fileName, FileHandle &fileHand
     return ret;
 }
 
-RC RecordBasedCoreManager::closeFile(FileHandle &fileHandle) {
+RC RecordBasedCoreManager::closeFile(FileHandle &fileHandle) 
+{
     RC ret = _pfm.closeFile(fileHandle);
     RETURN_ON_ERR(ret);
 
@@ -854,6 +857,7 @@ RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
             }
         }
         footer->numSlots -= empty;
+        cout << "Decremting the slots on page " << rid.pageNum <<  " by " << empty << endl;
 
 		// Zero out all of slotIndex
 		slotIndex->pageOffset = 0;

@@ -94,7 +94,7 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
 
     RID rid;
     RC rc;
-    unsigned numOfTuples = 1000;
+    unsigned numOfTuples = 1;
     unsigned key = 100;
     rid.pageNum = key;
     rid.slotNum = key+1;
@@ -348,8 +348,8 @@ void test()
 
     testCase_1(indexAgeFileName);
     testCase_2(indexAgeFileName, attrAge);
-    testCase_3(indexAgeFileName, attrAge);
-    testCase_4A(indexAgeFileName, attrAge);
+    // testCase_3(indexAgeFileName, attrAge);
+    // testCase_4A(indexAgeFileName, attrAge);
     return;
 }
 
