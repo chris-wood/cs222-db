@@ -97,6 +97,7 @@ class IndexManager : public RecordBasedCoreManager {
   static RC readRootPage(FileHandle& fileHandle, void* pageBuffer);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
   static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended);
+  static RC updateRootPage(FileHandle& fileHandle, unsigned newRootPage);
 
   RC getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid);
   
@@ -114,10 +115,6 @@ class IndexManager : public RecordBasedCoreManager {
  private:
 	static IndexManager *_index_manager;
 	
-	PagedFileManager& _pfm;
-
-	PageNum _rootPageNum; // TODO: This should be stored in page0 right? since if it changes for one index this can't keep track of that change ---- Yes, most definitely
-
 	std::vector<Attribute> _indexIntRecordDescriptor;
 	std::vector<Attribute> _indexRealRecordDescriptor;
 	std::vector<Attribute> _indexVarCharRecordDescriptor;

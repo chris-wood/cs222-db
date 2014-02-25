@@ -623,23 +623,29 @@ RC RecordBasedCoreManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 {
     dbg::out << dbg::LOG_EXTREMEDEBUG << "RecordBasedCoreManager::writeHeader(" << fileHandle.getFilename() << ")\n";
 
-    // Copy the header data into a newly allocated buffer
-    // We know the only data in page 0 is PFHeader, so we can stomp over everything already there
     unsigned char buffer[PAGE_SIZE] = {0};
-    memcpy(buffer, header, sizeof(PFHeader));
 
     // Commit the header to disk
-    RC ret;
     if (fileHandle.getNumberOfPages() == 0)
     {
-        ret = fileHandle.appendPage(buffer);
+		// Set the header data
+		memcpy(buffer, header, sizeof(PFHeader));
+        RC ret = fileHandle.appendPage(buffer);
+		RETURN_ON_ERR(ret);
     }
     else
-    { 
+    {
+		// Copy the old header data into a newly allocated buffer
+		RC ret = fileHandle.readPage(0, buffer);
+		RETURN_ON_ERR(ret);
+
+		// Overwrite the header data
+		memcpy(buffer, header, sizeof(PFHeader));
         ret = fileHandle.writePage(0, buffer);
+		RETURN_ON_ERR(ret);
     }
 
-    return ret;
+    return rc::OK;
 }
 
 RC RecordBasedCoreManager::readHeader(FileHandle &fileHandle, PFHeader* header)

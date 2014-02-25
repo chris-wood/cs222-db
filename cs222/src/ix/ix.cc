@@ -16,7 +16,7 @@ IndexManager* IndexManager::instance()
 }
 
 IndexManager::IndexManager()
-	: RecordBasedCoreManager(sizeof(IX_PageIndexFooter)), _pfm(*PagedFileManager::instance())
+	: RecordBasedCoreManager(sizeof(IX_PageIndexFooter))
 {
 	Attribute attr;
 	std::vector<Attribute> commonDescriptor;
@@ -77,7 +77,7 @@ RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> 
 
 RC IndexManager::createFile(const string &fileName)
 {
-	RC ret = _pfm.createFile(fileName.c_str());
+	RC ret = PagedFileManager::instance()->createFile(fileName.c_str());
 	if (ret != rc::OK)
 	{
 		return ret;
@@ -89,13 +89,36 @@ RC IndexManager::createFile(const string &fileName)
 	RETURN_ON_ERR(ret);
 
 	// Create the root page, mark it as a leaf, it's page 1
-	_rootPageNum = 1;
-	ret = newPage(fileHandle, _rootPageNum, true, 0, 0);
+	ret = newPage(fileHandle, 1, true, 0, 0);
+	RETURN_ON_ERR(ret);
+
+	// Store the root page to the reserved page 0
+	ret = updateRootPage(fileHandle, 1);
 	RETURN_ON_ERR(ret);
 
 	// We're done, leave the file closed
 	ret = closeFile(fileHandle);
 	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+RC IndexManager::updateRootPage(FileHandle& fileHandle, unsigned newRootPage)
+{
+	// Read in the reserved page
+	unsigned char pageBuffer[PAGE_SIZE];
+	RC ret = fileHandle.readPage(0, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Place the root page data at the very end of the page
+	unsigned* rootPage = (unsigned*)( (char*)pageBuffer + PAGE_SIZE - sizeof(unsigned) );
+	*rootPage = newRootPage;
+
+	// Write the page back
+	ret = fileHandle.writePage(0, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	std::cout << "NEW ROOT PAGE = " << newRootPage << '\n' << std::endl;
 
 	return rc::OK;
 }
@@ -222,11 +245,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			if (nextPage == rootPage)
 			{
 				PageNum oldRoot = rootPage;
-				_rootPageNum = fileHandle.getNumberOfPages();
-				ret = newPage(fileHandle, _rootPageNum, false, 0, leftPage);
+				PageNum newRootPage = fileHandle.getNumberOfPages();
+				ret = updateRootPage(fileHandle, newRootPage);
 				RETURN_ON_ERR(ret);
 
-				cout << "\t\t====>ROOT GREW: " << _rootPageNum << endl;
+				ret = newPage(fileHandle, newRootPage, false, 0, leftPage);
+				RETURN_ON_ERR(ret);
+
+				cout << "\t\t====>ROOT GREW: " << newRootPage << endl;
 
 				// Update the left/right children parents to point to the new root
 				unsigned char tempBuffer[PAGE_SIZE] = {0};
@@ -234,7 +260,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				RETURN_ON_ERR(ret);
 
 				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				tempFooter->parent = _rootPageNum;
+				tempFooter->parent = newRootPage;
 
 				// Write the new page information to disk
 				ret = fileHandle.writePage(leftPage, tempBuffer);
@@ -245,8 +271,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = fileHandle.readPage(rightPage, tempBuffer);
 				RETURN_ON_ERR(ret);
 
-				tempFooter->parent = _rootPageNum;
-				parent = _rootPageNum;
+				tempFooter->parent = newRootPage;
+				parent = newRootPage;
 
 				// Write the new page information to disk
 				ret = fileHandle.writePage(rightPage, tempBuffer);
@@ -254,8 +280,9 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 				// Read the new non-leaf page back in
 				memset(tempBuffer, 0, PAGE_SIZE);
-				RC ret = fileHandle.readPage(_rootPageNum, tempBuffer);
+				RC ret = fileHandle.readPage(newRootPage, tempBuffer);
 				RETURN_ON_ERR(ret);
+
 				tempFooter = getIXPageIndexFooter(tempBuffer);
 				assert(tempFooter->isLeafPage == false);
 
@@ -273,7 +300,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
 			{
-				cout << "splitting again: " << parent << "," << _rootPageNum << endl;
+				//cout << "splitting again: " << parent << "," << _rootPageNum << endl;
 				// assert(false);
 			}
 			nextPage = parent;
@@ -297,6 +324,10 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
+	// Extract the header
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+	const PageNum rootPageNum = footer->pageNumber;
+
 	// Build the key struct for the index 
 	KeyValueData keyData;
 	ret = keyData.init(attribute.type, key);
@@ -305,11 +336,8 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	// Extract the header
-	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
-
 	// Traverse down the tree to the leaf, using non-leaves along the way
-	PageNum nextPage = _rootPageNum;
+	PageNum nextPage = rootPageNum;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
@@ -755,8 +783,17 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 RC IndexManager::readRootPage(FileHandle& fileHandle, void* pageBuffer)
 {
+	// Read in the reserved page
+	RC ret = fileHandle.readPage(0, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Place the root page data at the very end of the page
+	unsigned* rootPage = (unsigned*)( (char*)pageBuffer + PAGE_SIZE - sizeof(unsigned) );
+
+	std::cout << "CURRENT ROOT PAGE = " << *rootPage << '\n' << std::endl;
+
 	// Pull in the root page
-	RC ret = fileHandle.readPage(IndexManager::instance()->_rootPageNum, pageBuffer); // TODO: Look for root page
+	ret = fileHandle.readPage(*rootPage, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	return rc::OK;
@@ -771,6 +808,7 @@ RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribu
 
 	// Extract the header
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+	const PageNum rootPageNum = footer->pageNumber;
 
 	// Extract the first record
 	RID currRid = footer->firstRecord;
@@ -780,7 +818,7 @@ RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribu
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
 	// Traverse down the tree to the rightmost leaf, using non-leaves along the way
-	PageNum currentPage = IndexManager::instance()->_rootPageNum;
+	PageNum currentPage = rootPageNum;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, NULL, currentPage);
@@ -1738,12 +1776,13 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 	std::cout << "]" << std::endl;
 	
 	std::cout << "Pages: " << fileHandle.getNumberOfPages();
-	std::cout << "\tRoot: " << im->_rootPageNum << "\n" << std::endl;
 
 	PageNum currentPage = 1;
 	IndexRecord currEntry;
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+
+	std::cout << "\tRoot: " << footer->pageNumber << "\n" << std::endl;
 
 	// Loop through all pages and print a summary of the data
 	while(currentPage < fileHandle.getNumberOfPages())
