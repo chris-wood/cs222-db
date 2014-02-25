@@ -985,7 +985,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	RETURN_ON_ERR(ret);
 
 	// Clear out the old page data
-	ret = newPage(fileHandle, targetPageNum, inputFooter->isLeafPage, inputFooter->nextLeafPage, inputFooter->leftChild);
+	ret = newPage(fileHandle, targetPageNum, inputFooter->isLeafPage, newPageNum, inputFooter->leftChild);
 	RETURN_ON_ERR(ret);
 
 	// Setup buffers for left/right page outputs
