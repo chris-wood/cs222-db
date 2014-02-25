@@ -463,10 +463,17 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 // Assume the rid does not change after update
 RC RecordBasedCoreManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
-    // Read the page of data RID points to
+	// Read the page of data RID points to
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
     RETURN_ON_ERR(ret);
+
+	return updateRecordInplace(fileHandle, recordDescriptor, data, rid, pageBuffer);
+}
+
+RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid, void* pageBuffer)
+{
+	RC ret = rc::OK;
 
     // Pull the target slot into memory
     CorePageIndexFooter* realFooter = getCorePageIndexFooter(pageBuffer);
@@ -531,7 +538,7 @@ RC RecordBasedCoreManager::updateRecord(FileHandle &fileHandle, const vector<Att
         if (rid.slotNum == realFooter->numSlots - 1)
         {
             realFooter->freeSpaceOffset = realSlot->pageOffset + recLength;    
-            memcpy(pageBuffer + PAGE_SIZE - _pageSlotOffset, realFooter, sizeof(CorePageIndexFooter));
+            memcpy(pageBuffer + PAGE_SIZE - sizeof(CorePageIndexFooter), realFooter, sizeof(CorePageIndexFooter));
         }
         realSlot->size = recLength;
 

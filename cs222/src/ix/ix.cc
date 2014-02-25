@@ -912,11 +912,6 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 
 RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey)
 {
-	if (targetPageNum == 4)
-	{
-		PRINT_ME_NOW = true;
-	}
-
 	// Read in the page to be split
 	unsigned char inputBuffer[PAGE_SIZE] = {0};
 	RC ret = fileHandle.readPage(targetPageNum, inputBuffer);

@@ -145,6 +145,7 @@ public:
   // Additional API for part 3
   RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, RID &rid);
   RC insertRecordInplace(const vector<Attribute> &recordDescriptor, const void *data, PageNum pageNum, void* pageBuffer, RID &rid);
+  RC updateRecordInplace(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid, void* pageBuffer);
 
   // Methods delegated to the children
   virtual RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data) = 0;
