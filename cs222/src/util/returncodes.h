@@ -4,7 +4,7 @@
 #include <iostream>
 using namespace std;
 
-#define GLOBAL_ASSERT_ON_BAD_RETURN true
+#define GLOBAL_ASSERT_ON_BAD_RETURN false
 extern bool ASSERT_ON_BAD_RETURN;
 
 #define RETURN_ON_ERR(ret) {if((ret) != rc::OK) {cout << rc::rcToString(ret) << endl; assert(!ASSERT_ON_BAD_RETURN || false); return ret;}}

@@ -35,7 +35,7 @@ int main()
 	testCustom();
 
 	ASSERT_ON_BAD_RETURN = false;
-    // test1();
+    test1();
     // test2();
 	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
@@ -166,6 +166,7 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
     if(rc == success) //This time it should NOT give success because entry is not there.
     {
+        cout << rc::rcToString(rc) << endl;
         cout << "Entry deleted again...failure" << endl;
         goto error_close_index;
     }
@@ -214,6 +215,8 @@ int testCase_3(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
+    cout << "after destroy" << endl;
+
     // open the destroyed index
     rc = indexManager->openFile(indexFileName, fileHandle);
     if(rc == success) //should not work now
@@ -223,6 +226,8 @@ int testCase_3(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
+    cout << "after open" << endl;
+
     // open scan
     rc = indexManager->scan(fileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator);
     if(rc == success)
@@ -231,6 +236,8 @@ int testCase_3(const string &indexFileName, const Attribute &attribute)
         ix_ScanIterator.close();
         goto error_return;
     }
+
+    cout << "after scan" << endl;
 
     g_nGradPoint += 5;
     g_nUndergradPoint += 5;
@@ -2289,8 +2296,8 @@ void testCustom()
 	// std::cout << "====Testing single split insert/delete on strings====" << std::endl;
 	// testSimpleAddDeleteIndex(75, true);
 
-	std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
-    testSimpleAddDeleteIndex(10000, false);
+	// std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
+ //    testSimpleAddDeleteIndex(10000, false);
 	// std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
 	// testSimpleAddDeleteIndex(250, true);
 }
