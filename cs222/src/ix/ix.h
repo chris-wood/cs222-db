@@ -145,6 +145,7 @@ private:
 	RID _beginRecordRid;
 	RID _endRecordRid;
 	RID _currentRecordRid;
+	RID _nextRecordRid;
 };
 
 // print out the error message for a given return code
