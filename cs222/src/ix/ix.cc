@@ -192,6 +192,9 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			PageNum rightPage;
 			KeyValueData rightKey;
 			RID rightRid;
+
+			// printIndex(fileHandle, attribute, true);
+
 			ret = split(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
 			RETURN_ON_ERR(ret);
 
@@ -314,6 +317,9 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		return ret;
 	}
 
+	printIndex(fileHandle, attribute, true);
+	cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
+
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
 	IndexRecord record;
 	if (entryRid.slotNum == footer->firstRecord.slotNum)
@@ -321,6 +327,12 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
 		RETURN_ON_ERR(ret);
 		footer->firstRecord = record.nextSlot;
+		while (footer->firstRecord.pageNum != 0) 
+		{
+			ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
+			RETURN_ON_ERR(ret);
+			footer->firstRecord = record.nextSlot;
+		}
 		memcpy(pageBuffer + PAGE_SIZE - sizeof(IX_PageIndexFooter), footer, sizeof(IX_PageIndexFooter));
 		ret = fileHandle.writePage(nextPage, pageBuffer);
 		RETURN_ON_ERR(ret);
@@ -334,6 +346,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 		record.nextSlot = nextEntryRid;
 
+		cout << "Update prev pointer on deletion: " << entryRid.pageNum << endl;
 		ret = IndexManager::instance()->updateRecord(fileHandle, recordDescriptor, &record, prevEntryRid);
 		RETURN_ON_ERR(ret);
 	}
@@ -375,7 +388,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 	// Determine if we can fit on this page
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
-	if (recLength >= targetFreeSpace)
+	if ((recLength + sizeof(PageIndexSlot)) >= targetFreeSpace)
 	{
 		if (footer->numSlots == 0)
 			return rc::BTREE_KEY_TOO_LARGE;
@@ -398,6 +411,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		
 		// Update the header of the page to point to this new entry
 		footer->firstRecord = newEntry;
+		cout << "Updating first record of " << page << " to " << newEntry.pageNum << "," << newEntry.slotNum << endl;
 		memcpy(pageBuffer + PAGE_SIZE - sizeof(IX_PageIndexFooter), footer, sizeof(IX_PageIndexFooter));
 
 		// Write the new page information to disk
@@ -419,12 +433,15 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		IndexRecord currEntry;
 		IndexRecord prevEntry;
 		RID targetPrevRid;
-		RID targetRid;
+		RID targetRid = footer->firstRecord;
 		IndexRecord targetPrevEntry;
 		IndexRecord targetEntry;
 
-		int index = 0;
+		printIndex(fileHandle, attribute, true);
+
+		int numEntries = 0;
 		int target = 0;
+		bool foundMatch = false;
 		while (currRid.pageNum > 0) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
@@ -437,14 +454,14 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 			if (compareResult >= 0)
 			{
-				target = index;
-				target = index;
+				foundMatch = true;
+				target = numEntries;
 				targetPrevRid = prevRid;
 				targetRid = currRid;
 				targetEntry = currEntry;
 				targetPrevEntry = prevEntry;
 			}
-			index++;
+			numEntries++;
 
             // Update for next iteration
             prevRid = currRid;
@@ -453,8 +470,8 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		}
 
 		// Drop the record into the right spot in the on-page list
-		atEnd = (target + 1) == footer->numSlots;
-		if (!atEnd && targetPrevRid.pageNum > 0) // middle of list
+		atEnd = (target + 1) == numEntries;
+		if (!atEnd && targetPrevRid.pageNum > 0 && numEntries > 1) // middle of list
 		{
 			// Insert the new record into the root, and make it point to the current RID
 			entry.nextSlot = targetRid;
@@ -465,14 +482,14 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 			// Update the previous entry to point to the new entry (it's in the middle now)
 			targetPrevEntry.nextSlot = newEntry;
-			cout << "Updating: " << targetPrevRid.pageNum << "," << targetPrevRid.slotNum << endl;
+			cout << "Updating middle: " << targetPrevRid.pageNum << "," << targetPrevRid.slotNum << endl;
 			ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
 			RETURN_ON_ERR(ret);
 		}
 		else if (!atEnd) // start
 		{
 			// Insert the new record into the root, and make it point to the current RID
-			entry.nextSlot = targetRid;
+			entry.nextSlot = footer->firstRecord;
 			RID newEntry;
 			cout << "Inserting to start of page: " << page << endl;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &entry, page, newEntry);
@@ -483,6 +500,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			RETURN_ON_ERR(ret);
 
 			footer->firstRecord = newEntry;
+			cout << "Updating first record of " << footer->pageNumber << " to " << newEntry.pageNum << "," << newEntry.slotNum << endl;
 			ret = fileHandle.writePage(footer->pageNumber, pageBuffer);
 			RETURN_ON_ERR(ret);
 		}
@@ -496,6 +514,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 			// Update the previous entry to point to the new entry
 			targetEntry.nextSlot = newEntry;
+			cout << "Updating end: " << page << "," << targetRid.pageNum << "," << targetRid.slotNum << endl;
 			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
@@ -534,7 +553,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
 	cout << "New entry size = " << recLength << endl;
 	cout << "Target freespace = " << targetFreeSpace << endl;
-	if (recLength > targetFreeSpace)
+	if ((recLength + sizeof(PageIndexSlot)) > targetFreeSpace)
 	{
 		if (footer->numSlots == 0)
 			return rc::BTREE_KEY_TOO_LARGE;
@@ -556,6 +575,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		
 		// Update the header of the page to point to this new entry
 		footer->firstRecord = newEntry;
+		cout << "Updating first record of " << page << " to " << newEntry.pageNum << "," << newEntry.slotNum << endl;
 		memcpy(pageBuffer + PAGE_SIZE - sizeof(IX_PageIndexFooter), footer, sizeof(IX_PageIndexFooter));
 
 		// Write the new page information to disk
@@ -575,13 +595,13 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		RID currRid = footer->firstRecord;
 		RID prevRid;
 		RID targetPrevRid;
-		RID targetRid;
+		RID targetRid = footer->firstRecord;
 		IndexRecord targetPrevEntry;
 		IndexRecord targetEntry;
 		IndexRecord currEntry;
 		IndexRecord prevEntry;
 
-		int index = 0;
+		int numEntries = 0;
 		int target = 0;
 		while (currRid.pageNum > 0) 
 		{
@@ -596,13 +616,13 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 
             if (compareResult >= 0)
 			{
-				target = index;
+				target = numEntries;
 				targetPrevRid = prevRid;
 				targetRid = currRid;
 				targetEntry = currEntry;
 				targetPrevEntry = prevEntry;
 			}
-			index++;
+			numEntries++;
 
             // Update for next iteration
             prevRid = currRid;
@@ -611,12 +631,14 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		}
 
 		// Drop the record into the right spot in the on-page list
-		atEnd = (target + 1) == footer->numSlots;
-		if (!atEnd && targetPrevRid.pageNum > 0) // middle of list
+		atEnd = (target + 1) == numEntries;
+		if (!atEnd && targetPrevRid.pageNum > 0 && numEntries > 1) // middle of list
 		{
 			// Insert the new record into the root, and make it point to the current RID
 			leaf.nextSlot = targetRid;
 			RID newEntry;
+			cout << "Inserting to page: " << page << endl;
+			cout << calculateFreespace(footer->freeSpaceOffset, footer->numSlots) << endl;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
 			RETURN_ON_ERR(ret);
 
@@ -628,7 +650,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		else if (!atEnd)
 		{
 			// Insert the new record into the root, and make it point to the current RID
-			leaf.nextSlot = targetRid;
+			leaf.nextSlot = footer->firstRecord;
 			RID newEntry;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
 			RETURN_ON_ERR(ret);
@@ -650,6 +672,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 
 			// Update the previous entry to point to the new entry
 			targetEntry.nextSlot = newEntry;
+			cout << "Updating end: " << page << "," << targetRid.pageNum << "," << targetRid.slotNum << endl;
 			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
@@ -908,6 +931,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	// Update the nextLeaf pointer if needed
 	if (targetFooter->isLeafPage)
 	{
+		cout << "Chaining leaves: " << targetPageNum << " - " << newPageNum << endl;
 		targetFooter->nextLeafPage = newPageNum;
 	}
 
@@ -924,13 +948,31 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	// Read in half of the entries from the target page and insert them onto the new page
 	IndexRecord tempRecord;
 	RID prevRid, currRid = targetFooter->firstRecord;
-	const unsigned numRecords = targetFooter->numSlots;
-	const unsigned numToMove = ((targetFooter->numSlots - 1) / 2);
+	assert(currRid.pageNum == targetPageNum); // sanity check
+
+	// Count the number of actual entries on the page (going by slots doesn't work)
+	unsigned numRecords = targetFooter->numSlots;
 	unsigned i = 0;
+	unsigned numToMove = 0;
+	for (i = 0; i < numRecords && currRid.pageNum > 0; i++)
+	{
+		numToMove++;
+		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
+		RETURN_ON_ERR(ret);
+		currRid = tempRecord.nextSlot;
+	}
+	numRecords = numToMove;
+	numToMove = ((numToMove - 1) / 2) + 1; // ceiling
+	cout << "Moving " << numToMove << " out of " << numRecords << endl;
+	cout << "Split page is leaf? " << targetFooter->isLeafPage << endl;
+
+	// Reset the currRid to start the move
+	currRid = targetFooter->firstRecord;
 	for (i = 0; i < numToMove; i++)
 	{
 		// Skip over the first 'numToMove' RIDs since they stay in place
 		prevRid = currRid;
+		cout << "Skipping " << targetPageNum << "," << currRid.pageNum << "," << currRid.slotNum << endl;
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
 
@@ -943,6 +985,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	ret = readRecord(fileHandle, recordDescriptor, lastLeftPageRid, &tempRecord);
 	RETURN_ON_ERR(ret);
 
+	cout << "Split page is leaf? " << targetFooter->isLeafPage << endl;
 	std::cout << " Break connection on LEFT: ";
 		// tempRecord.key.print(TypeInt);
 	std::cout << i;
@@ -951,19 +994,25 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	tempRecord.nextSlot.pageNum = 0;
 	tempRecord.nextSlot.slotNum = 0;
 	cout << "Terminating list at: " << lastLeftPageRid.pageNum << "," << lastLeftPageRid.slotNum << endl;
+	// cout << "Split page is leaf? " << targetFooter->isLeafPage << endl;
 	ret = updateRecord(fileHandle, recordDescriptor, &tempRecord, lastLeftPageRid);
 	RETURN_ON_ERR(ret);
+	// targetFooter = getIXPageIndexFooter(pageBuffer);
+	// cout << "Split page is leaf after update? " << targetFooter->isLeafPage << endl;
+	// cout << targetFooter->isLeafPage << "," << targetFooter->firstRecord.pageNum << "," << targetFooter->firstRecord.slotNum << "," << targetFooter->parent << "," << targetFooter->nextLeafPage << "," << targetFooter->leftChild << endl;
 	ret = fileHandle.readPage(targetPageNum, pageBuffer);
 	RETURN_ON_ERR(ret);
+	// targetFooter = getIXPageIndexFooter(pageBuffer);
+	// cout << targetFooter->isLeafPage << "," << targetFooter->firstRecord.pageNum << "," << targetFooter->firstRecord.slotNum << "," << targetFooter->parent << "," << targetFooter->nextLeafPage << "," << targetFooter->leftChild << endl;
 
 	// Read in the first entry in the second half - this entry now points to the left
-	if (!targetFooter->isLeafPage)
+	if (!(targetFooter->isLeafPage))
 	{
 		// Load in the entry
 		ret = readRecord(fileHandle, recordDescriptor, currRid, &tempRecord);
 		RETURN_ON_ERR(ret);
 
-		std::cout << " LEAF split, so RIGHT will have a leftChild = ";
+		std::cout << " NON-LEAF split, so RIGHT will have a leftChild = ";
 		tempRecord.key.print(TypeInt);
 		std::cout << std::endl;
 
@@ -1016,7 +1065,7 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 		leftFooter = getIXPageIndexFooter(pageBuffer);
 
 		// We know what the slot numbers will be because the page is empty
-		if (i == numRecords - 1 || tempRecord.nextSlot.pageNum == 0)
+		if (i == numRecords - 1)
 		{
 			cout << "Terminating condition: " << currRid.pageNum << "," << currRid.slotNum << endl;
 			nextSlot.slotNum = 0;

@@ -531,7 +531,7 @@ RC RecordBasedCoreManager::updateRecord(FileHandle &fileHandle, const vector<Att
         if (rid.slotNum == realFooter->numSlots - 1)
         {
             realFooter->freeSpaceOffset = realSlot->pageOffset + recLength;    
-            memcpy(pageBuffer + PAGE_SIZE - sizeof(CorePageIndexFooter), realFooter, sizeof(CorePageIndexFooter));
+            memcpy(pageBuffer + PAGE_SIZE - _pageSlotOffset, realFooter, sizeof(CorePageIndexFooter));
         }
         realSlot->size = recLength;
 
@@ -857,7 +857,6 @@ RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
             }
         }
         footer->numSlots -= empty;
-        cout << "Decremting the slots on page " << rid.pageNum <<  " by " << empty << endl;
 
 		// Zero out all of slotIndex
 		slotIndex->pageOffset = 0;

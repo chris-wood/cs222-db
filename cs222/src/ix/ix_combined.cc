@@ -35,8 +35,8 @@ int main()
 	testCustom();
 
 	ASSERT_ON_BAD_RETURN = false;
-    test1();
-    test2();
+    // test1();
+    // test2();
 	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
     cout << "\n\ngrad-point: " << g_nGradPoint << "\ngrad-extra-point: " << g_nGradExtraPoint << endl;
@@ -2289,8 +2289,8 @@ void testCustom()
 	// std::cout << "====Testing single split insert/delete on strings====" << std::endl;
 	// testSimpleAddDeleteIndex(75, true);
 
-	// std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
-    // testSimpleAddDeleteIndex(10000, false);
-	std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
-	testSimpleAddDeleteIndex(250, true);
+	std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(10000, false);
+	// std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
+	// testSimpleAddDeleteIndex(250, true);
 }
