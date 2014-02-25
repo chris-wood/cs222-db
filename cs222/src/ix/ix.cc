@@ -102,6 +102,7 @@ RC IndexManager::createFile(const string &fileName)
 
 RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, PageNum nextLeafPage, PageNum leftChild)
 {
+	const unsigned currentNumPages = fileHandle.getNumberOfPages();
 	IX_PageIndexFooter footerTemplate;
 	footerTemplate.isLeafPage = isLeaf; 
 	footerTemplate.firstRecord.pageNum = pageNum;
@@ -117,20 +118,31 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, P
 	footerTemplate.leftChild = leftChild;
 	footerTemplate.freespaceList = NUM_FREESPACE_LISTS - 1;
 
-	// TODO: Check freespace list to see if there's a completely empty page available
-
-	// Append as many pages as needed (should be only 1)
-	unsigned requiredPages = pageNum - fileHandle.getNumberOfPages() + 1;
 	unsigned char pageBuffer[PAGE_SIZE];
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
-	for (unsigned i = 0; i < requiredPages; i++)
+	// If we are 'new'ing a previously allocated page, just zero out the data there
+	if (pageNum < currentNumPages)
 	{
 		memset(pageBuffer, 0, PAGE_SIZE);
 		memcpy(footer, &footerTemplate, sizeof(footerTemplate));
 
-		RC ret = fileHandle.appendPage(pageBuffer);
+		RC ret = fileHandle.writePage(pageNum, pageBuffer);
 		RETURN_ON_ERR(ret);
+	}
+	else
+	{
+		// TODO: Check freespace list to see if there's a completely empty page available
+		// Append as many pages as needed (should be only 1)
+		unsigned requiredPages = pageNum - currentNumPages + 1;
+		for (unsigned i = 0; i < requiredPages; i++)
+		{
+			memset(pageBuffer, 0, PAGE_SIZE);
+			memcpy(footer, &footerTemplate, sizeof(footerTemplate));
+
+			RC ret = fileHandle.appendPage(pageBuffer);
+			RETURN_ON_ERR(ret);
+		}
 	}
 
 	return rc::OK;
