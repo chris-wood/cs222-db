@@ -152,7 +152,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 {
 	// Pull in the root page
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = fileHandle.readPage(_rootPageNum, pageBuffer);
+	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	// Build the key struct for the index 
@@ -162,9 +162,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Extract the header
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+	const PageNum rootPage = footer->pageNumber;
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
-	PageNum insertDestination = _rootPageNum;
+	PageNum insertDestination = rootPage;
 	while (footer->isLeafPage == false)
 	{
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
@@ -218,9 +219,9 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			// Check to see if we need to grow by one level, and if so, add a new page with enough space to 
 			// hold the new index entry
-			if (nextPage == _rootPageNum)
+			if (nextPage == rootPage)
 			{
-				PageNum oldRoot = _rootPageNum;
+				PageNum oldRoot = rootPage;
 				_rootPageNum = fileHandle.getNumberOfPages();
 				ret = newPage(fileHandle, _rootPageNum, false, 0, leftPage);
 				RETURN_ON_ERR(ret);
@@ -293,7 +294,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 {
     // Pull in the root page
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = fileHandle.readPage(_rootPageNum, pageBuffer);
+	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	// Build the key struct for the index 
@@ -752,11 +753,20 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 	return rc::OK;
 }
 
+RC IndexManager::readRootPage(FileHandle& fileHandle, void* pageBuffer)
+{
+	// Pull in the root page
+	RC ret = fileHandle.readPage(IndexManager::instance()->_rootPageNum, pageBuffer); // TODO: Look for root page
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
 RC IndexManager::findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid)
 {
 	// Pull in the root page
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = fileHandle.readPage(1, pageBuffer); // TODO: Look for root page
+	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	// Extract the header
@@ -811,7 +821,7 @@ RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
 {
 	// Begin at the root
 	char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = fileHandle.readPage(1, pageBuffer);
+	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	// Extract the first record's leftChild
@@ -855,7 +865,7 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, const Attribute &att
 {
 	// Begin at the root
 	char pageBuffer[PAGE_SIZE] = {0};
-	RC ret = fileHandle.readPage(1, pageBuffer);
+	RC ret = readRootPage(fileHandle, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	IX_PageIndexFooter* footer = IndexManager::getIXPageIndexFooter(pageBuffer);
@@ -1396,6 +1406,8 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 	_recordDescriptor = _im.getIndexRecordDescriptor(attribute.type);
 	RETURN_ON_ERR(ret);
+
+	IndexManager::instance()->printIndex(*fileHandle, attribute, true);
 
 	// Traverse down the left pointers to find the lowest RID
 	RID lowestPossibleRid;
