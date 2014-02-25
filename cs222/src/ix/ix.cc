@@ -471,6 +471,14 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			cout << "Inserting to start of page: " << page << endl;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &entry, page, newEntry);
 			RETURN_ON_ERR(ret);
+
+			// We are the beginning of the list, update the firstRecord slot to point here
+			ret = fileHandle.readPage(footer->pageNumber, pageBuffer);
+			RETURN_ON_ERR(ret);
+
+			footer->firstRecord = newEntry;
+			ret = fileHandle.writePage(footer->pageNumber, pageBuffer);
+			RETURN_ON_ERR(ret);
 		}
 		else // append the RID to the end of the on-page list 
 		{
@@ -616,6 +624,14 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			leaf.nextSlot = targetRid;
 			RID newEntry;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
+			RETURN_ON_ERR(ret);
+
+			// We are the beginning of the list, update the firstRecord slot to point here
+			ret = fileHandle.readPage(footer->pageNumber, pageBuffer);
+			RETURN_ON_ERR(ret);
+
+			footer->firstRecord = newEntry;
+			ret = fileHandle.writePage(footer->pageNumber, pageBuffer);
 			RETURN_ON_ERR(ret);
 		}
 		else // append the RID to the end of the on-page list 
