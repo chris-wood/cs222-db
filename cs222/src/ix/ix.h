@@ -98,6 +98,8 @@ class IndexManager : public RecordBasedCoreManager {
 
   static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended);
 
+  RC getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid);
+
  protected:
   IndexManager   ();                            // Constructor
   virtual ~IndexManager  ();                    // Destructor
@@ -127,14 +129,16 @@ public:
 
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
   RC close();             						// Terminate index scan
-
   RC init(FileHandle* fileHandle, const Attribute &attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
 
 private:
-	PagedFileManager& _pfm;
+	RC advance();
+
+	IndexManager& _im;
 
 	FileHandle* _fileHandle;
 	Attribute _attribute;
+	std::vector<Attribute> _recordDescriptor;
 	KeyValueData* _lowKeyValue;
 	KeyValueData* _highKeyValue;
 	bool _lowKeyInclusive;

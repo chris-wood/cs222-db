@@ -1292,6 +1292,46 @@ RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& rec
 	return rc::OK;
 }
 
+RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid)
+{
+	if (rid.pageNum == 0)
+		return IX_EOF;
+
+	// Read in the page with current record
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+	if (!footer->isLeafPage)
+		return rc::BTREE_ITERATOR_ILLEGAL_NON_LEAF_RECORD;
+
+	if (footer->numSlots <= rid.slotNum)
+		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
+
+	IndexRecord record;
+	ret = readRecord(fileHandle, recordDescriptor, rid, &record, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// We have a valid next slot, use it and return
+	if (record.nextSlot.pageNum != 0)
+	{
+		rid = record.nextSlot;
+		return rc::OK;
+	}
+
+	// We need to load in a new page
+	ret = fileHandle.readPage(footer->nextLeafPage, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	if (footer->firstRecord.pageNum == 0)
+		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
+
+	// Our first record on the next page is the next record
+	rid = footer->firstRecord;
+	return rc::OK;
+}
+
 RC IndexManager::scan(FileHandle &fileHandle,
     const Attribute &attribute,
     const void      *lowKey,
@@ -1330,7 +1370,7 @@ IX_ScanIterator::IX_ScanIterator()
 	_currentRecordRid(),
 	_beginRecordRid(),
 	_endRecordRid(),
-	_pfm(*PagedFileManager::instance())
+	_im(*IndexManager::instance())
 {
 }
 
@@ -1353,6 +1393,9 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	_attribute = attribute;
 	_lowKeyInclusive = lowKeyInclusive;
 	_highKeyInclusive = highKeyInclusive;
+
+	_recordDescriptor = _im.getIndexRecordDescriptor(attribute.type);
+	RETURN_ON_ERR(ret);
 
 	// Traverse down the left pointers to find the lowest RID
 	RID lowestPossibleRid;
@@ -1463,7 +1506,52 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 {
-    return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	RC ret = rc::OK;
+	if (_currentRecordRid.pageNum == 0)
+		return IX_EOF;
+	
+	// Check to see if we're at the beginning
+	if (_currentRecordRid.pageNum == _beginRecordRid.pageNum && _currentRecordRid.slotNum == _beginRecordRid.slotNum)
+	{
+		// If we are not inclusive, skip the 1st record
+		if (!_lowKeyInclusive)
+		{
+			ret = advance();
+			RETURN_ON_ERR(ret);
+		}
+	}
+
+	// Check to see if we're at the end
+	if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
+	{
+		// If we are not inclusive, skip the record
+		if (!_highKeyInclusive)
+		{
+			_currentRecordRid.pageNum = 0;
+		}
+	}
+
+	// TODO: Make sure we support very small ranges, of size 1 or 2 with all types of inclusivity
+	if (_currentRecordRid.pageNum == 0)
+	{
+		return IX_EOF;
+	}
+
+	// We have a valid record, return it
+	rid = _currentRecordRid;
+	ret = _im.readRecord(*_fileHandle, _recordDescriptor, _currentRecordRid, key);
+	RETURN_ON_ERR(ret);
+
+	// Advance to the next record
+	ret = advance();
+	RETURN_ON_ERR(ret);
+
+    return rc::OK;
+}
+
+RC IX_ScanIterator::advance()
+{
+	return _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _currentRecordRid);
 }
 
 RC IX_ScanIterator::close()
