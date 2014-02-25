@@ -910,6 +910,181 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 	}
 }
 
+RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey)
+{
+	if (targetPageNum == 4)
+	{
+		PRINT_ME_NOW = true;
+	}
+
+	// Read in the page to be split
+	unsigned char inputBuffer[PAGE_SIZE] = {0};
+	RC ret = fileHandle.readPage(targetPageNum, inputBuffer);
+	IX_PageIndexFooter* inputFooter = getIXPageIndexFooter(inputBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Allocate the new page and save its reference
+	newPageNum = fileHandle.getNumberOfPages();
+	rightRid.pageNum = newPageNum;
+	ret = newPage(fileHandle, newPageNum, inputFooter->isLeafPage, inputFooter->nextLeafPage, 0);
+	RETURN_ON_ERR(ret);
+
+	// Clear out the old page data
+	ret = newPage(fileHandle, targetPageNum, inputFooter->isLeafPage, inputFooter->nextLeafPage, inputFooter->leftChild);
+	RETURN_ON_ERR(ret);
+
+	// Setup buffers for left/right page outputs
+	unsigned char leftBuffer[PAGE_SIZE] = {0};
+	unsigned char rightBuffer[PAGE_SIZE] = {0};
+	IX_PageIndexFooter* leftFooter = getIXPageIndexFooter(leftBuffer);
+	IX_PageIndexFooter* rightFooter = getIXPageIndexFooter(rightBuffer);
+
+	ret = fileHandle.readPage(targetPageNum, leftBuffer);
+	RETURN_ON_ERR(ret);
+
+	ret = fileHandle.readPage(newPageNum, rightBuffer);
+	RETURN_ON_ERR(ret);
+
+	std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
+	std::cout << "Leaf? " << inputFooter->isLeafPage << endl;
+
+	// Update the nextLeaf pointer if needed
+	if (inputFooter->isLeafPage)
+	{
+		inputFooter->nextLeafPage = newPageNum;
+	}
+	
+	assert(rightFooter->isLeafPage == inputFooter->isLeafPage && leftFooter->isLeafPage == inputFooter->isLeafPage);
+
+	// Update known footer data
+	rightFooter->parent = inputFooter->parent;
+	leftFooter->parent = inputFooter->parent;
+
+	// Read in records and write to the left page until we hit half of the page full
+	IndexRecord tempRecord;
+	unsigned currentSize = sizeof(IX_PageIndexFooter);
+	unsigned slotNum = 0;
+	RID lastLeftRid, prevRid, curRid = inputFooter->firstRecord;
+	while(currentSize < PAGE_SIZE/2 && curRid.pageNum > 0)
+	{
+		// Read in the record from our input buffer
+		prevRid = curRid;
+		ret = readRecord(fileHandle, recordDescriptor, curRid, &tempRecord, inputBuffer);
+		RETURN_ON_ERR(ret);
+
+		// Compute the record length and add it to the running total
+		unsigned recLength = 0;
+		unsigned recHeaderSize = 0;
+		unsigned* recHeader = NULL;
+		ret = generateRecordHeader(recordDescriptor, &tempRecord, recHeader, recLength, recHeaderSize);
+		currentSize += recLength + sizeof(PageIndexSlot);
+		RETURN_ON_ERR(ret);
+
+		// Advance to next record
+		curRid = tempRecord.nextSlot;
+		++slotNum;
+
+		// We know what the slot numbers will be because the page is empty initially
+		if (currentSize >= PAGE_SIZE/2 || curRid.pageNum == 0)
+		{
+			tempRecord.nextSlot.pageNum = 0;
+			tempRecord.nextSlot.slotNum = 0;
+		}
+		else
+		{
+			tempRecord.nextSlot.pageNum = leftFooter->pageNumber;
+			tempRecord.nextSlot.slotNum = slotNum;
+		}
+
+		// Copy over the record to the new left page buffer
+		ret = insertRecordInplace(recordDescriptor, &tempRecord, leftFooter->pageNumber, leftBuffer, lastLeftRid);
+		RETURN_ON_ERR(ret);
+	}
+
+	std::cout << "Records still on LEFT page = " << slotNum << " @ " << currentSize << " bytes" << std::endl;
+
+	// Read in the first entry in the second half - this entry now points to the left
+	if (!inputFooter->isLeafPage)
+	{
+		// Load in the entry
+		ret = readRecord(fileHandle, recordDescriptor, curRid, &tempRecord, inputBuffer);
+		RETURN_ON_ERR(ret);
+
+		std::cout << " LEAF split, so RIGHT will have a leftChild = ";
+		tempRecord.key.print(TypeInt);
+		std::cout << std::endl;
+		
+		// Copy over the page pointer into the footer
+		rightFooter->leftChild = curRid.pageNum;
+		curRid = tempRecord.nextSlot;
+	}
+
+	// Save the 1st key that will be on the right page for later
+	const RID firstRightPageRid = curRid;
+	cout << "Right key: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
+
+	ret = readRecord(fileHandle, recordDescriptor, firstRightPageRid, &tempRecord, inputBuffer);
+	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
+	RETURN_ON_ERR(ret);
+
+	std::cout << " Break connection on RIGHT: ";
+	rightKey.print(TypeInt);
+	std::cout << std::endl;
+
+	// The currRid variable now points to the correct spot in the list from which we should start moving
+	// Move the rest over to the new page
+	currentSize = sizeof(IX_PageIndexFooter);
+	slotNum = 0;
+	RID lastRightRid;
+	while (curRid.pageNum > 0)
+	{
+		prevRid = curRid;
+
+		// Read in the record from our input buffer
+		ret = readRecord(fileHandle, recordDescriptor, curRid, &tempRecord, inputBuffer);
+		RETURN_ON_ERR(ret);
+
+		// Compute the record length and add it to the running total
+		unsigned recLength = 0;
+		unsigned recHeaderSize = 0;
+		unsigned* recHeader = NULL;
+		ret = generateRecordHeader(recordDescriptor, &tempRecord, recHeader, recLength, recHeaderSize);
+		currentSize += recLength + sizeof(PageIndexSlot);
+		RETURN_ON_ERR(ret);
+
+		// Advance to next record
+		curRid = tempRecord.nextSlot;
+		++slotNum;
+
+		// We know what the slot numbers will be because the page is empty initially
+		if (curRid.pageNum == 0)
+		{
+			tempRecord.nextSlot.pageNum = 0;
+			tempRecord.nextSlot.slotNum = 0;
+		}
+		else
+		{
+			tempRecord.nextSlot.pageNum = rightFooter->pageNumber;
+			tempRecord.nextSlot.slotNum = slotNum;
+		}
+
+		// Copy over the record to the new right page buffer
+		ret = insertRecordInplace(recordDescriptor, &tempRecord, rightFooter->pageNumber, rightBuffer, lastRightRid);
+		RETURN_ON_ERR(ret);
+	}
+
+	cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << slotNum << endl;
+
+	// Write out the new page buffers
+	ret = fileHandle.writePage(targetPageNum, leftBuffer);
+	RETURN_ON_ERR(ret);
+	ret = fileHandle.writePage(newPageNum, rightBuffer);
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+
 RC IndexManager::split(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, PageNum& targetPageNum, PageNum& newPageNum, RID& rightRid, KeyValueData& rightKey)
 {
 	// Read in the page to be split
