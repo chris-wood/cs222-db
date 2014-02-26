@@ -304,6 +304,7 @@ int testCase_4A(const string &indexFileName, const Attribute &attribute)
             cout << "Failed Inserting Entry..." << endl;
             goto error_close_index;
         }
+        cout << rid.pageNum << " " << rid.slotNum << endl;
         inRidPageNumSum += rid.pageNum;
     }
 
