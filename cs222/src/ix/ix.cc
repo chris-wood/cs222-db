@@ -56,11 +56,6 @@ IndexManager::~IndexManager()
     _index_manager = NULL;
 }
 
-// RC IndexManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
-// {
-// 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
-// }
-
 RC IndexManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
@@ -1004,6 +999,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	if (inputFooter->isLeafPage)
 	{
 		inputFooter->nextLeafPage = newPageNum;
+		leftFooter->nextLeafPage = newPageNum;
 	}
 	
 	assert(rightFooter->isLeafPage == inputFooter->isLeafPage && leftFooter->isLeafPage == inputFooter->isLeafPage);
@@ -1351,12 +1347,12 @@ RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribu
 	cout <<"extracted footer" << endl;
 	if (!footer->isLeafPage)
 		return rc::BTREE_ITERATOR_ILLEGAL_NON_LEAF_RECORD;
-
 	if (footer->numSlots <= rid.slotNum)
 		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
 
-	cout <<"reading record" << endl;
 	IndexRecord record;
+	cout <<"reading record: " << rid.pageNum << "," << rid.slotNum << endl;
+	cout << fileHandle.getFilename() << endl;
 	ret = readRecord(fileHandle, recordDescriptor, rid, &record, pageBuffer);
 	cout << "post read" << endl;
 	RETURN_ON_ERR(ret);
@@ -1379,7 +1375,7 @@ RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribu
 	if (footer->firstRecord.pageNum == 0)
 		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
 
-	// Our first record on the next page is the next record
+	// Our first record on the next leaf page is the next record
 	rid = footer->firstRecord;
 	return rc::OK;
 }
