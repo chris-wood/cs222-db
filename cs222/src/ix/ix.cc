@@ -1625,6 +1625,15 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 RC IX_ScanIterator::advance()
 {
 	RC ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _currentRecordRid);
+	
+	// If we are off the edge, our scan is done
+	if (ret != rc::OK && ret == rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND)
+	{
+		_currentRecordRid.pageNum = _currentRecordRid.slotNum = 0;
+		_nextRecordRid.pageNum = _nextRecordRid.slotNum = 0;
+		return rc::OK;
+	}
+
 	RETURN_ON_ERR(ret);
 
 	if (_currentRecordRid.pageNum == 0)
@@ -1635,7 +1644,12 @@ RC IX_ScanIterator::advance()
 	{
 		_nextRecordRid = _currentRecordRid;
 		ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _nextRecordRid);
-		RETURN_ON_ERR(ret);
+
+		// nextRecord will go off the edge before we are done scanning, so allow it to fail
+		if (ret != rc::OK && ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND)
+		{
+			RETURN_ON_ERR(ret);
+		}
 	}
 
 	return rc::OK;
