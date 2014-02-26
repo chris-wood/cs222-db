@@ -1344,17 +1344,13 @@ RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribu
 	RETURN_ON_ERR(ret);
 
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
-	cout <<"extracted footer" << endl;
 	if (!footer->isLeafPage)
 		return rc::BTREE_ITERATOR_ILLEGAL_NON_LEAF_RECORD;
 	if (footer->numSlots <= rid.slotNum)
 		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
 
 	IndexRecord record;
-	cout <<"reading record: " << rid.pageNum << "," << rid.slotNum << endl;
-	cout << fileHandle.getFilename() << endl;
 	ret = readRecord(fileHandle, recordDescriptor, rid, &record, pageBuffer);
-	cout << "post read" << endl;
 	RETURN_ON_ERR(ret);
 
 	// We have a valid next slot, use it and return
@@ -1364,13 +1360,9 @@ RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribu
 		return rc::OK;
 	}
 
-	cout << "reading page" << endl;
-
 	// We need to load in a new page
 	ret = fileHandle.readPage(footer->nextLeafPage, pageBuffer);
 	RETURN_ON_ERR(ret);
-
-	cout << "pulling in next leaf" << endl;
 
 	if (footer->firstRecord.pageNum == 0)
 		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
@@ -1579,8 +1571,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		}
 	}
 
-	cout << "here" << endl;
-
 	// Check to see if we're at the end
 	if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
 	{
@@ -1591,20 +1581,32 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		}
 	}
 
-	cout << "x2" << endl;
-
 	// TODO: Make sure we support very small ranges, of size 1 or 2 with all types of inclusivity
 	if (_currentRecordRid.pageNum == 0)
 	{
 		return IX_EOF;
 	}
 
-	cout << "x3" << endl;
+	// We have a valid record, pull the data RID and key value and return it
+	RID targetRid = _currentRecordRid;	
+	IndexRecord record;
+	ret = _im.readRecord(*_fileHandle, _recordDescriptor, _currentRecordRid, &record);
+	rid = record.rid;
+	switch (_attribute.type)
+	{
+		case TypeInt:
+			memcpy(key, &record.key.integer, sizeof(unsigned));
+			break;
+		case TypeReal:
+			memcpy(key, &record.key.real, sizeof(float));
+			break;
+		case TypeVarChar:
+			int size = 0;
+			memcpy(&size, record.key.varchar, sizeof(unsigned));
+			memcpy(key, record.key.varchar + sizeof(unsigned), size);
+	}
 
-	// We have a valid record, return it
-	rid = _currentRecordRid;
-	ret = _im.readRecord(*_fileHandle, _recordDescriptor, _currentRecordRid, key);
-	cout << "post read" << endl;
+	// Advance to the next RID
 	if (ret != rc::OK && ret == rc::RECORD_DELETED)
 	{
 		_currentRecordRid = _nextRecordRid;
@@ -1612,8 +1614,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		ret = _im.readRecord(*_fileHandle, _recordDescriptor, _nextRecordRid, key);
 		RETURN_ON_ERR(ret);
 	}
-
-	cout << "advancing..." << endl;
 
 	// Advance to the next record
 	ret = advance();
@@ -1624,18 +1624,15 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 
 RC IX_ScanIterator::advance()
 {
-	cout << "read" << endl;
 	RC ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _currentRecordRid);
 	RETURN_ON_ERR(ret);
 
 	if (_currentRecordRid.pageNum == 0)
 	{
-		cout << "cycle" << endl;
 		_nextRecordRid.pageNum = 0;
 	}
 	else
 	{
-		cout << "set next record ID" << endl;
 		_nextRecordRid = _currentRecordRid;
 		ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _nextRecordRid);
 		RETURN_ON_ERR(ret);
