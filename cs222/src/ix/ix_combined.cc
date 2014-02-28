@@ -473,6 +473,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
         outRidPageNumSum += rid.pageNum;
     }
 
+    cout << inRidPageNumSum << " " << outRidPageNumSum << endl;
     if (inRidPageNumSum != outRidPageNumSum)
     {
         cout << "Wrong entries output...failure" << endl;
@@ -2181,19 +2182,19 @@ void test2()
     attrEmpName.type = TypeVarChar;
 
     testCase_4B(indexAgeFileName, attrAge);
-    testCase_5(indexAgeFileName, attrAge);
-    testCase_6(indexHeightFileName, attrHeight);
-    testCase_7(indexHeightFileName, attrHeight);
-    testCase_8(indexHeightFileName, attrHeight);
-    testCase_9(indexAgeFileName, attrAge);
-    testCase_10(indexHeightFileName, attrHeight);
+    // testCase_5(indexAgeFileName, attrAge);
+    // testCase_6(indexHeightFileName, attrHeight);
+    // testCase_7(indexHeightFileName, attrHeight);
+    // testCase_8(indexHeightFileName, attrHeight);
+    // testCase_9(indexAgeFileName, attrAge);
+    // testCase_10(indexHeightFileName, attrHeight);
 
     // Extra Credit Work
     // Duplicat Entries
-    testCase_extra_1(indexAgeFileName, attrAge);
-    testCase_extra_2(indexAgeFileName, attrAge);
+    // testCase_extra_1(indexAgeFileName, attrAge);
+    // testCase_extra_2(indexAgeFileName, attrAge);
     // TypeVarChar - mandatory for graduate students
-    testCase_extra_3(indexEmpNameFileName, attrEmpName);
+    // testCase_extra_3(indexEmpNameFileName, attrEmpName);
     return;
 }
 
