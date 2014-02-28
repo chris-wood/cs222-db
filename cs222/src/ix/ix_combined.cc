@@ -32,11 +32,11 @@ int main()
     g_nUndergradPoint = 0;
     g_nUndergradExtraPoint = 0;
 
-	testCustom();
+	// testCustom();
 
-	ASSERT_ON_BAD_RETURN = false;
+	ASSERT_ON_BAD_RETURN = true;
     test1();
-    // test2();
+    test2();
 	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
     cout << "\n\ngrad-point: " << g_nGradPoint << "\ngrad-extra-point: " << g_nGradExtraPoint << endl;
@@ -2287,8 +2287,91 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 	// std::cout << " basic test on string keys passed!" << std::endl;
 }
 
+void testSkewedDelete(const int numEntries)
+{
+    const string filename = "testSkewedDelete";
+    Attribute attr;
+    attr.length = 1;
+    attr.name = "StringValue";
+    attr.type = TypeVarChar;
+
+    RC ret;
+    FileHandle fileHandle;
+
+    std::cout << "Testing: " << filename << "..." << std::endl;
+    indexManager->destroyFile(filename);
+    ret = indexManager->createFile(filename);
+    assert(ret == success);
+
+    ret = indexManager->openFile(filename, fileHandle);
+    assert(ret == success);
+
+    std::cout << " Inserting some small keys" << std::endl;
+    char stringBuffer[2004] = {0};
+    char* c = stringBuffer + 4;
+    int strlen = 256;
+    char pattern;
+    int i, j = 0;
+    void* data = (void*)stringBuffer;
+
+    RID rid;
+    for (i=0; i<numEntries; ++i)
+    {
+        rid.pageNum = 99999;
+        rid.slotNum = i;
+
+        *c = '!' + i%92;
+        // pattern = (char)i%92;
+        // for (j = 0; j < strlen - 4; j++)
+        // {
+        //     memcpy(stringBuffer + 4 + j, &pattern, sizeof(char));
+        // }
+        memcpy(stringBuffer, &strlen, sizeof(strlen));
+
+        std::cout << "INSERTING: " << i << "(" << (*c) << ")" << std::endl;
+        ret = indexManager->insertEntry(fileHandle, attr, data, rid);
+        assert(ret == success);
+    }
+
+    std::cout << " Delete half of the keys (the right hand side)" << std::endl;
+    memset(stringBuffer, 0, 2004);
+    for (i=numEntries/2; i<numEntries; i++)
+    {
+        rid.pageNum = 99999;
+        rid.slotNum = i;
+
+        *c = '!' + i%92;
+        // pattern = (char)i%92;
+        // for (j = 0; j < strlen - 4; j++)
+        // {
+        //     memcpy(stringBuffer + 4 + j, &pattern, sizeof(char));
+        // }
+        memcpy(stringBuffer, &strlen, sizeof(strlen));
+
+        std::cout << "DELETING: " << i << "(" << (*c) << ")" << std::endl;
+        ret = indexManager->deleteEntry(fileHandle, attr, data, rid);
+        if (ret != rc::OK)
+        {
+            cout << rc::rcToString(ret) << endl;
+            assert(ret == success);
+        }
+    }
+
+    // Clean up
+    ret = indexManager->closeFile(fileHandle);
+    assert(ret == success);
+
+    ret = indexManager->destroyFile(filename);
+    assert(ret == success);
+
+    // std::cout << " basic test on string keys passed!" << std::endl;
+}
+
 void testCustom()
 {
+    testSkewedDelete(50);
+    cout << "Passed skewed delete" << endl;
+
 	// std::cout << "====Testing single insert/delete on integers====" << std::endl;
  //    testSimpleAddDeleteIndex(50, false);
 	// std::cout << "====Testing single insert/delete on strings====" << std::endl;

@@ -22,7 +22,10 @@ RecordBasedCoreManager::~RecordBasedCoreManager()
 
 RC RecordBasedCoreManager::createFile(const string &fileName) {
     RC ret = _pfm.createFile(fileName.c_str());
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     if (sizeof(PFHeader) > PAGE_SIZE)
     {
@@ -35,11 +38,17 @@ RC RecordBasedCoreManager::createFile(const string &fileName) {
 
     // Write out the header data to the reserved page (page 0)
     ret = _pfm.openFile(fileName.c_str(), handle);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Initialize and validate the header for the new file
     ret = header.validate();
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Flush the header page to disk
     ret = writeHeader(handle, &header);
@@ -47,13 +56,19 @@ RC RecordBasedCoreManager::createFile(const string &fileName) {
     {
         _pfm.closeFile(handle);
 
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 		assert(false);
     }
 
     // Drop the handle to the file
     ret = _pfm.closeFile(handle);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
@@ -66,12 +81,18 @@ RC RecordBasedCoreManager::destroyFile(const string &fileName)
 RC RecordBasedCoreManager::openFile(const string &fileName, FileHandle &fileHandle) 
 {
     RC ret = _pfm.openFile(fileName.c_str(), fileHandle);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Read in header data from the reserved page
     PFHeader header;
     ret = readHeader(fileHandle, &header);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Validate header is in our correct format
     ret = header.validate();
@@ -81,7 +102,10 @@ RC RecordBasedCoreManager::openFile(const string &fileName, FileHandle &fileHand
 RC RecordBasedCoreManager::closeFile(FileHandle &fileHandle) 
 {
     RC ret = _pfm.closeFile(fileHandle);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
@@ -143,7 +167,10 @@ RC RecordBasedCoreManager::insertRecord(FileHandle &fileHandle, const vector<Att
     if (ret != rc::OK)
     {
         free(recHeader);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 		assert(false);
     }
     
@@ -153,7 +180,10 @@ RC RecordBasedCoreManager::insertRecord(FileHandle &fileHandle, const vector<Att
     if (ret != rc::OK)
     {
         free(recHeader);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 		assert(false);
     }
 
@@ -173,7 +203,10 @@ RC RecordBasedCoreManager::insertRecordInplace(const vector<Attribute> &recordDe
     if (ret != rc::OK)
     {
         free(recHeader);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 		assert(false);
     }
 
@@ -221,20 +254,32 @@ RC RecordBasedCoreManager::insertRecordToPage(FileHandle &fileHandle, const vect
     // Read in the designated page
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(pageNum, pageBuffer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Write out the record to our pageBuffer
     ret = insertRecordInplace(recordDescriptor, data, pageNum, pageBuffer, rid);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Update the position of this page in the freespace lists, if necessary
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
     ret = movePageToCorrectFreeSpaceList(fileHandle, footer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Write the new page information to disk
     ret = fileHandle.writePage(pageNum, pageBuffer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
@@ -245,7 +290,10 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     RC ret;
     PFHeader header;
     ret = readHeader(fileHandle, &header);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     if (bytes < 1)
     {
@@ -308,7 +356,10 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             if (ret != rc::OK)
             {
                 free(newPages);
-                RETURN_ON_ERR(ret);
+                if (ret != rc::OK)
+                {
+                    return ret;
+                }
 				assert(false);
             }
 
@@ -320,7 +371,10 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
             if (ret != rc::OK)
             {
                 free(newPages);
-                RETURN_ON_ERR(ret);
+                if (ret != rc::OK)
+                {
+                    return ret;
+                }
 				assert(false);
             }
 
@@ -334,7 +388,10 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
 		if (ret != rc::OK)
         {
 			free(newPages);
-            RETURN_ON_ERR(ret);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
 			assert(false);
         }
     }
@@ -347,7 +404,10 @@ RC RecordBasedCoreManager::findFreeSpace(FileHandle &fileHandle, unsigned bytes,
     // Update the file header information immediately
     header.numPages = header.numPages + requiredPages;
     ret = writeHeader(fileHandle, &header);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
@@ -356,7 +416,10 @@ RC RecordBasedCoreManager::movePageToCorrectFreeSpaceList(FileHandle &fileHandle
 {
     PFHeader header;
     RC ret = readHeader(fileHandle, &header);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	CorePageIndexFooter* pageFooter = (CorePageIndexFooter*)pageFooterBuffer;
     unsigned freespace = calculateFreespace(pageFooter->freeSpaceOffset, pageFooter->numSlots);
@@ -387,21 +450,30 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
     unsigned char pageBuffer[PAGE_SIZE] = {0};
 
 	ret = readHeader(fileHandle, &header);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     // Update prevPage to point to our nextPage
     if (pageFooter->freespacePrevPage > 0)
     {
         // Read in the next page
         ret = fileHandle.readPage(pageFooter->freespacePrevPage, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Update the prev pointer of the next page to our prev pointer
         CorePageIndexFooter *prevPageFooter = getCorePageIndexFooter(pageBuffer);
         prevPageFooter->freespaceNextPage = pageFooter->freespaceNextPage;
 
         ret = fileHandle.writePage(prevPageFooter->pageNumber, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     else
     {
@@ -415,14 +487,20 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
         // Read in the next page
 
         ret = fileHandle.readPage(pageFooter->freespaceNextPage, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Update the prev pointer of the next page to our prev pointer
         CorePageIndexFooter *nextPageFooter = getCorePageIndexFooter(pageBuffer);
         nextPageFooter->freespacePrevPage = pageFooter->freespacePrevPage;
 
         ret = fileHandle.writePage(nextPageFooter->pageNumber, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     // else { we were at the end of the list, we have nothing to do }
 
@@ -433,14 +511,20 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
         // Read in the page
 
         ret = fileHandle.readPage(destinationList.listHead, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Update the prev pointer of the previous head to be our page number
         CorePageIndexFooter *listFirstPageFooter = getCorePageIndexFooter(pageBuffer);
         listFirstPageFooter->freespacePrevPage = pageFooter->pageNumber;
 
         ret = fileHandle.writePage(listFirstPageFooter->pageNumber, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
 
     // The next page for us is whatever was the previous 1st page
@@ -455,7 +539,10 @@ RC RecordBasedCoreManager::movePageToFreeSpaceList(FileHandle& fileHandle, void*
 
     // Write out the header to disk with new data
     ret = writeHeader(fileHandle, &header);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return rc::OK;
 }
@@ -466,7 +553,10 @@ RC RecordBasedCoreManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	// Read the page of data RID points to
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	return updateRecordInplace(fileHandle, recordDescriptor, data, rid, pageBuffer);
 }
@@ -487,7 +577,10 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
     if (ret != rc::OK)
     {
         free(recHeader);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 		assert(false);
     }
 
@@ -524,7 +617,10 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
         // Read the page of data RID points to
         unsigned char pageBuffer[PAGE_SIZE] = {0};
         ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         realFooter = getCorePageIndexFooter(pageBuffer);
         realSlot = getPageIndexSlot(pageBuffer, rid.slotNum);
@@ -549,7 +645,10 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
             oldStone.pageNum = realSlot->nextPage;
             oldStone.slotNum = realSlot->nextSlot;
             ret = deleteRecord(fileHandle, recordDescriptor, oldStone);
-            RETURN_ON_ERR(ret);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
         }
         realSlot->nextPage = 0;
         realSlot->nextSlot = 0;
@@ -557,20 +656,32 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
         // Push the changes to disk
         writePageIndexSlot(pageBuffer, rid.slotNum, realSlot);
         ret = movePageToCorrectFreeSpaceList(fileHandle, realFooter);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     else // overflow onto new page somewhere and continue the tombstone chain
     {
         RID newRid;
         ret = insertRecord(fileHandle, recordDescriptor, data, newRid);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Re-read the page into memory, since we can potentially be on the same page
         ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Increase the gap size accordingly (the size of the previously stored record)
         realFooter = getCorePageIndexFooter(pageBuffer);
@@ -584,7 +695,10 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
             oldStone.pageNum = realSlot->nextPage;
             oldStone.slotNum = realSlot->nextSlot;
             ret = deleteRecord(fileHandle, recordDescriptor, oldStone);
-            RETURN_ON_ERR(ret);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
         }
 
         // Update the old page with a forward pointer and more free space
@@ -595,7 +709,10 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
 
         // Write the updated page & header information, for the old page, to disk
         ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         // Finally, check for reorganization
         if (realFooter->gapSize > REORG_THRESHOLD)
@@ -603,14 +720,20 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
             ret = reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
             if (ret != rc::OK && ret != rc::PAGE_CANNOT_BE_ORGANIZED)
             {
-                RETURN_ON_ERR(ret);
+                if (ret != rc::OK)
+                {
+                    return ret;
+                }
 				assert(false);
             }
         }
 
         // // Re-read the page into memory, since we can potentially be on the same page
         ret = fileHandle.readPage(newRid.pageNum, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         realFooter = getCorePageIndexFooter(pageBuffer);
         realSlot = getPageIndexSlot(pageBuffer, newRid.slotNum);
@@ -631,18 +754,27 @@ RC RecordBasedCoreManager::writeHeader(FileHandle &fileHandle, PFHeader* header)
 		// Set the header data
 		memcpy(buffer, header, sizeof(PFHeader));
         RC ret = fileHandle.appendPage(buffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     else
     {
 		// Copy the old header data into a newly allocated buffer
 		RC ret = fileHandle.readPage(0, buffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
 
 		// Overwrite the header data
 		memcpy(buffer, header, sizeof(PFHeader));
         ret = fileHandle.writePage(0, buffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
 
     return rc::OK;
@@ -666,7 +798,10 @@ RC RecordBasedCoreManager::readHeader(FileHandle &fileHandle, PFHeader* header)
     if(ret == rc::OK)
     {
         ret = fileHandle.readPage(0, buffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         memcpy(header, buffer, sizeof(PFHeader));
     }
@@ -685,7 +820,10 @@ RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attri
     // Pull the page into memory - O(1)
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
     return readRecord(fileHandle, recordDescriptor, rid, data, pageBuffer);
 }
@@ -711,7 +849,10 @@ RC RecordBasedCoreManager::readRecord(FileHandle &fileHandle, const vector<Attri
         unsigned nextSlot = slotIndex->nextSlot;
         unsigned char tempBuffer[PAGE_SIZE] = {0};
         ret = fileHandle.readPage(nextPage, tempBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
         memcpy(pageBuffer, tempBuffer, PAGE_SIZE);
         slotIndex = getPageIndexSlot(pageBuffer, nextSlot);
@@ -793,7 +934,10 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 	// Pull the file header in
 	PFHeader header;
 	RC ret = readHeader(fileHandle, &header);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	// Rewrite freespace list data in the header
 	for (unsigned i=0; i<header.numFreespaceLists-1; ++i)
@@ -806,14 +950,20 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 
 	// Write the header page back out to disk
 	ret = writeHeader(fileHandle, &header);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	// O(N) cost - We are rewriting all pages in this file
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	for (unsigned page = 1; page <= header.numPages; ++page)
 	{
         ret = fileHandle.readPage(page, pageBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
 
 		// Clear out all data on this page
 		memset(pageBuffer, 0, PAGE_SIZE);
@@ -832,7 +982,10 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 
 		// Write the page back out to disk
 		ret = fileHandle.writePage(page, pageBuffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
 	}
 
 	return rc::OK;
@@ -884,11 +1037,17 @@ RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
 
 	// If need be, fix the freespace lists
 	RC ret = movePageToCorrectFreeSpaceList(fileHandle, pageFooterBuffer);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	// Write back the new page
 	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	return rc::OK;
 }
@@ -898,7 +1057,10 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	// Read the page of data RID points to
     unsigned char pageBuffer[PAGE_SIZE] = {0};
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
-    RETURN_ON_ERR(ret);
+    if (ret != rc::OK)
+    {
+        return ret;
+    }
 
 	// Recover the index header structure
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
@@ -931,11 +1093,17 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 			// Delete the current record
 			ret = deleteRid(fileHandle, oldRID, slotIndex, footer, pageBuffer);
-			RETURN_ON_ERR(ret);
+			if (ret != rc::OK)
+            {
+                return ret;
+            }
 			
             // Pull the new page into memory
             ret = fileHandle.readPage(newRID.pageNum, pageBuffer);
-            RETURN_ON_ERR(ret);
+            if (ret != rc::OK)
+            {
+                return ret;
+            }
 
             slotIndex = getPageIndexSlot(pageBuffer, newRID.slotNum);
 
@@ -946,11 +1114,17 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	{
 		// We are deleting the record and no tombstone chain
 		ret = deleteRid(fileHandle, rid, slotIndex, footer, pageBuffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
 
 		// Write out the updated page data
 		ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+        {
+            return ret;
+        }
 	}
 
 	return ret;
@@ -1176,7 +1350,10 @@ RC RecordBasedCoreManager::reorganizeBufferedPage(FileHandle &fileHandle, unsign
 
         // Push the changes to disk
         ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
-        RETURN_ON_ERR(ret);
+        if (ret != rc::OK)
+        {
+            return ret;
+        }
     }
     else
     {

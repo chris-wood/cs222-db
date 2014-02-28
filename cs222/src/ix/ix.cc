@@ -81,19 +81,31 @@ RC IndexManager::createFile(const string &fileName)
 	// Open up the file so we can initialize it with some data
 	FileHandle fileHandle;
 	ret = openFile(fileName, fileHandle);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// Create the root page, mark it as a leaf, it's page 1
 	ret = newPage(fileHandle, 1, true, 0, 0);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// Store the root page to the reserved page 0
 	ret = updateRootPage(fileHandle, 1);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	// We're done, leave the file closed
 	ret = closeFile(fileHandle);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		return ret;
+	}
 
 	return rc::OK;
 }
