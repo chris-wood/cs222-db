@@ -25,3 +25,6 @@ rmtest_2
 rmtest_extra
 testAddDelete_StringIndex
 testAddDelete_IntegerIndex
+Age_idx
+Height_idx
+EmpName_idx
