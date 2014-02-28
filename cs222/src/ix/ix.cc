@@ -294,7 +294,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
 			{
-				cout << "splitting again: " << parent << "," << _rootPageNum << endl;
 				// assert(false);
 			}
 			nextPage = parent;
