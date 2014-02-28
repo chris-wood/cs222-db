@@ -34,7 +34,7 @@ int main()
     g_nUndergradExtraPoint = 0;
 	g_nTotalGradPoint = 0;
 
-	//testCustom();
+	testCustom();
 
 	// Cleanup from old tests previously run
 	indexManager->destroyFile("Age_idx");
