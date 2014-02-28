@@ -116,7 +116,6 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     // insert entry
     for(unsigned i = 0; i < numOfTuples; i++)
     {
-        age++;
         rc = indexManager->insertEntry(fileHandle, attribute, &age, rid);
         if(rc != success)
         {
@@ -126,20 +125,14 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     }
 
     // delete entry
-    age = 18;
-    for (unsigned i = 0; i < numOfTuples; i++)
+    rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
+    if(rc != success)
     {
-        age++;
-        rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
-        if(rc != success)
-        {
-            cout << "Failed Deleting Entry..." << endl;
-            goto error_close_index;
-        }
+        cout << "Failed Deleting Entry..." << endl;
+        goto error_close_index;
     }
 
     // delete entry again
-    age = 18;
     rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
     if(rc == success) //This time it should NOT give success because entry is not there.
     {
