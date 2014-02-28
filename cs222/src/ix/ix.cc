@@ -1488,8 +1488,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	if (ret != rc::OK && ret == rc::RECORD_DELETED)
 	{
 		_currentRecordRid = _nextRecordRid;
-		rid = _nextRecordRid;
-		ret = _im.readRecord(*_fileHandle, _recordDescriptor, _nextRecordRid, key);
+		ret = _im.readRecord(*_fileHandle, _recordDescriptor, _nextRecordRid, &record);
 		RETURN_ON_ERR(ret);
 	}
 
