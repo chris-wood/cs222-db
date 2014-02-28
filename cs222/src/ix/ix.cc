@@ -1808,18 +1808,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			memcpy(key, record.key.varchar + sizeof(unsigned), size);
 	}
 
-	// Advance to the next RID
-	// if (ret != rc::OK && ret == rc::RECORD_DELETED)
-	// {
-	// 	_currentRecordRid = _nextRecordRid;
-	// 	// rid = _nextRecordRid;
-	// 	ret = _im.readRecord(*_fileHandle, _recordDescriptor, _nextRecordRid, key);
-	// 	if (ret != rc::OK)
-	// 	{
-	// 		return ret;
-	// 	}
-	// }
-
 	// Advance to the next record
 	ret = advance();
 	if (ret != rc::OK)
