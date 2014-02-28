@@ -89,6 +89,7 @@ class IndexManager : public RecordBasedCoreManager {
 
   static IX_PageIndexFooter* getIXPageIndexFooter(void* pageBuffer);
   static const std::vector<Attribute>& getIndexRecordDescriptor(AttrType type);
+  static RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& targetRid, RID& prevRid);
   static RC findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, PageNum& pageNum);
   static RC findLeafIndexEntry(FileHandle& fileHandle, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);

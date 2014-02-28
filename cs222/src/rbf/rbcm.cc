@@ -900,8 +900,24 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
     RC ret = fileHandle.readPage(rid.pageNum, pageBuffer);
     RETURN_ON_ERR(ret);
 
+	ret = deleteRecordInplace(fileHandle, recordDescriptor, rid, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Write out the updated page data
+	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void* pageBuffer)
+{
+	RC ret = rc::OK;
+
 	// Recover the index header structure
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+	assert(footer->pageNumber == rid.pageNum);
+	assert(footer->numSlots > 0);
 
 	// Find the slot where the record is stored
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
@@ -930,7 +946,7 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 			newRID.slotNum = slotIndex->nextSlot;
 
 			// Delete the current record
-			ret = deleteRid(fileHandle, oldRID, slotIndex, footer, pageBuffer);
+			ret = deleteRid(fileHandle, oldRID, slotIndex, footer, (unsigned char*)pageBuffer);
 			RETURN_ON_ERR(ret);
 			
             // Pull the new page into memory
@@ -945,11 +961,7 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	else
 	{
 		// We are deleting the record and no tombstone chain
-		ret = deleteRid(fileHandle, rid, slotIndex, footer, pageBuffer);
-		RETURN_ON_ERR(ret);
-
-		// Write out the updated page data
-		ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+		ret = deleteRid(fileHandle, rid, slotIndex, footer, (unsigned char*)pageBuffer);
 		RETURN_ON_ERR(ret);
 	}
 
