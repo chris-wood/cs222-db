@@ -28,3 +28,4 @@ testAddDelete_IntegerIndex
 Age_idx
 Height_idx
 EmpName_idx
+testSkewedDelete

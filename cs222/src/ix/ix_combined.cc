@@ -34,7 +34,8 @@ int main()
     g_nUndergradExtraPoint = 0;
 	g_nTotalGradPoint = 0;
 
-	// testCustom();
+	ASSERT_ON_BAD_RETURN = true;
+	//testCustom();
 
 	// Cleanup from old tests previously run
 	ASSERT_ON_BAD_RETURN = false;
@@ -45,7 +46,6 @@ int main()
 	ASSERT_ON_BAD_RETURN = true;
     test1();
     test2();
-	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
 	cout << "\n\ngrad-point: " << g_nGradPoint << " / " << g_nTotalGradPoint << " \ngrad-extra-point: " << g_nGradExtraPoint << endl;
     return 0;
