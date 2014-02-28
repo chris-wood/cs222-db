@@ -991,14 +991,14 @@ RC RecordBasedCoreManager::deleteRecords(FileHandle &fileHandle)
 	return rc::OK;
 }
 
-RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* pageFooterBuffer, unsigned char* pageBuffer)
+RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, PageIndexSlot* slotIndex, void* pageFooterBuffer, void* pageBuffer)
 {
     // TODO: fetch the number of slots here
 	CorePageIndexFooter* footer = (CorePageIndexFooter*)pageFooterBuffer;
 
 	// Overwrite the memory of the record (not absolutely nessecary, but useful for finding bugs if we accidentally try to use it)
     assert(slotIndex->pageOffset + slotIndex->size < (PAGE_SIZE - _pageSlotOffset - (footer->numSlots * sizeof(PageIndexSlot))));
-	memset(pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
+	memset((unsigned char*)pageBuffer + slotIndex->pageOffset, 0, slotIndex->size);
 
 	// If this is the last record on the page being deleted, merge the freespace with the main pool
 	if (rid.slotNum + 1 == footer->numSlots)
@@ -1009,7 +1009,7 @@ RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
 
         // Properly decrement the number of slots post-deletion
         PageIndexSlot* offsets = (PageIndexSlot*)malloc(footer->numSlots * sizeof(PageIndexSlot));
-        memcpy(offsets, pageBuffer + PAGE_SIZE - _pageSlotOffset - (footer->numSlots * sizeof(PageIndexSlot)), (footer->numSlots * sizeof(PageIndexSlot)));
+        memcpy(offsets, (unsigned char*)pageBuffer + PAGE_SIZE - _pageSlotOffset - (footer->numSlots * sizeof(PageIndexSlot)), (footer->numSlots * sizeof(PageIndexSlot)));
         int empty = 1;
         for (unsigned i = 1; i < footer->numSlots; i++)
         {
@@ -1062,8 +1062,24 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
         return ret;
     }
 
+	ret = deleteRecordInplace(fileHandle, recordDescriptor, rid, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Write out the updated page data
+	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void* pageBuffer)
+{
+	RC ret = rc::OK;
+
 	// Recover the index header structure
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+	assert(footer->pageNumber == rid.pageNum);
+	assert(footer->numSlots > 0);
 
 	// Find the slot where the record is stored
 	PageIndexSlot* slotIndex = getPageIndexSlot(pageBuffer, rid.slotNum);
@@ -1113,18 +1129,20 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	else
 	{
 		// We are deleting the record and no tombstone chain
-		ret = deleteRid(fileHandle, rid, slotIndex, footer, pageBuffer);
-		if (ret != rc::OK)
-        {
-            return ret;
-        }
+		// ret = deleteRid(fileHandle, rid, slotIndex, footer, pageBuffer);
+		// if (ret != rc::OK)
+  //       {
+  //           return ret;
+  //       }
 
-		// Write out the updated page data
-		ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-		if (ret != rc::OK)
-        {
-            return ret;
-        }
+		// // Write out the updated page data
+		// ret = fileHandle.writePage(rid.pageNum, pageBuffer);
+		// if (ret != rc::OK)
+  //       {
+  //           return ret;
+  //       }
+		ret = deleteRid(fileHandle, rid, slotIndex, footer, pageBuffer);
+		RETURN_ON_ERR(ret);
 	}
 
 	return ret;

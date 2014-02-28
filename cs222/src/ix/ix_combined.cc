@@ -13,6 +13,7 @@
 using namespace std;
 
 IndexManager *indexManager;
+int g_nTotalGradPoint;
 int g_nGradPoint;
 int g_nGradExtraPoint;
 int g_nUndergradPoint;
@@ -31,20 +32,29 @@ int main()
     g_nGradExtraPoint = 0;
     g_nUndergradPoint = 0;
     g_nUndergradExtraPoint = 0;
+	g_nTotalGradPoint = 0;
 
 	// testCustom();
 
 	ASSERT_ON_BAD_RETURN = true;
+	// Cleanup from old tests previously run
+	indexManager->destroyFile("Age_idx");
+	indexManager->destroyFile("Height_idx");
+	indexManager->destroyFile("EmpName_idx");
+
+	ASSERT_ON_BAD_RETURN = false;
     test1();
     test2();
 	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
 
-    cout << "\n\ngrad-point: " << g_nGradPoint << "\ngrad-extra-point: " << g_nGradExtraPoint << endl;
+	cout << "\n\ngrad-point: " << g_nGradPoint << " / " << g_nTotalGradPoint << " \ngrad-extra-point: " << g_nGradExtraPoint << endl;
     return 0;
 }
 
 int testCase_1(const string &indexFileName)
 {
+	g_nTotalGradPoint += 2;
+
     // Functions tested
     // 1. Create Index File **
     // 2. Open Index File **
@@ -103,8 +113,10 @@ int testCase_1(const string &indexFileName)
         cout << "Failed Closing Index File..." << endl;
         goto error_return;
     }
+	
     g_nGradPoint += 2;
     g_nUndergradPoint += 5;
+
     return success;
 
 error_return:
@@ -113,6 +125,8 @@ error_return:
 
 int testCase_2(const string &indexFileName, const Attribute &attribute)
 {
+	g_nTotalGradPoint += 3;
+
     // Functions tested
     // 1. Open Index file
     // 2. Insert entry **
@@ -197,7 +211,9 @@ error_return:
 
 int testCase_3(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+	g_nTotalGradPoint += 5;
+
+	// Functions tested
     // 1. Destroy Index File **
     // 2. Open Index File -- should fail
     // 3. Scan  -- should fail
@@ -248,7 +264,9 @@ error_return:
 
 int testCase_4A(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+	g_nTotalGradPoint += 2;
+
+	// Functions tested
     // 1. Create Index File
     // 2. Open Index File
     // 3. Insert entry
@@ -379,6 +397,7 @@ void test1()
 	attrAge.name = "Age";
 	attrAge.type = TypeInt;
 
+	IndexManager::instance()->destroyFile(indexAgeFileName);
     testCase_1(indexAgeFileName);
     testCase_2(indexAgeFileName, attrAge);
     testCase_3(indexAgeFileName, attrAge);
@@ -388,6 +407,8 @@ void test1()
 
 int testCase_4B(const string &indexFileName, const Attribute &attribute)
 {
+	g_nTotalGradPoint += 3;
+    
     // Functions tested
     // 2. Open Index File
     // 4. Scan entries NO_OP -- open**
@@ -494,7 +515,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 3;
+	g_nGradPoint += 3;
     g_nUndergradPoint += 3;
     return success;
 
@@ -513,7 +534,9 @@ error_return:
 
 int testCase_5(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index File
     // 2. Open Index File
     // 3. Insert entry
@@ -654,7 +677,7 @@ int testCase_5(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -673,7 +696,9 @@ error_return:
 
 int testCase_6(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index File
     // 2. Open Index File
     // 3. Insert entry
@@ -770,8 +795,8 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
     // iterate
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if(rid.pageNum % 500 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if(rid.pageNum % 500 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
         if ((rid.pageNum > 2000 && rid.pageNum < 6000) || rid.pageNum >= 6500)
         {
             cout << "Wrong entries output...failure" << endl;
@@ -822,7 +847,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -842,7 +867,9 @@ error_return:
 
 int testCase_7(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index File
     // 2. OpenIndex File
     // 3. Insert entry
@@ -999,7 +1026,7 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -1018,7 +1045,9 @@ error_return:
 
 int testCase_8(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index File
     // 2. OpenIndex File
     // 3. Insert entry
@@ -1096,7 +1125,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     // Test DeleteEntry in IndexScan Iterator
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+       // cout << rid.pageNum << " " << rid.slotNum << endl;
 
         key = (float)rid.pageNum;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1197,7 +1226,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -1217,7 +1246,9 @@ error_return:
 
 int testCase_9(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index
     // 2. OpenIndex
     // 3. Insert entry
@@ -1304,8 +1335,9 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
+		/*
         if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
 
         key = A[rid.pageNum-1];
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1373,8 +1405,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if (count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if (count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
 
         if(rid.pageNum > 30000 && B[rid.pageNum-30001] > 35000)
         {
@@ -1421,7 +1453,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -1441,7 +1473,9 @@ error_return:
 
 int testCase_10(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
+    g_nTotalGradPoint += 5;
+    
+	// Functions tested
     // 1. Create Index
     // 2. OpenIndex
     // 3. Insert entry
@@ -1530,8 +1564,8 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if(count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
 
         key = A[rid.pageNum-1];
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1599,8 +1633,8 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if (count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if (count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
 
         if(rid.pageNum > 40000 && B[rid.pageNum-40001] > 45000)
         {
@@ -1647,7 +1681,7 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
         goto error_return;
     }
 
-    g_nGradPoint += 5;
+	g_nGradPoint += 5;
     g_nUndergradPoint += 5;
     return success;
 
@@ -1759,8 +1793,8 @@ int testCase_extra_1(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if(count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
         count++;
     }
     cout << "Number of scanned entries: " << count << endl;
@@ -1918,8 +1952,8 @@ int testCase_extra_2(const string &indexFileName, const Attribute &attribute)
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
+        /*if(count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;*/
         count++;
     }
     cout << "Number of scanned entries: " << count << endl;
