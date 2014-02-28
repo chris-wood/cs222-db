@@ -94,6 +94,7 @@ class IndexManager : public RecordBasedCoreManager {
   static RC findLeafIndexEntry(FileHandle& fileHandle, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& dataRid);
+  static RC findIndexEntry(FileHandle& fileHandle, const Attribute &attribute, KeyValueData* keyData, RID& entryRid, RID& prevEntryRid, RID& nextEntryRid, RID& dataRid);
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
   static RC readRootPage(FileHandle& fileHandle, void* pageBuffer);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
