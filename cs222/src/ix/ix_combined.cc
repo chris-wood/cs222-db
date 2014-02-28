@@ -36,13 +36,13 @@ int main()
 
 	// testCustom();
 
-	ASSERT_ON_BAD_RETURN = true;
 	// Cleanup from old tests previously run
+	ASSERT_ON_BAD_RETURN = false;
 	indexManager->destroyFile("Age_idx");
 	indexManager->destroyFile("Height_idx");
 	indexManager->destroyFile("EmpName_idx");
 
-	ASSERT_ON_BAD_RETURN = false;
+	ASSERT_ON_BAD_RETURN = true;
     test1();
     test2();
 	ASSERT_ON_BAD_RETURN = GLOBAL_ASSERT_ON_BAD_RETURN;
@@ -2176,7 +2176,7 @@ void test2()
     attrEmpName.type = TypeVarChar;
 
     testCase_4B(indexAgeFileName, attrAge);
-    // testCase_5(indexAgeFileName, attrAge);
+    testCase_5(indexAgeFileName, attrAge);
     // testCase_6(indexHeightFileName, attrHeight);
     // testCase_7(indexHeightFileName, attrHeight);
     // testCase_8(indexHeightFileName, attrHeight);
