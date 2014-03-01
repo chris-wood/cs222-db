@@ -1,10 +1,12 @@
 #include <iostream>
 #include <algorithm>
+#include <vector>
 
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 
 #include "ix.h"
 #include "ixtest_util.h"
@@ -35,7 +37,7 @@ int main()
 	g_nTotalGradPoint = 0;
 
 	ASSERT_ON_BAD_RETURN = true;
-	//testCustom();
+	testCustom();
 
 	// Cleanup from old tests previously run
 	ASSERT_ON_BAD_RETURN = false;
@@ -2398,10 +2400,168 @@ void testSkewedDelete(const int numEntries)
     // std::cout << " basic test on string keys passed!" << std::endl;
 }
 
+struct IntOrStringData
+{
+	union
+	{
+		int i;
+		int size;
+	};
+
+	char stringData[100];
+
+	void setRandomData(int max)
+	{
+		i = rand() % max;
+		for (int i = 0; i < 100; ++i)
+		{
+			stringData[i] = '!' + (rand() % 91);
+		}
+	}
+
+	bool equals(const IntOrStringData& that, bool strings)
+	{
+		if (strings)
+		{
+			return (this->size == that.size) && (strncmp(this->stringData, that.stringData, this->size) == 0);
+		}
+		else
+		{
+			return this->i == that.i;
+		}
+	}
+
+	void print(bool strings)
+	{
+		if (strings)
+		{
+			if (size == 1)
+			{
+				std::cout << "'" << stringData[0] << "'";
+			}
+			else
+			{
+				char buf[101] = { 0 };
+				memcpy(buf, stringData, size);
+				std::string s(buf);
+				std::cout << "\"" << s << "\"";
+			}
+		}
+		else
+		{
+			std::cout << i;
+		}
+	}
+};
+
+void testRandomAddDelete(const int numEntries, bool strings)
+{
+	const string filename = strings ? "testRandomAddDelete_StringIndex" : "testRandomAddDelete_IntegerIndex";
+	Attribute attr;
+	IntOrStringData data;
+	if (strings)
+	{
+		attr.length = sizeof(data.stringData);
+		attr.name = "StringValue";
+		attr.type = TypeVarChar;
+	}
+	else
+	{
+		attr.length = 4;
+		attr.name = "IntegerValue";
+		attr.type = TypeInt;
+	}
+
+	RC ret;
+	FileHandle fileHandle;
+
+	std::cout << "Random insert Testing: " << filename << "..." << std::endl;
+	indexManager->destroyFile(filename);
+	ret = indexManager->createFile(filename);
+	assert(ret == success);
+
+	ret = indexManager->openFile(filename, fileHandle);
+	assert(ret == success);
+
+	// Generating entries
+	std::vector<IntOrStringData> entryData;
+	std::vector<int> entryIndices;
+	std::vector<RID> entryDataRIDs;
+	
+	for (int i = 0; i < numEntries; ++i)
+	{
+		RID dataRID;
+		dataRID.pageNum = 0;
+		dataRID.slotNum = i;
+
+		data.setRandomData(99);
+		
+		entryData.push_back(data);
+		entryIndices.push_back(i);
+		entryDataRIDs.push_back(dataRID);
+	}
+
+	// TODO: Randomize here
+
+	// Insert the keys
+	for (int i = 0; i < numEntries; ++i)
+	{
+		int index = entryIndices[i];
+		IntOrStringData& dataToEnter = entryData[index];
+		RID& dataRID = entryDataRIDs[index];
+
+		std::cout << "Inserting KEY: ";
+		dataToEnter.print(strings);
+		std::cout << " index=" << index;
+		std::cout << std::endl;
+
+		ret = indexManager->insertEntry(fileHandle, attr, &dataToEnter, dataRID);
+		assert(ret == success);
+	}
+
+	// Scan through keys just to make sure they're all there and in tact
+	IX_ScanIterator scan;
+	ret = indexManager->scan(fileHandle, attr, NULL, NULL, true, true, scan);
+	assert(ret == success);
+
+	RID returnedRID;
+	int numScanned = 0; 
+	while (scan.getNextEntry(returnedRID, &data) == success)
+	{
+		int index = returnedRID.slotNum;
+		IntOrStringData& compareData = entryData[index];
+
+		std::cout << "Read #" << numScanned << " index=" << returnedRID.slotNum << " key=";
+		data.print(strings);
+		std::cout << " =? ";
+		compareData.print(strings);
+		std::cout << std::endl;
+
+		assert(returnedRID.pageNum == 0);
+		assert(compareData.equals(data, strings));
+
+		++numScanned;
+	}
+
+	ret = scan.close();
+	assert(ret == success);
+
+	assert(numScanned == numEntries);
+
+	// Clean up
+	ret = indexManager->closeFile(fileHandle);
+	assert(ret == success);
+
+	ret = indexManager->destroyFile(filename);
+	assert(ret == success);
+}
+
 void testCustom()
 {
-    testSkewedDelete(50);
-    cout << "Passed skewed delete" << endl;
+    //testSkewedDelete(50);
+    //cout << "Passed skewed delete" << endl;
+
+	//testRandomAddDelete(50, false);
 
 	// std::cout << "====Testing single insert/delete on integers====" << std::endl;
  //    testSimpleAddDeleteIndex(50, false);
