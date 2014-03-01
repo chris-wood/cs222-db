@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\rbf">
+      <UniqueIdentifier>{4fbef20f-4da2-4db9-aa1f-c68989cef5bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\rbf">
+      <UniqueIdentifier>{fed1f8f9-f5b1-49c2-921a-d65aa4ce5247}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\util">
+      <UniqueIdentifier>{aed8575f-f401-46dc-a9c9-883c49fc0b72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\util">
+      <UniqueIdentifier>{88e400e1-67fc-471a-9fdb-b53f0912863d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\rm">
+      <UniqueIdentifier>{b3fe343c-ba94-41b0-9f8f-421d20984513}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\rm">
+      <UniqueIdentifier>{73c8e844-049a-4559-9277-3f1cb8919c5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ix">
+      <UniqueIdentifier>{fac5e37f-b120-451c-9c0f-17989494ae75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ix">
+      <UniqueIdentifier>{d6409bcb-07ba-4bd3-a276-bb241d2bf096}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h">
+      <Filter>Header Files\rbf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.h">
+      <Filter>Header Files\rbf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\util\dbgout.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\util\returncodes.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\rm\rm.h">
+      <Filter>Header Files\rm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\rm\test_util.h">
+      <Filter>Header Files\rm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\rbf\rbcm.h">
+      <Filter>Header Files\rbf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\ix\ix.h">
+      <Filter>Header Files\ix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\ix\ixtest_util.h">
+      <Filter>Header Files\ix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\util\hash.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc">
+      <Filter>Source Files\rbf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc">
+      <Filter>Source Files\rbf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\util\dbgout.cc">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\util\returncodes.cc">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\rm\rm.cc">
+      <Filter>Source Files\rm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc">
+      <Filter>Source Files\rbf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\ix\ix.cc">
+      <Filter>Source Files\ix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc">
+      <Filter>Source Files\ix</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
