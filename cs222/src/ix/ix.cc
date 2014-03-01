@@ -250,7 +250,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// hold the new index entry
 			if (nextPage == rootPage)
 			{
-				PageNum oldRoot = rootPage;
 				PageNum newRootPage = fileHandle.getNumberOfPages();
 				ret = updateRootPage(fileHandle, newRootPage);
 				RETURN_ON_ERR(ret);

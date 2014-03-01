@@ -775,6 +775,8 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         }
     }
 
+    cout << "scanning" << endl;
+
     // scan
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, false, ix_ScanIterator);
     if(rc == success)
@@ -2177,7 +2179,7 @@ void test2()
 
     testCase_4B(indexAgeFileName, attrAge);
     testCase_5(indexAgeFileName, attrAge);
-    // testCase_6(indexHeightFileName, attrHeight);
+    testCase_6(indexHeightFileName, attrHeight);
     // testCase_7(indexHeightFileName, attrHeight);
     // testCase_8(indexHeightFileName, attrHeight);
     // testCase_9(indexAgeFileName, attrAge);
