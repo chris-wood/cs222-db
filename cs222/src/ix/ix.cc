@@ -1315,8 +1315,6 @@ const std::vector<Attribute>& IndexManager::getIndexRecordDescriptor(AttrType ty
 IX_ScanIterator::IX_ScanIterator()
 	: _fileHandle(NULL), 
 	_attribute(),
-	_lowKeyValue(NULL), 
-	_highKeyValue(NULL), 
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
 	_currentRecordRid(),
@@ -1359,21 +1357,12 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	// Copy over the key values to local memory
 	if (lowKey)
 	{
-		if (_lowKeyValue)
-				free(_lowKeyValue);
-
-		_lowKeyValue = new KeyValueData();
-		if (!_lowKeyValue)
-		{
-			return rc::OUT_OF_MEMORY;
-		}
+		KeyValueData lowKeyValue;
 
 		// Copy over the key that we will be comparing against on the low end
-		ret = _lowKeyValue->init(attribute.type, lowKey);
+		ret = lowKeyValue.init(attribute.type, lowKey);
 		if (ret != rc::OK)
 		{
-			free(_lowKeyValue);
-			_lowKeyValue = NULL;
 			RETURN_ON_ERR(ret);
 			assert(false);
 		}
@@ -1382,7 +1371,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 		// Look for something that matches our low end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
-		ret = IndexManager::findIndexEntry(*fileHandle, attribute, _lowKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
+		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &lowKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
 		RETURN_ON_ERR(ret);
 
 		if (entryRid.pageNum == 0)
@@ -1401,36 +1390,23 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	}
 	else
 	{
-		if (_lowKeyValue)
-			free(_lowKeyValue);
-
-		_lowKeyValue = NULL;
 		_beginRecordRid = lowestPossibleRid;
 	}
 
 	if (highKey)
 	{
-		if (_highKeyValue)
-				free(_highKeyValue);
+		KeyValueData highKeyValue;
 
-		_highKeyValue = new KeyValueData();
-		if (!_highKeyValue)
-		{
-			return rc::OUT_OF_MEMORY;
-		}
-
-		ret = _highKeyValue->init(attribute.type, highKey);
+		ret = highKeyValue.init(attribute.type, highKey);
 		if (ret != rc::OK)
 		{
-			free(_highKeyValue);
-			_highKeyValue = NULL;
 			RETURN_ON_ERR(ret);
 			assert(false);
 		}
 
 		// Look for something that matches our high end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
-		ret = IndexManager::findIndexEntry(*fileHandle, attribute, _highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
+		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
 		RETURN_ON_ERR(ret);
 
 		if (entryRid.pageNum == 0)
@@ -1446,10 +1422,6 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	}
 	else
 	{
-		if (_highKeyValue)
-			free(_highKeyValue);
-
-		_highKeyValue = NULL;
 		ret = IndexManager::findLargestLeafIndexEntry(*fileHandle, attribute, _endRecordRid);
 		RETURN_ON_ERR(ret);
 	}
@@ -1562,15 +1534,7 @@ RC IX_ScanIterator::advance()
 
 RC IX_ScanIterator::close()
 {
-	if (_lowKeyValue)
-		free(_lowKeyValue);
-
-	if (_highKeyValue)
-		free(_highKeyValue);
-
 	_fileHandle = NULL;
-	_lowKeyValue = NULL;
-	_highKeyValue = NULL;
 
 	return rc::OK;
 }

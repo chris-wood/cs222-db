@@ -139,8 +139,6 @@ private:
 	FileHandle* _fileHandle;
 	Attribute _attribute;
 	std::vector<Attribute> _recordDescriptor;
-	KeyValueData* _lowKeyValue;
-	KeyValueData* _highKeyValue;
 	bool _lowKeyInclusive;
 	bool _highKeyInclusive;
 	
