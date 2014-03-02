@@ -316,6 +316,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				RETURN_ON_ERR(ret);
 			}
 
+			if (leftPage == 57)
+			{
+				IndexManager::instance()->printIndex(fileHandle, attribute, true);
+			}
+
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
 			{
 				// assert(false);
@@ -326,7 +331,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		// Don't forget to insert the actual item we were trying to insert in the first place!
 		if (needsToInsert)
 		{
-			ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
+			ret = insertEntry(fileHandle, attribute, key, rid);
+			//ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 			RETURN_ON_ERR(ret);
 		}
 	}
@@ -1133,10 +1139,8 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	unsigned char inputBuffer[PAGE_SIZE] = {0};
 	RC ret = fileHandle.readPage(targetPageNum, inputBuffer);
 	IX_PageIndexFooter* inputFooter = getIXPageIndexFooter(inputBuffer);
+	const bool isLeaf = inputFooter->isLeafPage;
 	RETURN_ON_ERR(ret);
-
-	// Remember if we're splitting a leaf
-	bool isLeaf = inputFooter->isLeafPage;
 
 	// Allocate the new page and save its reference
 	newPageNum = fileHandle.getNumberOfPages();
@@ -1163,15 +1167,21 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	// std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
 	// std::cout << "Leaf? " << inputFooter->isLeafPage << endl;
 
-	// Update the nextLeaf pointer if needed
+	// sanity check...
 	if (isLeaf)
 	{
-		inputFooter->nextLeafPage = newPageNum;
+		assert(leftFooter->nextLeafPage == newPageNum);
+		assert(rightFooter->nextLeafPage == inputFooter->nextLeafPage);
+		assert(leftFooter->isLeafPage == true);
+		assert(rightFooter->isLeafPage == true);
 		leftFooter->nextLeafPage = newPageNum;
-		rightFooter->isLeafPage = true; // sanity check...
+		rightFooter->nextLeafPage = inputFooter->nextLeafPage;
+		leftFooter->isLeafPage = true;
+		rightFooter->isLeafPage = true; 
 	}
 
-	assert(rightFooter->isLeafPage == inputFooter->isLeafPage && leftFooter->isLeafPage == inputFooter->isLeafPage);
+	// Verify new pages are correct with leaf status
+	assert(rightFooter->isLeafPage == isLeaf && leftFooter->isLeafPage == isLeaf);
 
 	// Update known footer data
 	rightFooter->parent = inputFooter->parent;
@@ -1706,11 +1716,11 @@ void KeyValueData::print(AttrType type)
 	switch (type)
 	{
 		case TypeInt:
-			dbg::out << integer;
+			std::cout << integer;
 			break;
 
 		case TypeReal:
-			dbg::out << real;
+			std::cout << real;
 			break;
 
 		case TypeVarChar:
@@ -1721,25 +1731,25 @@ void KeyValueData::print(AttrType type)
 
 				if (size==1)
 				{
-					dbg::out << "'" << s << "'(";
+					std::cout << "'" << s << "'(";
 
 					if (s[0] < 0)
-						dbg::out << ((int)s[0] + 256);
+						std::cout << ((int)s[0] + 256);
 					else
-						dbg::out << ((int)s[0]);
+						std::cout << ((int)s[0]);
 
-					dbg::out << ")";
+					std::cout << ")";
 				}
 				else
 				{
-					dbg::out << "(" << size << ")'" << s << "'";
+					std::cout << "(" << size << ")'" << s << "'";
 				}
 				
 			}
 			break;
 
 		default:
-			dbg::out << "????";
+			std::cout << "????";
 	}
 }
 
@@ -1766,35 +1776,35 @@ std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f)
 void IndexRecord::print(AttrType type, bool isLeaf)
 {
 	key.print(type);
-	dbg::out << "\tnext=" << nextSlot << " ";
+	std::cout << "\tnext=" << nextSlot << " ";
 	if (isLeaf)
-		dbg::out << "\tdata=" << rid;
+		std::cout << "\tdata=" << rid;
 	else
-		dbg::out << "\tpage=" << rid;
+		std::cout << "\tpage=" << rid;
 }
 
 RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended)
 {
 	IndexManager* im = IndexManager::instance();
 
-	dbg::out << "BEGIN==============" << fileHandle.getFilename() << "==============" << "\n";
+	std::cout << "BEGIN==============" << fileHandle.getFilename() << "==============" << "\n";
 	
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
-	dbg::out << "RecordDescriptor: [ ";
+	std::cout << "RecordDescriptor: [ ";
 	for (std::vector<Attribute>::const_iterator it=recordDescriptor.begin(); it!=recordDescriptor.end(); ++it)
 	{
-		dbg::out << (*it) << " ";
+		std::cout << (*it) << " ";
 	}
-	dbg::out << "]" << "\n";
+	std::cout << "]" << "\n";
 	
-	dbg::out << "Pages: " << fileHandle.getNumberOfPages();
+	std::cout << "Pages: " << fileHandle.getNumberOfPages();
 
 	PageNum currentPage = 1;
 	IndexRecord currEntry;
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 
-	dbg::out << "\tRoot: " << footer->pageNumber << "\n" << "\n";
+	std::cout << "\tRoot: " << footer->pageNumber << "\n" << std::endl;
 
 	// Loop through all pages and print a summary of the data
 	while(currentPage < fileHandle.getNumberOfPages())
@@ -1803,10 +1813,10 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 		RETURN_ON_ERR(ret);
 
 		// Print out page basics
-		dbg::out << "---Page: " << currentPage << "  " << *footer;
-		dbg::out << "\n";
+		std::cout << "---Page: " << currentPage << "  " << *footer;
+		std::cout << "\n";
 
-		dbg::out << "Record List: ";
+		std::cout << "Record List: ";
 		{
 			// Print out all records pointed to on this page
 			RID curRid = footer->firstRecord;
@@ -1815,12 +1825,12 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 				ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
 				RETURN_ON_ERR(ret);
 
-				dbg::out << curRid.slotNum << " > ";
+				std::cout << curRid.slotNum << " > ";
 				curRid = currEntry.nextSlot;
 			}
 		}
 
-		dbg::out << "x" << "\n";
+		std::cout << "x" << "\n";
 		if (extended)
 		{
 			// Print out all the slots on this page
@@ -1835,7 +1845,7 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 				{
 					if (ret == rc::RECORD_DELETED)
 					{
-						dbg::out << "s=" << curRid.slotNum << "\tDELETED\n";
+						std::cout << "s=" << curRid.slotNum << "\tDELETED\n";
 						curRid.slotNum++;
 						continue;
 					}
@@ -1845,9 +1855,9 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 					}
 				}
 
-				dbg::out << "s=" << curRid.slotNum << "\tkey=";
+				std::cout << "s=" << curRid.slotNum << "\tkey=";
 				currEntry.print(attribute.type, footer->isLeafPage);
-				dbg::out << "\n";
+				std::cout << "\n";
 
 				curRid.slotNum++;
 			}
@@ -1861,18 +1871,18 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 				ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
 				RETURN_ON_ERR(ret);
 
-				dbg::out << "s=" << curRid.slotNum << "\tkey=";
+				std::cout << "s=" << curRid.slotNum << "\tkey=";
 				currEntry.print(attribute.type, footer->isLeafPage);
-				dbg::out << "\n";
+				std::cout << "\n";
 
 				curRid = currEntry.nextSlot;
 			}
 		}
 
-		dbg::out << "\n";
+		std::cout << "\n";
 		++currentPage;
 	}
 
-	dbg::out << "==============" << fileHandle.getFilename() << "==============END" << "\n";
+	std::cout << "==============" << fileHandle.getFilename() << "==============END" << std::endl;
 	return rc::OK;
 }
