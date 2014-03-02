@@ -193,6 +193,12 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 	const PageNum rootPage = footer->pageNumber;
 
+	if (keyData.real == 1561.50000)
+	{
+		//IndexManager::printIndex(fileHandle, attribute, true);
+		//std::cout << "The one that messes up?" << std::endl;
+	}
+
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum insertDestination = rootPage;
 	while (footer->isLeafPage == false)
@@ -221,8 +227,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	}
 	else
 	{
-		bool needsToInsert = ret != rc::OK;
+		bool needsToInsertOriginal = ret != rc::OK;
+		bool needsToInsertNonLeaf = false;
 		PageNum nextPage = insertDestination;
+		KeyValueData cascadedKey;
+		RID cascadedRid;
 		insertDestination = 0;
 
 		// TODO: Verify cascading works
@@ -234,22 +243,54 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			PageNum rightPage;
 			KeyValueData rightKey;
 			RID rightRid;
+			int compareResult = 0;
 
 			// printIndex(fileHandle, attribute, true);
 
-			if (leftPage == 57)
+			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
+			RETURN_ON_ERR(ret)
+
+			// Determine if we have a leftover non-leaf insert from a previous split
+			if (needsToInsertNonLeaf)
 			{
-				IndexManager::instance()->printIndex(fileHandle, attribute, true);
+				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
+				PageNum destinationPage = leftPage;
+				
+				ret = cascadedKey.compare(attribute.type, rightKey, compareResult);
+				RETURN_ON_ERR(ret);
+
+				// Determine if we need to put this on the left or right page we just created
+				if (compareResult >= 0)
+				{
+					destinationPage = rightPage;
+				}
+
+				// Insert the right child into the parent of the left
+				ret = insertIntoNonLeaf(fileHandle, destinationPage, attribute, cascadedKey, cascadedRid);
+				RETURN_ON_ERR(ret);
+
+				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
+
+				needsToInsertNonLeaf = false;
 			}
 
-			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
-			// ret = split(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
+			// Our first split will tell us where to put or original value
+			ret = keyData.compare(attribute.type, rightKey, compareResult);
 			RETURN_ON_ERR(ret);
 
-			// Our first split will tell us where to put or original value
+			// TODO: Determine if we need to put this on the left or right page we just created?
+			/*
+			if (compareResult >= 0)
+			{
+				insertDestination = rightPage;
+			}
+			else
+			{
+				insertDestination = leftPage;
+			}*/
 			if (insertDestination == 0)
 			{
-				insertDestination = rightRid.pageNum;
+				insertDestination = 0;
 			}
 
 			// Check to see if we need to grow by one level, and if so, add a new page with enough space to 
@@ -310,17 +351,22 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			// Insert the right child into the parent of the left
 			ret = insertIntoNonLeaf(fileHandle, parent, attribute, rightKey, rightRid);
-			if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
+			if (ret != rc::OK)
 			{
-				assert(false);
-				RETURN_ON_ERR(ret);
+				// Save our key for later insertion if we needed to split this non-leaf
+				if (ret == rc::BTREE_INDEX_PAGE_FULL)
+				{
+					cascadedKey = rightKey;
+					cascadedRid = rightRid;
+					needsToInsertNonLeaf = true;
+				}
+				else
+				{
+					RETURN_ON_ERR(ret);
+					assert(false);
+				}
 			}
-
-			if (leftPage == 57)
-			{
-				IndexManager::instance()->printIndex(fileHandle, attribute, true);
-			}
-
+			
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
 			{
 				// assert(false);
@@ -328,8 +374,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			nextPage = parent;
 		}
 
+		assert(needsToInsertNonLeaf == false);
+
 		// Don't forget to insert the actual item we were trying to insert in the first place!
-		if (needsToInsert)
+		if (needsToInsertOriginal)
 		{
 			ret = insertEntry(fileHandle, attribute, key, rid);
 			//ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
@@ -1164,8 +1212,8 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	ret = fileHandle.readPage(newPageNum, rightBuffer);
 	RETURN_ON_ERR(ret);
 
-	// std::cout << " SPLITTING " << targetPageNum << " + " << newPageNum << std::endl;
-	// std::cout << "Leaf? " << inputFooter->isLeafPage << endl;
+	//std::cout << "\nSPLITTING " << targetPageNum << " + " << newPageNum << " parent=" << inputFooter->parent << std::endl;
+	//std::cout << "   Leaf? " << inputFooter->isLeafPage << endl;
 
 	// sanity check...
 	if (isLeaf)
@@ -1186,6 +1234,8 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	// Update known footer data
 	rightFooter->parent = inputFooter->parent;
 	leftFooter->parent = inputFooter->parent;
+
+	//std::cout << "LEFT: ";
 
 	// Read in records and write to the left page until we hit half of the page full
 	IndexRecord tempRecord;
@@ -1223,16 +1273,18 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			tempRecord.nextSlot.slotNum = slotNum;
 		}
 
+		//std::cout << " " << tempRecord.rid.pageNum;
+
 		// Copy over the record to the new left page buffer
 		ret = insertRecordInplace(recordDescriptor, &tempRecord, leftFooter->pageNumber, leftBuffer, lastLeftRid);
 		RETURN_ON_ERR(ret);
 	}
 
-	// std::cout << "Records still on LEFT page = " << slotNum << " @ " << currentSize << " bytes" << std::endl;
+	//std::cout << "Records still on LEFT page = " << slotNum << " @ " << currentSize << " bytes" << std::endl;
 
 	// Save the 1st key that will be on the right page for later
 	const RID firstRightPageRid = curRid;
-	// cout << "Right key: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
+	//cout << "Right key: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
 
 	ret = readRecord(fileHandle, recordDescriptor, firstRightPageRid, &tempRecord, inputBuffer);
 	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
@@ -1264,6 +1316,8 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		childFooter->parent = newPageNum;
 		fileHandle.writePage(rightFooter->leftChild, childBuffer);
 	}
+
+	//std::cout << "\nRIGHT: ";
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
 	// Move the rest over to the new page
@@ -1312,12 +1366,15 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			tempRecord.nextSlot.slotNum = slotNum;
 		}
 
+		//std::cout << " " << tempRecord.rid.pageNum;
+
 		// Copy over the record to the new right page buffer
 		ret = insertRecordInplace(recordDescriptor, &tempRecord, rightFooter->pageNumber, rightBuffer, lastRightRid);
 		RETURN_ON_ERR(ret);
 	}
-
-	// cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << slotNum << endl;s
+	
+	//std::cout << std::endl;
+	//cout << "TOTAL INSERTED ON RIGHT page " << newPageNum << ": " << slotNum << endl;
 
 	// Write out the new page buffers
 	ret = fileHandle.writePage(targetPageNum, leftBuffer);
@@ -1430,7 +1487,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	_recordDescriptor = _im.getIndexRecordDescriptor(attribute.type);
 	RETURN_ON_ERR(ret);
 
-	IndexManager::instance()->printIndex(*fileHandle, attribute, true);
+	//IndexManager::instance()->printIndex(*fileHandle, attribute, true);
 
 	// Traverse down the left pointers to find the lowest RID
 	RID lowestPossibleRid;
@@ -1785,6 +1842,11 @@ void IndexRecord::print(AttrType type, bool isLeaf)
 
 RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended)
 {
+	return printIndex(fileHandle, attribute, extended, false, 0);
+}
+
+RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended, bool restrictToPage, PageNum restrictPage)
+{
 	IndexManager* im = IndexManager::instance();
 
 	std::cout << "BEGIN==============" << fileHandle.getFilename() << "==============" << "\n";
@@ -1809,6 +1871,12 @@ RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, 
 	// Loop through all pages and print a summary of the data
 	while(currentPage < fileHandle.getNumberOfPages())
 	{
+		if (restrictToPage && currentPage != restrictPage)
+		{
+			++currentPage;
+			continue;
+		}
+
 		RC ret = fileHandle.readPage(currentPage, pageBuffer);
 		RETURN_ON_ERR(ret);
 

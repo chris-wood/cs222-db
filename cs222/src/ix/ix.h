@@ -99,6 +99,7 @@ class IndexManager : public RecordBasedCoreManager {
   static RC readRootPage(FileHandle& fileHandle, void* pageBuffer);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
   static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended);
+  static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended, bool restrictToPage, PageNum restrictPage);
   static RC updateRootPage(FileHandle& fileHandle, unsigned newRootPage);
 
   RC getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid);
