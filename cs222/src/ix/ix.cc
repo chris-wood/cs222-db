@@ -1507,7 +1507,11 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	// Traverse down the left pointers to find the lowest RID
 	RID lowestPossibleRid;
 	ret = IndexManager::findSmallestLeafIndexEntry(*_fileHandle, lowestPossibleRid);
-	RETURN_ON_ERR(ret);
+	if (ret != rc::OK)
+	{
+		// Do not error out if the index is empty, simply set up for getNextEntry to fail immediately
+		lowestPossibleRid.pageNum = lowestPossibleRid.slotNum = 0;
+	}
 
 	// Copy over the key values to local memory
 	if (lowKey)
@@ -1596,7 +1600,12 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	else
 	{
 		ret = IndexManager::findLargestLeafIndexEntry(*fileHandle, attribute, _endRecordRid);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK)
+		{
+			// If we cannot find the largest, that means we have no entries at all
+			_beginRecordRid.pageNum = _beginRecordRid.slotNum = 0;
+			_endRecordRid.pageNum = _endRecordRid.slotNum = 0;
+		}
 	}
 
 	// Start at the beginning RID (keep track of beginRecordRid just for debug purposes for now)
