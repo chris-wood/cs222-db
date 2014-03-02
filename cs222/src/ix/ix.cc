@@ -1072,6 +1072,15 @@ RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* 
 			dataRid = currEntry.rid;
 			break;
 		}
+		else if (compareResult < 0)
+		{
+			// We are searching for something that is smaller than anything on this leaf, return the current and error out
+			entryRid = currRid;
+			dataRid = currEntry.rid;
+
+			currRid.pageNum = 0;
+			break;
+		}
 		else
 		{
 			prevEntryRid = currRid;
@@ -1410,7 +1419,11 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		// Look for something that matches our low end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &lowKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK && ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+		{
+			RETURN_ON_ERR(ret);
+			assert(false);
+		}
 
 		if (entryRid.pageNum == 0)
 		{
@@ -1423,6 +1436,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		}
 		else
 		{
+			// TODO: Verify this is correct when we search for low value and fail 
 			_beginRecordRid = nextEntryRid;
 		}
 	}
@@ -1446,7 +1460,11 @@ cout << " setting high key" << endl;
 		// Look for something that matches our high end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
-		RETURN_ON_ERR(ret);
+		if (ret != rc::OK && ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+		{
+			RETURN_ON_ERR(ret);
+			assert(false);
+		}
 
 		if (entryRid.pageNum == 0)
 		{
