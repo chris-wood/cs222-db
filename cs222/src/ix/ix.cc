@@ -203,6 +203,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	PageNum insertDestination = rootPage;
 	while (footer->isLeafPage == false)
 	{
+		cout << "-> " << insertDestination << endl;
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
 		RETURN_ON_ERR(ret);
 
@@ -248,7 +249,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// printIndex(fileHandle, attribute, true);
 
 			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
-			RETURN_ON_ERR(ret)
+			cout << "Insert key: " << keyData.real << endl << "Target = " << nextPage << endl;
+			cout << "SPLIT: " << leftPage << " - " << rightPage << endl << endl;
+			RETURN_ON_ERR(ret);
+
+			if (leftPage == 56)
+			{
+				printIndex(fileHandle, attribute, true);
+				assert(false);
+			}
 
 			// Determine if we have a leftover non-leaf insert from a previous split
 			if (needsToInsertNonLeaf)
@@ -1306,7 +1315,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		// std::cout << std::endl;
 		
 		// Copy over the page pointer into the footer
-		rightFooter->leftChild = curRid.pageNum;
+		rightFooter->leftChild = tempRecord.rid.pageNum;
 		curRid = tempRecord.nextSlot;
 
 		// Update the child's parent pointer to newPageNum
@@ -1649,6 +1658,8 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			memcpy(&size, record.key.varchar, sizeof(unsigned));
 			memcpy(key, record.key.varchar + sizeof(unsigned), size);
 	}
+
+	cout << "Next entry: " << targetRid.pageNum << "," << targetRid.slotNum << endl;
 
 	// Advance to the next record
 	ret = advance();
