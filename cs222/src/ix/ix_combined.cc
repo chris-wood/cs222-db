@@ -1167,6 +1167,8 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         goto error_close_index;
     }
 
+    indexManager->printIndex(fileHandle, attribute, true);
+
     // insert entry Again
     numOfTuples = 500;
     for(unsigned i = 1; i <= numOfTuples; i++)
@@ -1175,6 +1177,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i;
         rid.slotNum = i;
 
+        cout << "inserting: " << key << endl;
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -1322,12 +1325,17 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     }
     random_shuffle(A, A+numOfTuples);
 
+    indexManager->printIndex(fileHandle, attribute, true);
+
+    cout << "POST SHUFFLE" << endl;
+
     for(int i = 0; i < numOfTuples; i++)
     {
         key = A[i];
         rid.pageNum = i+1;
         rid.slotNum = i+1;
 
+        cout << "Inserting: " << key << " - " << endl;
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -1350,6 +1358,11 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     }
 
     // Test DeleteEntry in IndexScan Iterator
+
+    cout << "deleting now" << endl;
+
+    indexManager->printIndex(fileHandle, attribute, true);
+
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
@@ -1358,9 +1371,11 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
             dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
 
         key = A[rid.pageNum-1];
+        cout << "deleting: " << key << " -" << endl;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
+            cout << rc::rcToString(rc) << endl;
             cout << "Failed deleting entry in Scan..." << endl;
             goto error_close_scan;
         }
@@ -1393,6 +1408,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     }
     random_shuffle(B, B+numOfTuples);
 
+    cout << "inserting new entries in random order" << endl;
+
     for(int i = 0; i < numOfTuples; i++)
     {
         key = B[i];
@@ -1407,6 +1424,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
     }
 
+    cout << "initializing scan" << endl;
+
     //scan
     compVal = 35000;
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
@@ -1419,6 +1438,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Opening Scan..." << endl;
         goto error_close_index;
     }
+
+    cout << "checking filter" << endl;
 
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
@@ -2200,10 +2221,10 @@ void test2()
 
     testCase_4B(indexAgeFileName, attrAge);
     testCase_5(indexAgeFileName, attrAge);
-    testCase_6(indexHeightFileName, attrHeight);
-    testCase_7(indexHeightFileName, attrHeight);
-    testCase_8(indexHeightFileName, attrHeight);
-    // testCase_9(indexAgeFileName, attrAge);
+    // testCase_6(indexHeightFileName, attrHeight);
+    // testCase_7(indexHeightFileName, attrHeight);
+    // testCase_8(indexHeightFileName, attrHeight);
+    testCase_9(indexAgeFileName, attrAge);
     // testCase_10(indexHeightFileName, attrHeight);
 
     // Extra Credit Work
