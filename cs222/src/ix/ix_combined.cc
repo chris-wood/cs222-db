@@ -2562,7 +2562,7 @@ void testCustom()
     //testSkewedDelete(50);
     //cout << "Passed skewed delete" << endl;
 
-	//testRandomAddDelete(50, false);
+	testRandomAddDelete(2, false);
 
 	// std::cout << "====Testing single insert/delete on integers====" << std::endl;
  //    testSimpleAddDeleteIndex(50, false);
