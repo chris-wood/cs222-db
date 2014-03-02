@@ -765,6 +765,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i;
         rid.slotNum = i-(unsigned)500;
 
+        cout << "Inserting: " << key << endl;
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
