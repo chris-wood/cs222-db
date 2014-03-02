@@ -253,6 +253,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// Determine if we have a leftover non-leaf insert from a previous split
 			if (needsToInsertNonLeaf)
 			{
+				/*
 				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
 				PageNum destinationPage = leftPage;
 				
@@ -270,7 +271,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				RETURN_ON_ERR(ret);
 
 				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
-
+				*/
 				needsToInsertNonLeaf = false;
 			}
 
