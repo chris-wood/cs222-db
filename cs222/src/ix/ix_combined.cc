@@ -324,7 +324,7 @@ int testCase_4A(const string &indexFileName, const Attribute &attribute)
             cout << "Failed Inserting Entry..." << endl;
             goto error_close_index;
         }
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
         inRidPageNumSum += rid.pageNum;
     }
 
@@ -342,7 +342,7 @@ int testCase_4A(const string &indexFileName, const Attribute &attribute)
 
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
         outRidPageNumSum += rid.pageNum;
     }
 
@@ -465,7 +465,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
 
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
         outRidPageNumSum += rid.pageNum;
     }
 
@@ -623,7 +623,7 @@ int testCase_5(const string &indexFileName, const Attribute &attribute)
     // Test IndexScan iterator
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
         if (rid.pageNum < 501 || rid.slotNum < 502)
         {
             cout << "Wrong entries output...failure" << endl;
@@ -716,6 +716,8 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
     int inRidPageNumSum = 0;
     int outRidPageNumSum = 0;
 
+	std::vector<int> validPageNums;
+
     // create index file
     rc = indexManager->createFile(indexFileName);
     if(rc == success)
@@ -756,6 +758,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         if (key < compVal)
         {
             inRidPageNumSum += rid.pageNum;
+			validPageNums.push_back(rid.pageNum);
         }
     }
 
@@ -765,7 +768,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i;
         rid.slotNum = i-(unsigned)500;
 
-        cout << "Inserting: " << key << endl;
+        dbg::out << "Inserting: " << key << "\n";
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -775,6 +778,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         if (key < compVal)
         {
             inRidPageNumSum += rid.pageNum;
+			validPageNums.push_back(rid.pageNum);
         }
     }
 
@@ -793,17 +797,21 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
     }
 
     // iterate
-    while(ix_ScanIterator.getNextEntry(rid, &key) == success)
-    {
-        /*if(rid.pageNum % 500 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
-        if ((rid.pageNum > 2000 && rid.pageNum < 6000) || rid.pageNum >= 6500)
-        {
-            cout << "Wrong entries output...failure" << endl;
-            goto error_close_scan;
-        }
-        outRidPageNumSum += rid.pageNum;
-    }
+	int index = 0;
+	while (ix_ScanIterator.getNextEntry(rid, &key) == success)
+	{
+		/*if(rid.pageNum % 500 == 0)
+			dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
+		if ((rid.pageNum > 2000 && rid.pageNum < 6000) || rid.pageNum >= 6500)
+		{
+			cout << "Wrong entries output...failure" << endl;
+			goto error_close_scan;
+		}
+		outRidPageNumSum += rid.pageNum;
+
+		const int comparePageNum = validPageNums[index++];
+		assert(rid.pageNum == comparePageNum);
+	}
 
     if (inRidPageNumSum != outRidPageNumSum)
     {
@@ -942,7 +950,7 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
     // DeleteEntry in IndexScan Iterator
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
 
         float key = (float)rid.pageNum;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -981,7 +989,7 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
     //iterate
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << "Entry returned: " << rid.pageNum << " " << rid.slotNum << "--- failure" << endl;
+		dbg::out << "Entry returned: " << rid.pageNum << " " << rid.slotNum << "--- failure" << "\n";
 
         if(rid.pageNum > 100)
         {
@@ -1125,7 +1133,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     // Test DeleteEntry in IndexScan Iterator
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-       // cout << rid.pageNum << " " << rid.slotNum << endl;
+       // dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
 
         key = (float)rid.pageNum;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1180,7 +1188,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
 
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
 
         if(rid.pageNum <= 450 || rid.slotNum <= 450)
         {
@@ -1337,7 +1345,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     {
 		/*
         if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
 
         key = A[rid.pageNum-1];
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1406,7 +1414,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
         /*if (count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
 
         if(rid.pageNum > 30000 && B[rid.pageNum-30001] > 35000)
         {
@@ -1565,7 +1573,7 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
         /*if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
 
         key = A[rid.pageNum-1];
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
@@ -1634,7 +1642,7 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
         /*if (count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
 
         if(rid.pageNum > 40000 && B[rid.pageNum-40001] > 45000)
         {
@@ -1794,7 +1802,7 @@ int testCase_extra_1(const string &indexFileName, const Attribute &attribute)
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
         /*if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
         count++;
     }
     cout << "Number of scanned entries: " << count << endl;
@@ -1953,7 +1961,7 @@ int testCase_extra_2(const string &indexFileName, const Attribute &attribute)
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
         /*if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;*/
+            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
         count++;
     }
     cout << "Number of scanned entries: " << count << endl;
@@ -2106,7 +2114,7 @@ int testCase_extra_3(const string &indexFileName, const Attribute &attribute)
     //iterate
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
+		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
     }
     cout << endl;
 
@@ -2180,8 +2188,8 @@ void test2()
     attrEmpName.name = "EmpName";
     attrEmpName.type = TypeVarChar;
 
-    testCase_4B(indexAgeFileName, attrAge);
-    testCase_5(indexAgeFileName, attrAge);
+    // testCase_4B(indexAgeFileName, attrAge);
+    // testCase_5(indexAgeFileName, attrAge);
     testCase_6(indexHeightFileName, attrHeight);
     // testCase_7(indexHeightFileName, attrHeight);
     // testCase_8(indexHeightFileName, attrHeight);
@@ -2247,7 +2255,7 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 			std::cout << std::endl;
 		}
 
-        std::cout << "INSERTING: " << i << "(" << (*c) << ")" << std::endl;
+        dbg::out << "INSERTING: " << i << "(" << (*c) << ")" << "\n";
 		ret = indexManager->insertEntry(fileHandle, attr, data, rid);
 		assert(ret == success);
 	}
@@ -2260,7 +2268,7 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 		*c = '!' + i%92;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
 
-        std::cout << "DELETING: " << i << "(" << (*c) << ")" << std::endl;
+		dbg::out << "DELETING: " << i << "(" << (*c) << ")" << "\n";
 		ret = indexManager->deleteEntry(fileHandle, attr, data, rid);
 	}
 
