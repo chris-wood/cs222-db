@@ -327,6 +327,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			RETURN_ON_ERR(ret);
 		}
 	}
+
+	// IndexManager::instance()->printIndex(fileHandle, attribute, true);
 	
 	return rc::OK;
 }
@@ -532,8 +534,6 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 	}
 	else // if we can fit, find the spot in the list where the new record will go
 	{
-		bool found = false;
-		bool atEnd = false;
 		RID currRid = footer->firstRecord;
 		RID prevRid;
 		IndexRecord currEntry;
@@ -559,6 +559,7 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			ret = keyData.compare(attribute.type, currEntry.key, compareResult);
 			RETURN_ON_ERR(ret);
 
+			numEntries++;
 			if (compareResult >= 0)
 			{
 				foundMatch = true;
@@ -568,7 +569,6 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 				targetEntry = currEntry;
 				targetPrevEntry = prevEntry;
 			}
-			numEntries++;
 
             // Update for next iteration
             prevRid = currRid;
@@ -577,23 +577,38 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 		}
 
 		// Drop the record into the right spot in the on-page list
-		atEnd = (target + 1) == numEntries;
-		if (!atEnd && targetPrevRid.pageNum > 0 && numEntries > 1) // middle of list
+		bool atEnd = target == numEntries;
+		bool atStart = target == 0;
+		if (!atEnd && !atStart) // middle of list
 		{
+			// // Insert the new record into the root, and make it point to the current RID
+			// entry.nextSlot = targetRid;
+			// RID newEntry;
+			// // cout << "Inserting to middle of page: " << page << endl;
+			// ret = insertRecordToPage(fileHandle, recordDescriptor, &entry, page, newEntry);
+			// RETURN_ON_ERR(ret);
+
+			// // Update the previous entry to point to the new entry (it's in the middle now)
+			// targetPrevEntry.nextSlot = newEntry;
+			// // cout << "Updating middle: " << targetPrevRid.pageNum << "," << targetPrevRid.slotNum << endl;
+			// ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
+			// RETURN_ON_ERR(ret);
+
 			// Insert the new record into the root, and make it point to the current RID
-			entry.nextSlot = targetRid;
+			entry.nextSlot = targetEntry.nextSlot;
 			RID newEntry;
-			// cout << "Inserting to middle of page: " << page << endl;
+			// cout << "Inserting to page: " << page << endl;
+			// cout << calculateFreespace(footer->freeSpaceOffset, footer->numSlots) << endl;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &entry, page, newEntry);
 			RETURN_ON_ERR(ret);
 
 			// Update the previous entry to point to the new entry (it's in the middle now)
-			targetPrevEntry.nextSlot = newEntry;
-			// cout << "Updating middle: " << targetPrevRid.pageNum << "," << targetPrevRid.slotNum << endl;
-			ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
+			// targetPrevEntry.nextSlot = newEntry;
+			targetEntry.nextSlot = newEntry;
+			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
-		else if (!atEnd) // start
+		else if (atStart) // start
 		{
 			// Insert the new record into the root, and make it point to the current RID
 			entry.nextSlot = footer->firstRecord;
@@ -697,8 +712,6 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	}
 	else
 	{
-		bool found = false;
-		bool atEnd = false;
 		RID currRid = footer->firstRecord;
 		RID prevRid;
 		RID targetPrevRid;
@@ -721,6 +734,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			ret = keyData.compare(attribute.type, currEntry.key, compareResult);
 			RETURN_ON_ERR(ret);
 
+			numEntries++;
             if (compareResult >= 0)
 			{
 				target = numEntries;
@@ -729,7 +743,6 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 				targetEntry = currEntry;
 				targetPrevEntry = prevEntry;
 			}
-			numEntries++;
 
             // Update for next iteration
             prevRid = currRid;
@@ -738,11 +751,14 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		}
 
 		// Drop the record into the right spot in the on-page list
-		atEnd = (target + 1) == numEntries;
-		if (!atEnd && targetPrevRid.pageNum > 0 && numEntries > 1) // middle of list
+		// atEnd = (target + 1) == numEntries;
+		bool atEnd = target == numEntries;
+		bool atStart = target == 0;
+		if (!atEnd && !atStart) // middle of list
 		{
+			cout << "inserting to middle" << endl;
 			// Insert the new record into the root, and make it point to the current RID
-			leaf.nextSlot = targetRid;
+			leaf.nextSlot = targetEntry.nextSlot;
 			RID newEntry;
 			// cout << "Inserting to page: " << page << endl;
 			// cout << calculateFreespace(footer->freeSpaceOffset, footer->numSlots) << endl;
@@ -750,12 +766,14 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			RETURN_ON_ERR(ret);
 
 			// Update the previous entry to point to the new entry (it's in the middle now)
-			targetPrevEntry.nextSlot = newEntry;
-			ret = updateRecord(fileHandle, recordDescriptor, &targetPrevEntry, targetPrevRid);
+			// targetPrevEntry.nextSlot = newEntry;
+			targetEntry.nextSlot = newEntry;
+			ret = updateRecord(fileHandle, recordDescriptor, &targetEntry, targetRid);
 			RETURN_ON_ERR(ret);
 		}
-		else if (!atEnd)
+		else if (atStart) // start of the list
 		{
+			cout << "inserting to start" << endl;
 			// Insert the new record into the root, and make it point to the current RID
 			leaf.nextSlot = footer->firstRecord;
 			RID newEntry;
@@ -766,12 +784,14 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 			ret = fileHandle.readPage(footer->pageNumber, pageBuffer);
 			RETURN_ON_ERR(ret);
 
+			// Update the header
 			footer->firstRecord = newEntry;
 			ret = fileHandle.writePage(footer->pageNumber, pageBuffer);
 			RETURN_ON_ERR(ret);
 		}
-		else // append the RID to the end of the on-page list 
+		else // end of the list 
 		{
+			cout << "inserting to end" << endl;
 			// Insert the new record into the root
 			RID newEntry;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
