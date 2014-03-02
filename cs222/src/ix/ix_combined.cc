@@ -2202,7 +2202,7 @@ void test2()
     testCase_5(indexAgeFileName, attrAge);
     testCase_6(indexHeightFileName, attrHeight);
     testCase_7(indexHeightFileName, attrHeight);
-    // testCase_8(indexHeightFileName, attrHeight);
+    testCase_8(indexHeightFileName, attrHeight);
     // testCase_9(indexAgeFileName, attrAge);
     // testCase_10(indexHeightFileName, attrHeight);
 
