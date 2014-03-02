@@ -137,7 +137,7 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, P
 	footerTemplate.firstRecord.pageNum = pageNum;
 	footerTemplate.firstRecord.slotNum = 0;
 	footerTemplate.parent = 0;
-	footerTemplate.nextLeafPage = nextLeafPage;
+	footerTemplate.nextLeafPage = isLeaf ? nextLeafPage : 0;
 	footerTemplate.freespacePrevPage = 0;
 	footerTemplate.freespaceNextPage = 0;
 	footerTemplate.freeSpaceOffset = 0;
@@ -237,7 +237,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			// printIndex(fileHandle, attribute, true);
 
-			if (leftPage == 3)
+			if (leftPage == 57)
 			{
 				IndexManager::instance()->printIndex(fileHandle, attribute, true);
 			}
