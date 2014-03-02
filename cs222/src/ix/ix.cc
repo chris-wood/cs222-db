@@ -250,14 +250,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
 			cout << "Insert key: " << keyData.real << endl << "Target = " << nextPage << endl;
-			cout << "SPLIT: " << leftPage << " - " << rightPage << endl << endl;
+			cout << "SPLIT: " << leftPage << " - " << rightPage << endl;
 			RETURN_ON_ERR(ret);
-
-			if (leftPage == 56)
-			{
-				printIndex(fileHandle, attribute, true);
-				assert(false);
-			}
 
 			// Determine if we have a leftover non-leaf insert from a previous split
 			if (needsToInsertNonLeaf)
@@ -360,6 +354,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			parent = tempFooter->parent;
 
 			// Insert the right child into the parent of the left
+			cout << "fixing parent: " << parent << " - " << rightRid.pageNum << endl;
 			ret = insertIntoNonLeaf(fileHandle, parent, attribute, rightKey, rightRid);
 			if (ret != rc::OK)
 			{
@@ -375,6 +370,12 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 					RETURN_ON_ERR(ret);
 					assert(false);
 				}
+			}
+
+			if (leftPage == 56)
+			{
+				printIndex(fileHandle, attribute, true);
+				// assert(false);
 			}
 			
 			if (ret == rc::BTREE_INDEX_PAGE_FULL)
