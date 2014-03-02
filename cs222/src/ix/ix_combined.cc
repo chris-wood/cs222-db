@@ -37,7 +37,7 @@ int main()
 	g_nTotalGradPoint = 0;
 
 	ASSERT_ON_BAD_RETURN = true;
-	testCustom();
+	// testCustom();
 
 	// Cleanup from old tests previously run
 	ASSERT_ON_BAD_RETURN = false;
@@ -2562,20 +2562,20 @@ void testCustom()
     //testSkewedDelete(50);
     //cout << "Passed skewed delete" << endl;
 
-	testRandomAddDelete(50, false);
+	testRandomAddDelete(500, false);
 
-	// std::cout << "====Testing single insert/delete on integers====" << std::endl;
- //    testSimpleAddDeleteIndex(50, false);
-	// std::cout << "====Testing single insert/delete on strings====" << std::endl;
-	// testSimpleAddDeleteIndex(50, true);
+	std::cout << "====Testing single insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(50, false);
+	std::cout << "====Testing single insert/delete on strings====" << std::endl;
+	testSimpleAddDeleteIndex(50, true);
 
-	// std::cout << "====Testing single split insert/delete on integers====" << std::endl;
- //    testSimpleAddDeleteIndex(75, false);
-	// std::cout << "====Testing single split insert/delete on strings====" << std::endl;
-	// testSimpleAddDeleteIndex(75, true);
+	std::cout << "====Testing single split insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(75, false);
+	std::cout << "====Testing single split insert/delete on strings====" << std::endl;
+	testSimpleAddDeleteIndex(75, true);
 
-	// std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
- //    testSimpleAddDeleteIndex(10000, false);
-	// std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
-	// testSimpleAddDeleteIndex(250, true);
+	std::cout << "====Testing multi-level split insert/delete on integers====" << std::endl;
+    testSimpleAddDeleteIndex(10000, false);
+	std::cout << "====Testing multi-level split insert/delete on strings====" << std::endl;
+	testSimpleAddDeleteIndex(250, true);
 }

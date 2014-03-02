@@ -756,7 +756,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		bool atStart = target == 0;
 		if (!atEnd && !atStart) // middle of list
 		{
-			cout << "inserting to middle" << endl;
+			// cout << "inserting to middle" << endl;
 			// Insert the new record into the root, and make it point to the current RID
 			leaf.nextSlot = targetEntry.nextSlot;
 			RID newEntry;
@@ -773,7 +773,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		}
 		else if (atStart) // start of the list
 		{
-			cout << "inserting to start" << endl;
+			// cout << "inserting to start" << endl;
 			// Insert the new record into the root, and make it point to the current RID
 			leaf.nextSlot = footer->firstRecord;
 			RID newEntry;
@@ -791,7 +791,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 		}
 		else // end of the list 
 		{
-			cout << "inserting to end" << endl;
+			// cout << "inserting to end" << endl;
 			// Insert the new record into the root
 			RID newEntry;
 			ret = insertRecordToPage(fileHandle, recordDescriptor, &leaf, page, newEntry);
@@ -846,7 +846,7 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 	if (key)
 	{
-		cout << "Comparing: " << key->real << endl;
+		// cout << "Comparing: " << key->real << endl;
 		// IndexManager::instance()->printIndex(fileHandle, attribute, true);
 		ret = key->compare(attribute.type, currEntry.key, compareResult);
 		RETURN_ON_ERR(ret);
@@ -854,7 +854,7 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 	if (compareResult < 0)
 	{
-		cout << "Branching to left: " << targetRid.slotNum << endl;
+		// cout << "Branching to left: " << targetRid.slotNum << endl;
 		// targetRid.pageNum = targetRid.slotNum = 0;
 		targetRid.pageNum = footer->leftChild;
 		targetRid.slotNum = 0;
@@ -882,7 +882,7 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			currRid = currEntry.nextSlot;
 		}
 
-		cout << "Branching to the right: " << targetRid.pageNum << endl;
+		// cout << "Branching to the right: " << targetRid.pageNum << endl;
 	}
 
 	prevRid = currRid;
@@ -1013,7 +1013,7 @@ RC IndexManager::findIndexEntry(FileHandle& fileHandle, const Attribute &attribu
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
 	// TODO
-	IndexManager::instance()->printIndex(fileHandle, attribute, true);
+	//IndexManager::instance()->printIndex(fileHandle, attribute, true);
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum nextPage = rootPageNum;
@@ -1031,9 +1031,9 @@ RC IndexManager::findIndexEntry(FileHandle& fileHandle, const Attribute &attribu
 	// Now search along the leaf page
 	assert(footer->isLeafPage);
 	ret = findLeafIndexEntry(fileHandle, footer, attribute, keyData, entryRid, prevEntryRid, nextEntryRid, dataRid);
-	RETURN_ON_ERR(ret);
-
-	return rc::OK;
+	
+	// Allow this find to fail, this just means we will return the closest entry
+	return ret;
 }
 
 RC IndexManager::findLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFooter* footer, const Attribute &attribute, KeyValueData* key, RID& entryRid, RID& dataRid)
@@ -1434,15 +1434,21 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			assert(false);
 		}
 
-		IndexManager::instance()->printIndex(*_fileHandle, _attribute, true);
+		//IndexManager::instance()->printIndex(*_fileHandle, _attribute, true);
 
 		// Look for something that matches our low end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &lowKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
-		if (ret != rc::OK && ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+		if (ret != rc::OK)
 		{
-			RETURN_ON_ERR(ret);
-			assert(false);
+			if (ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+			{
+				RETURN_ON_ERR(ret);
+				assert(false);
+			}
+
+			// We did not find the exact value, so our closest value must be "inclusive"
+			_lowKeyInclusive = true;
 		}
 
 		if (entryRid.pageNum == 0)
@@ -1450,14 +1456,9 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 			// TODO: When is this true?
 			_beginRecordRid = lowestPossibleRid;
 		}
-		else if (_lowKeyInclusive)
-		{
-			_beginRecordRid = entryRid;
-		}
 		else
 		{
-			// TODO: Verify this is correct when we search for low value and fail 
-			_beginRecordRid = nextEntryRid;
+			_beginRecordRid = entryRid;
 		}
 	}
 	else
@@ -1465,7 +1466,6 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		_beginRecordRid = lowestPossibleRid;
 	}
 
-cout << " setting high key" << endl;
 	if (highKey)
 	{
 		KeyValueData highKeyValue;
@@ -1477,13 +1477,21 @@ cout << " setting high key" << endl;
 			assert(false);
 		}
 
+		//IndexManager::printIndex(*fileHandle, _attribute, true);
+
 		// Look for something that matches our high end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
-		if (ret != rc::OK && ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+		if (ret != rc::OK)
 		{
-			RETURN_ON_ERR(ret);
-			assert(false);
+			if (ret != rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND && ret != rc::BTREE_CANNOT_FIND_LEAF)
+			{
+				RETURN_ON_ERR(ret);
+				assert(false);
+			}
+
+			// We did not find the exact value, current entry is pointing to a value larger than we want
+			_highKeyInclusive = false;
 		}
 
 		if (entryRid.pageNum == 0)
