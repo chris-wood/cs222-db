@@ -805,6 +805,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         outRidPageNumSum += rid.pageNum;
     }
 
+    cout << inRidPageNumSum << " " << outRidPageNumSum << endl;
     if (inRidPageNumSum != outRidPageNumSum)
     {
         cout << "Wrong entries output...failure" << endl;

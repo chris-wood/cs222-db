@@ -194,8 +194,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum insertDestination = rootPage;
+	cout << "START INSERTION"<< endl;
 	while (footer->isLeafPage == false)
 	{
+		cout << "-> " << insertDestination << endl;
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
 		RETURN_ON_ERR(ret);
 
@@ -882,7 +884,7 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 			currRid = currEntry.nextSlot;
 		}
 
-		// cout << "Branching to the right: " << targetRid.pageNum << endl;
+		cout << "Branching to the right: " << targetRid.pageNum << endl;
 	}
 
 	prevRid = currRid;
@@ -1226,7 +1228,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	IX_PageIndexFooter* childFooter;
 
 	// Read in the first entry in the second half - this entry now points to the left
-	if (!inputFooter->isLeafPage)
+	if (!isLeaf)
 	{
 		// Load in the entry
 		cout << "Splitting non-leaf" << endl;
@@ -1414,7 +1416,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 	_recordDescriptor = _im.getIndexRecordDescriptor(attribute.type);
 	RETURN_ON_ERR(ret);
 
-	//IndexManager::instance()->printIndex(*fileHandle, attribute, true);
+	IndexManager::instance()->printIndex(*fileHandle, attribute, true);
 
 	// Traverse down the left pointers to find the lowest RID
 	RID lowestPossibleRid;
