@@ -1443,8 +1443,6 @@ cout << " setting high key" << endl;
 			assert(false);
 		}
 
-		cout << "High: " << _highKeyValue->real << endl;
-
 		// Look for something that matches our high end
 		RID entryRid, prevEntryRid, nextEntryRid, dataRid;
 		ret = IndexManager::findIndexEntry(*fileHandle, attribute, &highKeyValue, entryRid, prevEntryRid, nextEntryRid, dataRid);
