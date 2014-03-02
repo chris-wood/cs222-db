@@ -201,9 +201,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum insertDestination = rootPage;
+	// cout << endl;
 	while (footer->isLeafPage == false)
 	{
-		cout << "-> " << insertDestination << endl;
+		// cout << "-> " << insertDestination << endl;
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
 		RETURN_ON_ERR(ret);
 
@@ -235,6 +236,13 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		RID cascadedRid;
 		insertDestination = 0;
 
+		// PageNum prevSplitIndexPage = 0;
+		// RID prevSplitIndexRid;
+		// KeyValueData prevSplitKey;
+		PageNum postSplitIndexPage = 0;
+		RID postSplitIndexRid;
+		KeyValueData postSplitKey;
+
 		// TODO: Verify cascading works
 		while (ret == rc::BTREE_INDEX_PAGE_FULL)
 		{
@@ -253,49 +261,37 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			cout << "SPLIT: " << leftPage << " - " << rightPage << endl;
 			RETURN_ON_ERR(ret);
 
-			// Determine if we have a leftover non-leaf insert from a previous split
-			if (needsToInsertNonLeaf)
+			// Save the result of the first split so that we can insert after initial cascading is done
+			if (postSplitIndexPage == 0)
 			{
-				/*
-				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
-				PageNum destinationPage = leftPage;
-				
-				ret = cascadedKey.compare(attribute.type, rightKey, compareResult);
+				needsToInsertNonLeaf = true;
+				postSplitIndexPage = rightPage;
+				postSplitIndexRid = rightRid;
+				postSplitKey = rightKey;
+			} 
+			else
+			{
+				ret = insertIntoNonLeaf(fileHandle, rightPage, attribute, postSplitKey, postSplitIndexRid);
+				RETURN_ON_ERR(ret); // split just occurred, so this insertion should always postSplitIndexRid
+
+				// Update parent pointer for this new guy
+				unsigned char tempBuffer[PAGE_SIZE] = {0};
+				ret = fileHandle.readPage(postSplitIndexRid.pageNum, tempBuffer);
 				RETURN_ON_ERR(ret);
+				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
+				tempFooter->parent = rightPage;
+				fileHandle.writePage(postSplitIndexRid.pageNum, tempBuffer);
 
-				// Determine if we need to put this on the left or right page we just created
-				if (compareResult >= 0)
-				{
-					destinationPage = rightPage;
-				}
-
-				// Insert the right child into the parent of the left
-				ret = insertIntoNonLeaf(fileHandle, destinationPage, attribute, cascadedKey, cascadedRid);
-				RETURN_ON_ERR(ret);
-
-				//IndexManager::instance()->printIndex(fileHandle, attribute, true);
-				*/
-				needsToInsertNonLeaf = false;
+				// Reset the split flags in case we need to cascade upwards
+				needsToInsertNonLeaf = true;
+				postSplitIndexPage = rightPage;
+				postSplitIndexRid = rightRid;
+				postSplitKey = rightKey;
 			}
 
 			// Our first split will tell us where to put or original value
 			ret = keyData.compare(attribute.type, rightKey, compareResult);
 			RETURN_ON_ERR(ret);
-
-			// TODO: Determine if we need to put this on the left or right page we just created?
-			/*
-			if (compareResult >= 0)
-			{
-				insertDestination = rightPage;
-			}
-			else
-			{
-				insertDestination = leftPage;
-			}*/
-			if (insertDestination == 0)
-			{
-				insertDestination = 0;
-			}
 
 			// Check to see if we need to grow by one level, and if so, add a new page with enough space to 
 			// hold the new index entry
@@ -308,7 +304,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = newPage(fileHandle, newRootPage, false, 0, leftPage);
 				RETURN_ON_ERR(ret);
 
-				dbg::out << "\t\t====>ROOT GREW: " << newRootPage << " - " << leftPage << " - " << rightPage << "\n";
+				cout << "\t\t====>ROOT GREW: " << newRootPage << " - " << leftPage << " - " << rightPage << "\n";
+				// printIndex(fileHandle, attribute, true);
 
 				// Update the left/right children parents to point to the new root
 				unsigned char tempBuffer[PAGE_SIZE] = {0};
@@ -345,13 +342,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				// Update the footer to point left to the left page
 				tempFooter->leftChild = leftPage;
 			}
-
-			// Make sure we have the right parent
-			unsigned char tempBuffer[PAGE_SIZE] = {0};
-			ret = fileHandle.readPage(leftPage, tempBuffer);
-			RETURN_ON_ERR(ret);
-			IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-			parent = tempFooter->parent;
+			else
+			{
+				// Make sure we have the right parent
+				unsigned char tempBuffer[PAGE_SIZE] = {0};
+				ret = fileHandle.readPage(leftPage, tempBuffer);
+				RETURN_ON_ERR(ret);
+				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
+				parent = tempFooter->parent;
+			}
 
 			// Insert the right child into the parent of the left
 			cout << "fixing parent: " << parent << " - " << rightRid.pageNum << endl;
@@ -372,26 +371,16 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				}
 			}
 
-			if (leftPage == 56)
-			{
-				printIndex(fileHandle, attribute, true);
-				// assert(false);
-			}
-			
-			if (ret == rc::BTREE_INDEX_PAGE_FULL)
-			{
-				// assert(false);
-			}
+			// printIndex(fileHandle, attribute, true);
+
+			// Recurse up the tree!
 			nextPage = parent;
 		}
-
-		assert(needsToInsertNonLeaf == false);
 
 		// Don't forget to insert the actual item we were trying to insert in the first place!
 		if (needsToInsertOriginal)
 		{
 			ret = insertEntry(fileHandle, attribute, key, rid);
-			//ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 			RETURN_ON_ERR(ret);
 		}
 	}
@@ -442,25 +431,31 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		return ret;
 	}
 
-	// printIndex(fileHandle, attribute, true);
-	// cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
+	cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
 
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
 	IndexRecord record;
 	if (entryRid.slotNum == footer->firstRecord.slotNum)
 	{
+		cout << "FIRST RECORD == " << footer->firstRecord.pageNum << "," << footer->firstRecord.slotNum << endl;
 		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
 		RETURN_ON_ERR(ret);
+		cout << "next slot == " << record.nextSlot.pageNum << "," << record.nextSlot.slotNum << endl;
 		footer->firstRecord = record.nextSlot;
-		while (footer->firstRecord.pageNum != 0) 
-		{
-			ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
-			RETURN_ON_ERR(ret);
-			footer->firstRecord = record.nextSlot;
-		}
+
+		// TODO: why was this loop needed again?
+		// while (footer->firstRecord.pageNum != 0) 
+		// {
+		// 	ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
+		// 	RETURN_ON_ERR(ret);
+		// 	footer->firstRecord = record.nextSlot;
+		// }
+
 		memcpy(pageBuffer + PAGE_SIZE - sizeof(IX_PageIndexFooter), footer, sizeof(IX_PageIndexFooter));
 		ret = fileHandle.writePage(nextPage, pageBuffer);
 		RETURN_ON_ERR(ret);
+
+		cout << "FIRST RECORD DELETED, UPDATING TO " << footer->firstRecord.slotNum << endl;
 	}
 
 	// Update the next pointer of our previous record if it exists
@@ -480,59 +475,61 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
     ret = deleteRecord(fileHandle, recordDescriptor, entryRid);
     RETURN_ON_ERR(ret);
 
-	// Check if the page has become completely empty
-	ret = fileHandle.readPage(entryRid.pageNum, pageBuffer);
-	RETURN_ON_ERR(ret);
+    cout << "deleting record..." << entryRid.pageNum << endl;
 
-	PageNum curPage = footer->parent;
-	while (footer->numSlots == 0 && curPage > 1)
-	{
-		// We need to remove the this from our parent
-		ret = fileHandle.readPage(curPage, pageBuffer);
-		RETURN_ON_ERR(ret);
+	// // Check if the page has become completely empty
+	// ret = fileHandle.readPage(entryRid.pageNum, pageBuffer);
+	// RETURN_ON_ERR(ret);
 
-		// Search for the record
-		RID targetRid, prevRid;
-		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, targetRid, prevRid);
-		RETURN_ON_ERR(ret);
+	// PageNum curPage = footer->parent;
+	// while (footer->numSlots == 0 && curPage > 1)
+	// {
+	// 	// We need to remove the this from our parent
+	// 	ret = fileHandle.readPage(curPage, pageBuffer);
+	// 	RETURN_ON_ERR(ret);
 
-		// Read in the target record so we can see what the next record is
-		ret = readRecord(fileHandle, recordDescriptor, targetRid, &record, pageBuffer);
-		RETURN_ON_ERR(ret);
+	// 	// Search for the record
+	// 	RID targetRid, prevRid;
+	// 	ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, targetRid, prevRid);
+	// 	RETURN_ON_ERR(ret);
 
-		const RID nextRid = record.nextSlot;
+	// 	// Read in the target record so we can see what the next record is
+	// 	ret = readRecord(fileHandle, recordDescriptor, targetRid, &record, pageBuffer);
+	// 	RETURN_ON_ERR(ret);
 
-		// TODO: Deal with the case where we're trying to delete the 'leftChild' pointer
+	// 	const RID nextRid = record.nextSlot;
 
-		assert(targetRid.pageNum == footer->pageNumber);
-		if(prevRid.pageNum == 0)
-		{
-			// If we don't have a previous RID, this should be the first record, so we need to update that
-			assert(footer->firstRecord.slotNum == targetRid.slotNum);
+	// 	// TODO: Deal with the case where we're trying to delete the 'leftChild' pointer
 
-			// Update the firstRecord data in the footer
-			footer->firstRecord = nextRid;
-		}
-		else
-		{
-			// We need read in the target record to see what the nextSlot is
-			ret = readRecord(fileHandle, recordDescriptor, prevRid, &record, pageBuffer);
-			RETURN_ON_ERR(ret);
+	// 	assert(targetRid.pageNum == footer->pageNumber);
+	// 	if(prevRid.pageNum == 0)
+	// 	{
+	// 		// If we don't have a previous RID, this should be the first record, so we need to update that
+	// 		assert(footer->firstRecord.slotNum == targetRid.slotNum);
 
-			record.nextSlot = nextRid;
+	// 		// Update the firstRecord data in the footer
+	// 		footer->firstRecord = nextRid;
+	// 	}
+	// 	else
+	// 	{
+	// 		// We need read in the target record to see what the nextSlot is
+	// 		ret = readRecord(fileHandle, recordDescriptor, prevRid, &record, pageBuffer);
+	// 		RETURN_ON_ERR(ret);
+
+	// 		record.nextSlot = nextRid;
 			
-			// Update the record
-			ret = updateRecordInplace(fileHandle, recordDescriptor, &record, prevRid, pageBuffer);
-			RETURN_ON_ERR(ret);
-		}
+	// 		// Update the record
+	// 		ret = updateRecordInplace(fileHandle, recordDescriptor, &record, prevRid, pageBuffer);
+	// 		RETURN_ON_ERR(ret);
+	// 	}
 
-		// Delete the record
-		ret = deleteRecordInplace(fileHandle, recordDescriptor, targetRid, pageBuffer);
-		RETURN_ON_ERR(ret);
+	// 	// Delete the record
+	// 	ret = deleteRecordInplace(fileHandle, recordDescriptor, targetRid, pageBuffer);
+	// 	RETURN_ON_ERR(ret);
 
-		// Write out the update non-leaf page
-		fileHandle.writePage(curPage, pageBuffer);
-	}
+	// 	// Write out the updated non-leaf page
+	// 	fileHandle.writePage(curPage, pageBuffer);
+	// }
 
     return rc::OK;
 }
@@ -1045,6 +1042,7 @@ RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
 	while(leftChild != 0 && !footer->isLeafPage)
 	{
 		// Load in the next page
+		cout << "-> " << leftChild << endl;
 		ret = fileHandle.readPage(leftChild, pageBuffer);
 		RETURN_ON_ERR(ret);
 
@@ -1057,12 +1055,16 @@ RC IndexManager::findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid)
 		return rc::BTREE_CANNOT_FIND_LEAF;
 	}
 
-	// Get the first (smallest) element from this leaf
+	// Walk the leaf list until we hit a non-deleted item
 	rid = footer->firstRecord;
-	if (rid.pageNum == 0)
-	{
-		return rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND;
-	}
+	if (rid.pageNum == 0) return -1; // this should be removed
+
+	// @TAMIR
+	// while (rid.pageNum == 0)
+	// {
+		// TODO: we need to walk the entire list here, which means we need the index attribute type passed in
+		// TODO: if we walk every leaf and don't find an entry, then we return an error
+	// }
 
 	return rc::OK;
 }
@@ -1325,6 +1327,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		RETURN_ON_ERR(ret);
 		childFooter = getIXPageIndexFooter(childBuffer);
 		childFooter->parent = newPageNum;
+		cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
 		fileHandle.writePage(rightFooter->leftChild, childBuffer);
 	}
 
@@ -1350,6 +1353,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			RETURN_ON_ERR(ret);
 			childFooter = getIXPageIndexFooter(childBuffer);
 			childFooter->parent = newPageNum;
+			cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
 			fileHandle.writePage(tempRecord.rid.pageNum, childBuffer);
 		}
 
@@ -1377,7 +1381,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			tempRecord.nextSlot.slotNum = slotNum;
 		}
 
-		//std::cout << " " << tempRecord.rid.pageNum;
+		std::cout << " " << tempRecord.rid.pageNum << endl;
 
 		// Copy over the record to the new right page buffer
 		ret = insertRecordInplace(recordDescriptor, &tempRecord, rightFooter->pageNumber, rightBuffer, lastRightRid);

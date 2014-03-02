@@ -958,15 +958,17 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
     // DeleteEntry in IndexScan Iterator
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-		dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
+		cout << rid.pageNum << " " << rid.slotNum << "\n";
 
         float key = (float)rid.pageNum;
+        cout << "deleting: " << key << endl;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
             cout << "Failed deleting entry in Scan..." << endl;
             goto error_close_scan;
         }
+        indexManager->printIndex(fileHandle, attribute, true);
     }
     cout << endl;
 
@@ -2196,10 +2198,10 @@ void test2()
     attrEmpName.name = "EmpName";
     attrEmpName.type = TypeVarChar;
 
-    // testCase_4B(indexAgeFileName, attrAge);
-    // testCase_5(indexAgeFileName, attrAge);
+    testCase_4B(indexAgeFileName, attrAge);
+    testCase_5(indexAgeFileName, attrAge);
     testCase_6(indexHeightFileName, attrHeight);
-    // testCase_7(indexHeightFileName, attrHeight);
+    testCase_7(indexHeightFileName, attrHeight);
     // testCase_8(indexHeightFileName, attrHeight);
     // testCase_9(indexAgeFileName, attrAge);
     // testCase_10(indexHeightFileName, attrHeight);
