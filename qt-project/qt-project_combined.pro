@@ -12,7 +12,8 @@ SOURCES += \
     ../cs222/src/util/dbgout.cc \
     ../cs222/src/rm/rm.cc \
     ../cs222/src/ix/ix.cc \
-    ../cs222/src/ix/ix_combined.cc
+    ../cs222/src/rbf/rbcm.cc \
+    ../cs222/src/rbf/rbftest.cc
 
 HEADERS += \
     ../cs222/src/rbf/rbfm.h \
@@ -23,6 +24,7 @@ HEADERS += \
     ../cs222/src/rm/rm.h \
     ../cs222/src/rm/test_util.h \
     ../cs222/src/ix/ixtest_util.h \
-    ../cs222/src/ix/ix.h
+    ../cs222/src/ix/ix.h \
+    ../cs222/src/rbf/rbcm.h
 
 OTHER_FILES +=
