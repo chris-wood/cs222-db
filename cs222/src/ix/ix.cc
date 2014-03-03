@@ -225,7 +225,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Determine what type of record descriptor we need
 	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
 
-	cout << "Insert entry going into leaf: " << insertDestination << ", " << keyData.integer << endl;
+	// cout << "Insert entry going into leaf: " << insertDestination << ", " << keyData.integer << endl;
+	// if (insertDestination == 454)
+	// {
+	// 	cout << "Inserting into 454: " << keyData.integer << endl;
+	// }
 	ret = insertIntoLeaf(fileHandle, insertDestination, attribute, keyData, rid);
 	if (ret != rc::OK && ret != rc::BTREE_INDEX_PAGE_FULL)
 	{
@@ -262,8 +266,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// printIndex(fileHandle, attribute, true);
 
 			ret = deletelessSplit(fileHandle, recordDescriptor, leftPage, rightPage, rightRid, rightKey);
-			cout << "Insert key: " << keyData.real << endl << "Target = " << nextPage << endl;
-			cout << "SPLIT: " << leftPage << " - " << rightPage << endl;
+			// cout << "Insert key: " << keyData.real << endl << "Target = " << nextPage << endl;
+			// cout << "SPLIT: " << leftPage << " - " << rightPage << endl;
 			RETURN_ON_ERR(ret);			
 
 			// Save the result of the first split so that we can insert after initial cascading is done
@@ -276,7 +280,19 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			} 
 			else
 			{
-				ret = insertIntoNonLeaf(fileHandle, rightPage, attribute, postSplitKey, postSplitIndexRid);
+				
+
+				// Determine which page we should actually insert into...
+				PageNum targetCascadePage = leftPage;
+				ret = postSplitKey.compare(attribute.type, rightKey, compareResult);
+				RETURN_ON_ERR(ret);
+
+				if (compareResult >= 0)
+				{
+					targetCascadePage = rightPage;
+				}
+
+				ret = insertIntoNonLeaf(fileHandle, targetCascadePage, attribute, postSplitKey, postSplitIndexRid);
 				RETURN_ON_ERR(ret); // split just occurred, so this insertion should always postSplitIndexRid
 
 				// Update parent pointer for this new guy
@@ -284,7 +300,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = fileHandle.readPage(postSplitIndexRid.pageNum, tempBuffer);
 				RETURN_ON_ERR(ret);
 				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				tempFooter->parent = rightPage;
+				tempFooter->parent = targetCascadePage;
 				fileHandle.writePage(postSplitIndexRid.pageNum, tempBuffer);
 
 				// Reset the split flags in case we need to cascade upwards
@@ -292,6 +308,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				postSplitIndexPage = rightPage;
 				postSplitIndexRid = rightRid;
 				postSplitKey = rightKey;
+
+				// if (postSplitKey.integer == 46)
+				// {
+				// 	cout << "inserting cascaded split key into: " << rightPage << endl;
+				// 	cout << "what about  left? " << leftPage << endl;
+				// 	cout << "we chose: " << targetCascadePage << endl;
+				// 	assert(false);
+				// }
 			}
 
 			// Our first split will tell us where to put or original value
@@ -432,23 +456,23 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Now search along the leaf page
 	assert(footer->isLeafPage);
 	RID entryRid, prevEntryRid, nextEntryRid, dataRid;
-	cout << "pulling in from leaf: " << nextPage << endl;
+	// cout << "pulling in from leaf: " << nextPage << endl;
 	ret = findLeafIndexEntry(fileHandle, footer, attribute, &keyData, entryRid, prevEntryRid, nextEntryRid, dataRid);
 	if (ret != rc::OK)
 	{
 		return ret;
 	}
 
-	cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
+	// cout << "Leaf entry RID: " << entryRid.pageNum << "," << entryRid.slotNum << endl;
 
 	// If we delete the first RID on the page, be sure to update the footer pointer to the "new" first RID
 	IndexRecord record;
 	if (entryRid.slotNum == footer->firstRecord.slotNum)
 	{
-		cout << "FIRST RECORD == " << footer->firstRecord.pageNum << "," << footer->firstRecord.slotNum << endl;
+		// cout << "FIRST RECORD == " << footer->firstRecord.pageNum << "," << footer->firstRecord.slotNum << endl;
 		ret = IndexManager::instance()->readRecord(fileHandle, recordDescriptor, footer->firstRecord, &record);
 		RETURN_ON_ERR(ret);
-		cout << "next slot == " << record.nextSlot.pageNum << "," << record.nextSlot.slotNum << endl;
+		// cout << "next slot == " << record.nextSlot.pageNum << "," << record.nextSlot.slotNum << endl;
 		footer->firstRecord = record.nextSlot;
 
 		// TODO: why was this loop needed again?
@@ -463,7 +487,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 		ret = fileHandle.writePage(nextPage, pageBuffer);
 		RETURN_ON_ERR(ret);
 
-		cout << "FIRST RECORD DELETED, UPDATING TO " << footer->firstRecord.slotNum << endl;
+		// cout << "FIRST RECORD DELETED, UPDATING TO " << footer->firstRecord.slotNum << endl;
 	}
 
 	// Update the next pointer of our previous record if it exists
@@ -485,7 +509,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
     ret = reorganizePage(fileHandle, recordDescriptor, entryRid.pageNum);
 
-    cout << "deleting record..." << entryRid.pageNum << endl;
+    // cout << "deleting record..." << entryRid.pageNum << endl;
 
 	// Check if the page has become completely empty
 	ret = fileHandle.readPage(entryRid.pageNum, pageBuffer);
@@ -494,10 +518,10 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Reset the page if so
 	if (footer->numSlots == 0)
 	{
-		if (entryRid.pageNum == 8)
-		{
-			cout << "HERE MOFO" << endl;
-		}
+		// if (entryRid.pageNum == 8)
+		// {
+		// 	cout << "HERE MOFO" << endl;
+		// }
 		ret = reorganizePage(fileHandle, recordDescriptor, entryRid.pageNum);
 
 		// reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber) = 0;
