@@ -1072,7 +1072,7 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	return rc::OK;
 }
 
-RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void* pageBuffer)
+RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vector<Attribute> &/*recordDescriptor*/, const RID &rid, void* pageBuffer)
 {
 	RC ret = rc::OK;
 
@@ -1271,7 +1271,7 @@ unsigned RecordBasedCoreManager::calculateFreespace(unsigned freespaceOffset, un
 	return calculateFreespace(freespaceOffset, numSlots, _pageSlotOffset);
 }
 
-RC RecordBasedCoreManager::reorganizeBufferedPage(FileHandle &fileHandle, unsigned footerSize, const vector<Attribute> &recordDescriptor, const unsigned pageNumber, unsigned char* pageBuffer)
+RC RecordBasedCoreManager::reorganizeBufferedPage(FileHandle &fileHandle, unsigned footerSize, const vector<Attribute> &/*recordDescriptor*/, const unsigned pageNumber, unsigned char* pageBuffer)
 {
 	RC ret = rc::OK;
 

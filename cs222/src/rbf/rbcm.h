@@ -8,6 +8,7 @@
 
 #include "pfm.h"
 #include "../util/dbgout.h"
+#include "../util/returncodes.h"
 
 using namespace std;
 
