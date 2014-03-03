@@ -382,7 +382,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			}
 
 			// Insert the right child into the parent of the left
-			cout << "fixing parent: " << parent << " - " << rightRid.pageNum << endl;
+			//cout << "fixing parent: " << parent << " - " << rightRid.pageNum << endl;
 			ret = insertIntoNonLeaf(fileHandle, parent, attribute, rightKey, rightRid);
 			if (ret != rc::OK)
 			{
@@ -421,7 +421,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	cout << "==> " << rid.pageNum << "," << rid.slotNum << endl;
+	//cout << "==> " << rid.pageNum << "," << rid.slotNum << endl;
     // Pull in the root page
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
 	RC ret = readRootPage(fileHandle, pageBuffer);
@@ -443,7 +443,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	PageNum nextPage = rootPageNum;
 	while (footer->isLeafPage == false)
 	{
-		cout << "-> " << nextPage << endl;
+		//cout << "-> " << nextPage << endl;
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, nextPage);
 		RETURN_ON_ERR(ret);
 
@@ -1308,7 +1308,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		curRid = tempRecord.nextSlot;
 		totalEntries++;
 	}	
-	cout << "TOTAL SIZE = " << totalSize << endl;
+	//cout << "TOTAL SIZE = " << totalSize << endl;
 
 	// Read in records and write to the left page until we hit half of the page full
 	// IndexRecord tempRecord;
@@ -1328,7 +1328,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 
 		if (targetPageNum == 1)
 		{
-			cout << "skipping: " << curRid.pageNum << "," << curRid.slotNum << " - " << tempRecord.key.integer << endl;
+			//cout << "skipping: " << curRid.pageNum << "," << curRid.slotNum << " - " << tempRecord.key.integer << endl;
 		}
 		skipped++;
 
@@ -1367,7 +1367,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	const RID firstRightPageRid = curRid;
 	//cout << "Right key: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
 
-	cout << "reading page: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
+	//cout << "reading page: " << firstRightPageRid.pageNum << "," << firstRightPageRid.slotNum << endl;
 	ret = readRecord(fileHandle, recordDescriptor, firstRightPageRid, &tempRecord, inputBuffer);
 	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
 	// if (ret != rc::OK)
@@ -1400,7 +1400,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		RETURN_ON_ERR(ret);
 		childFooter = getIXPageIndexFooter(childBuffer);
 		childFooter->parent = newPageNum;
-		cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
+		//cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
 		fileHandle.writePage(rightFooter->leftChild, childBuffer);
 	}
 
@@ -1426,13 +1426,13 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			RETURN_ON_ERR(ret);
 			childFooter = getIXPageIndexFooter(childBuffer);
 			childFooter->parent = newPageNum;
-			cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
+			//cout << "Setting child " << tempRecord.rid.pageNum << " parent to " << newPageNum << endl;
 			fileHandle.writePage(tempRecord.rid.pageNum, childBuffer);
 		}
 
 		if (targetPageNum == 1 || tempRecord.key.integer == 46)
 		{
-			cout << "===> " << tempRecord.key.integer << " to " << newPageNum << endl;
+			//cout << "===> " << tempRecord.key.integer << " to " << newPageNum << endl;
 		}
 
 		// Compute the record length and add it to the running total
@@ -1459,7 +1459,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 			tempRecord.nextSlot.slotNum = slotNum;
 		}
 
-		std::cout << " " << tempRecord.rid.pageNum << endl;
+		//std::cout << " " << tempRecord.rid.pageNum << endl;
 
 		// Copy over the record to the new right page buffer
 		ret = insertRecordInplace(recordDescriptor, &tempRecord, rightFooter->pageNumber, rightBuffer, lastRightRid);
@@ -1758,7 +1758,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			memcpy(key, record.key.varchar + sizeof(unsigned), size);
 	}
 
-	cout << "Next entry: " << targetRid.pageNum << "," << targetRid.slotNum << endl;
+	//cout << "Next entry: " << targetRid.pageNum << "," << targetRid.slotNum << endl;
 
 	// Advance to the next record
 	ret = advance();
@@ -1769,9 +1769,9 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 
 RC IX_ScanIterator::advance()
 {
-	cout << "start: " << _currentRecordRid.pageNum << "," << _currentRecordRid.slotNum << endl;
+	//cout << "start: " << _currentRecordRid.pageNum << "," << _currentRecordRid.slotNum << endl;
 	RC ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _currentRecordRid);
-	cout << "end: " << _currentRecordRid.pageNum << "," << _currentRecordRid.slotNum << endl;
+	//cout << "end: " << _currentRecordRid.pageNum << "," << _currentRecordRid.slotNum << endl;
 	
 	// If we are off the edge, our scan is done
 	if (ret != rc::OK && ret == rc::BTREE_INDEX_LEAF_ENTRY_NOT_FOUND)
@@ -1790,7 +1790,7 @@ RC IX_ScanIterator::advance()
 	else
 	{
 		_nextRecordRid = _currentRecordRid;
-		cout << "getting next" << endl;
+		//cout << "getting next" << endl;
 		ret = _im.getNextRecord(*_fileHandle, _recordDescriptor, _attribute, _nextRecordRid);
 
 		// nextRecord will go off the edge before we are done scanning, so allow it to fail
