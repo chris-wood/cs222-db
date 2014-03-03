@@ -1680,6 +1680,8 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 		{
 			_endRecordRid = entryRid;
 		}
+
+		// cout << "EEEEEND: " << _endRecordRid.pageNum << "," << _endRecordRid.slotNum << endl;
 	}
 	else
 	{
@@ -1724,6 +1726,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	}
 
 	// Check to see if we're at the end
+
 	if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
 	{
 		// If we are not inclusive, skip the record
