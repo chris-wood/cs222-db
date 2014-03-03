@@ -1556,6 +1556,7 @@ IX_ScanIterator::IX_ScanIterator()
 	_attribute(),
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
+	_pastLastRecord(false),
 	_currentRecordRid(),
 	_beginRecordRid(),
 	_endRecordRid(),
@@ -1578,6 +1579,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 	RC ret = rc::OK;
 
+	_pastLastRecord = false;
 	_fileHandle = fileHandle;
 	_attribute = attribute;
 	_lowKeyInclusive = lowKeyInclusive;
@@ -1726,11 +1728,18 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	}
 
 	// Check to see if we're at the end
-
-	if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
+	if (_pastLastRecord)
+	{
+		_currentRecordRid.pageNum = 0;
+	}
+	else if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
 	{
 		// If we are not inclusive, skip the record
-		if (!_highKeyInclusive)
+		if (_highKeyInclusive)
+		{
+			_pastLastRecord = true;
+		}
+		else
 		{
 			_currentRecordRid.pageNum = 0;
 		}

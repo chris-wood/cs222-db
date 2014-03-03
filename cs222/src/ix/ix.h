@@ -142,6 +142,7 @@ private:
 	std::vector<Attribute> _recordDescriptor;
 	bool _lowKeyInclusive;
 	bool _highKeyInclusive;
+	bool _pastLastRecord;
 	
 	RID _beginRecordRid;
 	RID _endRecordRid;
