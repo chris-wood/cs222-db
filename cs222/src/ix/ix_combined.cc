@@ -46,7 +46,7 @@ int main()
 	indexManager->destroyFile("EmpName_idx");
 
 	ASSERT_ON_BAD_RETURN = true;
-    test1();
+    //test1();
     test2();
 
 	cout << "\n\ngrad-point: " << g_nGradPoint << " / " << g_nTotalGradPoint << " \ngrad-extra-point: " << g_nGradExtraPoint << endl;
@@ -772,7 +772,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i;
         rid.slotNum = i-(unsigned)500;
 
-        dbg::out << "Inserting: " << key << "\n";
+        //dbg::out << "Inserting: " << key << "\n";
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -968,7 +968,7 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
             cout << "Failed deleting entry in Scan..." << endl;
             goto error_close_scan;
         }
-        indexManager->printIndex(fileHandle, attribute, true);
+        //indexManager->printIndex(fileHandle, attribute, true);
     }
     cout << endl;
 
@@ -1167,7 +1167,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         goto error_close_index;
     }
 
-    indexManager->printIndex(fileHandle, attribute, true);
+    //indexManager->printIndex(fileHandle, attribute, true);
 
     // insert entry Again
     numOfTuples = 500;
@@ -1177,7 +1177,7 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i;
         rid.slotNum = i;
 
-        cout << "inserting: " << key << endl;
+        //cout << "inserting: " << key << endl;
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -1325,7 +1325,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     }
     random_shuffle(A, A+numOfTuples);
 
-    indexManager->printIndex(fileHandle, attribute, true);
+    //indexManager->printIndex(fileHandle, attribute, true);
 
     cout << "POST SHUFFLE" << endl;
 
@@ -1335,7 +1335,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         rid.pageNum = i+1;
         rid.slotNum = i+1;
 
-        cout << "Inserting: " << key << " - " << endl;
+        //cout << "Inserting: " << key << " - " << endl;
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -1344,6 +1344,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
     }
 
+	std::cout << "POST INSERT: " << numOfTuples << std::endl;
+	
     //scan
     compVal = 20000;
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
@@ -1361,17 +1363,17 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
 
     cout << "deleting now" << endl;
 
-    indexManager->printIndex(fileHandle, attribute, true);
+    //indexManager->printIndex(fileHandle, attribute, true);
 
     count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-		/*
-        if(count % 1000 == 0)
-            dbg::out << rid.pageNum << " " << rid.slotNum << "\n";*/
+		
+		if (count % 1000 == 0)
+			cout << "."; //dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
 
         key = A[rid.pageNum-1];
-        cout << "deleting: " << key << " -" << endl;
+        cout << " deleting: " << key << " -" << endl;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -1381,7 +1383,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
         count++;
     }
-    cout << "Number of deleted entries: " << count << endl;
+
+    cout << "Number of deleted entries: " << count << " entries left=" << (numOfTuples - count) << endl;
     if (count != 20001)
     {
         cout << "Wrong entries output...failure" << endl;
@@ -1399,6 +1402,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Closing Scan..." << endl;
         goto error_close_index;
     }
+
+	std::cout << "INSERT #2 (20,000 items)" << std::endl;
 
     // insert entry Again
     numOfTuples = 20000;
@@ -1424,7 +1429,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
     }
 
-    cout << "initializing scan" << endl;
+	cout << "initializing scan #2" << endl;
 
     //scan
     compVal = 35000;
@@ -2219,8 +2224,8 @@ void test2()
     attrEmpName.name = "EmpName";
     attrEmpName.type = TypeVarChar;
 
-    testCase_4B(indexAgeFileName, attrAge);
-    testCase_5(indexAgeFileName, attrAge);
+    //testCase_4B(indexAgeFileName, attrAge);
+    //testCase_5(indexAgeFileName, attrAge);
     // testCase_6(indexHeightFileName, attrHeight);
     // testCase_7(indexHeightFileName, attrHeight);
     // testCase_8(indexHeightFileName, attrHeight);
@@ -2278,13 +2283,6 @@ void testSimpleAddDeleteIndex(const int numEntries, bool strings)
 		rid.slotNum = i;
 		*c = '!' + i%92;
 		memcpy(stringBuffer, &strlen, sizeof(strlen));
-
-		if (i==142)
-		{
-			std::cout << "\n\n";
-			indexManager->printIndex(fileHandle, attr, true);
-			std::cout << std::endl;
-		}
 
         dbg::out << "INSERTING: " << i << "(" << (*c) << ")" << "\n";
 		ret = indexManager->insertEntry(fileHandle, attr, data, rid);
