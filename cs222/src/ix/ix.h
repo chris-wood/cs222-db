@@ -104,7 +104,6 @@ class IndexManager : public RecordBasedCoreManager {
 
   RC getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid);
   
-
  protected:
   IndexManager   ();                            // Constructor
   virtual ~IndexManager  ();                    // Destructor

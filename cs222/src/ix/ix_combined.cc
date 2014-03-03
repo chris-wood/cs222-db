@@ -46,7 +46,7 @@ int main()
 	indexManager->destroyFile("EmpName_idx");
 
 	ASSERT_ON_BAD_RETURN = true;
-    //test1();
+    test1();
     test2();
 
 	cout << "\n\ngrad-point: " << g_nGradPoint << " / " << g_nTotalGradPoint << " \ngrad-extra-point: " << g_nGradExtraPoint << endl;
@@ -1373,7 +1373,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
 			cout << "."; //dbg::out << rid.pageNum << " " << rid.slotNum << "\n";
 
         key = A[rid.pageNum-1];
-        cout << " deleting: " << key << " -" << endl;
+        // cout << " deleting: " << key << " -" << endl;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {
@@ -2224,13 +2224,13 @@ void test2()
     attrEmpName.name = "EmpName";
     attrEmpName.type = TypeVarChar;
 
-    //testCase_4B(indexAgeFileName, attrAge);
-    //testCase_5(indexAgeFileName, attrAge);
-    // testCase_6(indexHeightFileName, attrHeight);
-    // testCase_7(indexHeightFileName, attrHeight);
-    // testCase_8(indexHeightFileName, attrHeight);
+    testCase_4B(indexAgeFileName, attrAge);
+    testCase_5(indexAgeFileName, attrAge);
+    testCase_6(indexHeightFileName, attrHeight);
+    testCase_7(indexHeightFileName, attrHeight);
+    testCase_8(indexHeightFileName, attrHeight);
     testCase_9(indexAgeFileName, attrAge);
-    // testCase_10(indexHeightFileName, attrHeight);
+    testCase_10(indexHeightFileName, attrHeight);
 
     // Extra Credit Work
     // Duplicat Entries
