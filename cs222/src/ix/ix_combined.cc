@@ -961,7 +961,7 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
 		cout << rid.pageNum << " " << rid.slotNum << "\n";
 
         float key = (float)rid.pageNum;
-        cout << "deleting: " << key << endl;
+        //cout << "deleting: " << key << endl;
         rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
         {

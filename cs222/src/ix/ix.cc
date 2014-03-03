@@ -276,7 +276,19 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			} 
 			else
 			{
-				ret = insertIntoNonLeaf(fileHandle, rightPage, attribute, postSplitKey, postSplitIndexRid);
+				
+
+				// Determine which page we should actually insert into...
+				PageNum targetCascadePage = leftPage;
+				ret = postSplitKey.compare(attribute.type, rightKey, compareResult);
+				RETURN_ON_ERR(ret);
+
+				if (compareResult >= 0)
+				{
+					targetCascadePage = rightPage;
+				}
+
+				ret = insertIntoNonLeaf(fileHandle, targetCascadePage, attribute, postSplitKey, postSplitIndexRid);
 				RETURN_ON_ERR(ret); // split just occurred, so this insertion should always postSplitIndexRid
 
 				// Update parent pointer for this new guy
@@ -284,7 +296,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = fileHandle.readPage(postSplitIndexRid.pageNum, tempBuffer);
 				RETURN_ON_ERR(ret);
 				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				tempFooter->parent = rightPage;
+				tempFooter->parent = targetCascadePage;
 				fileHandle.writePage(postSplitIndexRid.pageNum, tempBuffer);
 
 				// Reset the split flags in case we need to cascade upwards
@@ -292,6 +304,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				postSplitIndexPage = rightPage;
 				postSplitIndexRid = rightRid;
 				postSplitKey = rightKey;
+
+				// if (postSplitKey.integer == 46)
+				// {
+				// 	cout << "inserting cascaded split key into: " << rightPage << endl;
+				// 	cout << "what about  left? " << leftPage << endl;
+				// 	cout << "we chose: " << targetCascadePage << endl;
+				// 	assert(false);
+				// }
 			}
 
 			// Our first split will tell us where to put or original value
@@ -494,10 +514,10 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	// Reset the page if so
 	if (footer->numSlots == 0)
 	{
-		if (entryRid.pageNum == 8)
-		{
-			cout << "HERE MOFO" << endl;
-		}
+		// if (entryRid.pageNum == 8)
+		// {
+		// 	cout << "HERE MOFO" << endl;
+		// }
 		ret = reorganizePage(fileHandle, recordDescriptor, entryRid.pageNum);
 
 		// reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber) = 0;
@@ -1528,10 +1548,11 @@ const std::vector<Attribute>& IndexManager::getIndexRecordDescriptor(AttrType ty
 }
 
 IX_ScanIterator::IX_ScanIterator()
-	: _fileHandle(NULL), 
+	: _fileHandle(NULL),
 	_attribute(),
-	_lowKeyInclusive(false), 
+	_lowKeyInclusive(false),
 	_highKeyInclusive(false),
+	_pastLastRecord(false),
 	_currentRecordRid(),
 	_beginRecordRid(),
 	_endRecordRid(),
@@ -1554,6 +1575,7 @@ RC IX_ScanIterator::init(FileHandle* fileHandle, const Attribute &attribute, con
 
 	RC ret = rc::OK;
 
+	_pastLastRecord = false;
 	_fileHandle = fileHandle;
 	_attribute = attribute;
 	_lowKeyInclusive = lowKeyInclusive;
@@ -1700,10 +1722,13 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	}
 
 	// Check to see if we're at the end
-	if (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum)
+	if (_pastLastRecord || (_currentRecordRid.pageNum == _endRecordRid.pageNum && _currentRecordRid.slotNum == _endRecordRid.slotNum))
 	{
-		// If we are not inclusive, skip the record
-		if (!_highKeyInclusive)
+		_pastLastRecord = true;
+
+		// If we are not inclusive, end
+		// If our previous iteration made us pass the last valid record, end
+		if (!_highKeyInclusive || _pastLastRecord)
 		{
 			_currentRecordRid.pageNum = 0;
 		}
