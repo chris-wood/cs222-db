@@ -2,11 +2,8 @@
 unzip $1.zip
 cd $1
 cd codebase
-cd rbf
+cd ix
 make clean
 make
-cd ../rm
-make clean
-make
-./rmtest_1
-./rmtest_2
+./ixtest1
+./ixtest2
