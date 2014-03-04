@@ -126,6 +126,9 @@ RC IndexManager::updateRootPage(FileHandle& fileHandle, unsigned newRootPage)
 	ret = fileHandle.writePage(0, pageBuffer);
 	RETURN_ON_ERR(ret);
 
+	// Cache the value
+	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = *rootPage;
+
 	return rc::OK;
 }
 

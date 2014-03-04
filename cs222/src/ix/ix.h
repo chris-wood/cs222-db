@@ -116,6 +116,8 @@ class IndexManager : public RecordBasedCoreManager {
  private:
 	static IndexManager *_index_manager;
 	
+	std::map<std::string, PageNum> _rootPageMap;
+
 	std::vector<Attribute> _indexIntRecordDescriptor;
 	std::vector<Attribute> _indexRealRecordDescriptor;
 	std::vector<Attribute> _indexVarCharRecordDescriptor;
