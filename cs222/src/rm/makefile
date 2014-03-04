@@ -20,10 +20,11 @@ rmtest_extra: rmtest_extra.o librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/l
 combined_tests: combined_tests.o librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
 
 # dependencies to compile used libraries
-.PHONY: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+.PHONY: $(CODEROOT)/rbf/librbf.a 
 $(CODEROOT)/rbf/librbf.a:
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
 
+.PHONY: $(CODEROOT)/util/libutil.a	
 $(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 

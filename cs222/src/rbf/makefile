@@ -15,13 +15,14 @@ rbfm.o: rbfm.h
 rbftest.o: pfm.h rbcm.h rbfm.h
 
 # binary dependencies
-rbftest: rbftest.o librbf.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+rbftest: rbftest.o librbf.a $(CODEROOT)/util/libutil.a
 
 # dependencies to compile used libraries
-.PHONY: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+.PHONY: $(CODEROOT)/rbf/librbf.a
 $(CODEROOT)/rbf/librbf.a:
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
 
+.PHONY: $(CODEROOT)/util/libutil.a
 $(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 
