@@ -92,8 +92,8 @@
     <ClCompile Include="..\..\cs222\src\ix\ix.cc">
       <Filter>Source Files\ix</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc">
-      <Filter>Source Files\ix</Filter>
+    <ClCompile Include="..\..\cs222\src\rm\rmtest_2.cc">
+      <Filter>Source Files\rm</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
