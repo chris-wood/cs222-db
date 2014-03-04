@@ -1065,10 +1065,6 @@ RC RecordBasedCoreManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	ret = deleteRecordInplace(fileHandle, recordDescriptor, rid, pageBuffer);
 	RETURN_ON_ERR(ret);
 
-	// Write out the updated page data
-	ret = fileHandle.writePage(rid.pageNum, pageBuffer);
-	RETURN_ON_ERR(ret);
-
 	return rc::OK;
 }
 
@@ -1078,6 +1074,8 @@ RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vec
 
 	// Recover the index header structure
     CorePageIndexFooter* footer = getCorePageIndexFooter(pageBuffer);
+	unsigned numpages = fileHandle.getNumberOfPages();
+
 	assert(footer->pageNumber == rid.pageNum);
 	assert(footer->numSlots > 0);
 
@@ -1113,6 +1111,10 @@ RC RecordBasedCoreManager::deleteRecordInplace(FileHandle &fileHandle, const vec
             {
                 return ret;
             }
+
+			// Write out the updated page data
+			ret = fileHandle.writePage(oldRID.pageNum, pageBuffer);
+			RETURN_ON_ERR(ret);
 			
             // Pull the new page into memory
             ret = fileHandle.readPage(newRID.pageNum, pageBuffer);
