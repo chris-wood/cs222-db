@@ -536,6 +536,28 @@ RC RM_ScanIterator::close()
 	return iter.close();
 }
 
+RC RM_IndexScanIterator::getNextEntry(RID &rid, void *key)
+{
+	return iter.getNextEntry(rid, key);
+}
+
+RC RM_IndexScanIterator::close()
+{
+	tableData = NULL;
+	return iter.close();
+}
+
+RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+{
+	tableData = &_tableData;
+	
+	unsigned attributeIndex = 0;
+	RC ret = RBFM_ScanIterator::findAttributeByName(tableData->recordDescriptor, attributeName, attributeIndex);
+	RETURN_ON_ERR(ret);
+
+	return iter.init(&tableData->fileHandle, tableData->recordDescriptor[attributeIndex], lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+}
+
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
@@ -554,7 +576,9 @@ RC RelationManager::indexScan(const string &tableName,
 	bool highKeyInclusive,
 	RM_IndexScanIterator &rm_IndexScanIterator)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	TableMetaData& tableData = _catalog[tableName];
+
+	return rm_IndexScanIterator.init(tableData, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
 }
 
 // Extra credit

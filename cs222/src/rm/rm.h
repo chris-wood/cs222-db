@@ -7,6 +7,7 @@
 #include <map>
 
 #include "../rbf/rbfm.h"
+#include "../ix/ix.h"
 
 #define MAX_TABLENAME_SIZE 1024
 #define MAX_ATTRIBUTENAME_SIZE 1024
@@ -78,8 +79,13 @@ public:
 	~RM_IndexScanIterator() {}; 	// Destructor
 
 	// "key" follows the same format as in IndexManager::insertEntry()
-	RC getNextEntry(RID &rid, void *key) { return RM_EOF; };  	// Get next matching entry
-	RC close() { return -1; };             			// Terminate index scan
+	RC getNextEntry(RID &rid, void *key);
+	RC close();
+
+	RC init(TableMetaData& tableData, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
+
+	IX_ScanIterator iter;
+	TableMetaData* tableData;
 };
 
 // Relation Manager
