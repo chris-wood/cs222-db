@@ -80,6 +80,7 @@
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.h" />
     <ClInclude Include="..\..\cs222\src\ix\ix.h" />
     <ClInclude Include="..\..\cs222\src\ix\ixtest_util.h" />
+    <ClInclude Include="..\..\cs222\src\qe\qe.h" />
     <ClInclude Include="..\..\cs222\src\rbf\rbcm.h" />
     <ClInclude Include="..\..\cs222\src\rm\rm.h" />
     <ClInclude Include="..\..\cs222\src\rm\test_util.h" />
@@ -91,7 +92,8 @@
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
     <ClCompile Include="..\..\cs222\src\ix\ix.cc" />
-    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc" />
+    <ClCompile Include="..\..\cs222\src\qe\qe.cc" />
+    <ClCompile Include="..\..\cs222\src\qe\qetest.cc" />
     <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc" />
     <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />

@@ -37,6 +37,12 @@
     <Filter Include="Source Files\ix">
       <UniqueIdentifier>{d6409bcb-07ba-4bd3-a276-bb241d2bf096}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\qe">
+      <UniqueIdentifier>{f2f777f0-c0fc-4328-bc8d-f6c1435e2cc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\qe">
+      <UniqueIdentifier>{69752aff-6c43-4479-bd29-aa21239c76ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h">
@@ -69,6 +75,9 @@
     <ClInclude Include="..\..\cs222\src\util\hash.h">
       <Filter>Header Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\cs222\src\qe\qe.h">
+      <Filter>Header Files\qe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc">
@@ -92,8 +101,11 @@
     <ClCompile Include="..\..\cs222\src\ix\ix.cc">
       <Filter>Source Files\ix</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\ix\ix_combined.cc">
-      <Filter>Source Files\ix</Filter>
+    <ClCompile Include="..\..\cs222\src\qe\qe.cc">
+      <Filter>Source Files\qe</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\qe\qetest.cc">
+      <Filter>Source Files\qe</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
