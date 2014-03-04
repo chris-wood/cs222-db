@@ -57,7 +57,7 @@ IndexManager::~IndexManager()
     _index_manager = NULL;
 }
 
-RC IndexManager::readAttribute(FileHandle &/*fileHandle*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, const string /*attributeName*/, void */*data*/)
+RC IndexManager::readAttribute(FileHandle &/*fileHandle*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, const string /*attributeName*/, void * /*data*/)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }

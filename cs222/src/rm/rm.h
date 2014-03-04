@@ -72,6 +72,15 @@ public:
   RBFM_ScanIterator iter;
 };
 
+class RM_IndexScanIterator {
+public:
+	RM_IndexScanIterator() {};  	// Constructor
+	~RM_IndexScanIterator() {}; 	// Destructor
+
+	// "key" follows the same format as in IndexManager::insertEntry()
+	RC getNextEntry(RID &rid, void *key) { return RM_EOF; };  	// Get next matching entry
+	RC close() { return -1; };             			// Terminate index scan
+};
 
 // Relation Manager
 class RelationManager

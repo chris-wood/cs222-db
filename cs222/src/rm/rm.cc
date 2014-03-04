@@ -536,6 +536,27 @@ RC RM_ScanIterator::close()
 	return iter.close();
 }
 
+RC RelationManager::createIndex(const string &tableName, const string &attributeName)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC RelationManager::indexScan(const string &tableName,
+	const string &attributeName,
+	const void *lowKey,
+	const void *highKey,
+	bool lowKeyInclusive,
+	bool highKeyInclusive,
+	RM_IndexScanIterator &rm_IndexScanIterator)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
 // Extra credit
 RC RelationManager::dropAttribute(const string &tableName, const string &/*attributeName*/)
 {

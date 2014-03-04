@@ -296,7 +296,7 @@ int populateLeftVarCharTable() {
 
 		int length = (i % 26) + 1;
 		string b;
-		for (unsigned j = 0; j < length; j++) {
+		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
 		prepareLeftVarCharTuple(a, length, b, buf);
@@ -325,7 +325,7 @@ int populateRightVarCharTable() {
 		// Prepare the tuple data for insertion
 		int length = (i % 26) + 1;
 		string b;
-		for (unsigned j = 0; j < length; j++) {
+		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
 
