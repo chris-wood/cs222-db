@@ -18,9 +18,8 @@ struct IX_PageIndexFooter : CorePageIndexFooter
 	RID firstRecord;
 
 	// Tree pointers
-	PageNum parent;
 	PageNum nextLeafPage; // ignored by non-leaf pages
-	PageNum leftChild;
+	PageNum leftChild; // ignored by leaf pages
 
 	friend std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f);
 };
