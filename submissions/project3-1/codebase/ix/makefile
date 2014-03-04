@@ -1,7 +1,7 @@
 
 include ../makefile.inc
 
-all: libix.a ixtest1 ixtest2 ix_combined
+all: libix.a $(CODEROOT)/util/libutil.a $(CODEROOT)/rbf/librbf.a ixtest1 ixtest2 ix_combined
 
 # lib file dependencies
 libix.a: libix.a(ix.o)  # and possibly other .o files
@@ -13,16 +13,20 @@ ixtest2.o: ixtest_util.h
 ix_combined.o: ixtest_util.h ix.h
 
 # binary dependencies
-ixtest1: ixtest1.o libix.a $(CODEROOT)/rbf/librbf.a
-ixtest2: ixtest2.o libix.a $(CODEROOT)/rbf/librbf.a
-ix_combined: ix_combined.o libix.a $(CODEROOT)/rbf/librbf.a
+ixtest1: ixtest1.o libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+ixtest2: ixtest2.o libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+ix_combined: ix_combined.o libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
 
 # dependencies to compile used libraries
-.PHONY: $(CODEROOT)/rbf/librbf.a
+.PHONY: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
 $(CODEROOT)/rbf/librbf.a:
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
 
+$(CODEROOT)/util/libutil.a:
+	$(MAKE) -C $(CODEROOT)/util libutil.a
+
 .PHONY: clean
 clean:
-	-rm ixtest1 ixtest2 ix_combined *.a *.o
+	-rm -f ixtest1 ixtest2 ix_combined *.a *.o
 	$(MAKE) -C $(CODEROOT)/rbf clean
+	$(MAKE) -C $(CODEROOT)/util clean

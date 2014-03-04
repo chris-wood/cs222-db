@@ -348,7 +348,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	RID attributeRid = currentRow.firstAttribute;
 	while(attributeRid.pageNum > 0 && deletedAttributes <= currentRow.numAttributes)
 	{
-		RID prevAttribute = attributeRid;
+        //RID prevAttribute = attributeRid;
 		memset(&attributeBuffer, 0, sizeof(attributeBuffer));
 
 		// Read in the attribute so we can continue along the chain
@@ -537,7 +537,7 @@ RC RM_ScanIterator::close()
 }
 
 // Extra credit
-RC RelationManager::dropAttribute(const string &tableName, const string &attributeName)
+RC RelationManager::dropAttribute(const string &tableName, const string &/*attributeName*/)
 {
 	if (_catalog.find(tableName) == _catalog.end())
 	{
@@ -551,7 +551,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 }
 
 // Extra credit
-RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
+RC RelationManager::addAttribute(const string &tableName, const Attribute &/*attr*/)
 {
 	if (_catalog.find(tableName) == _catalog.end())
 	{

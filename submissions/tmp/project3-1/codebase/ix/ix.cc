@@ -57,7 +57,7 @@ IndexManager::~IndexManager()
     _index_manager = NULL;
 }
 
-RC IndexManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+RC IndexManager::readAttribute(FileHandle &/*fileHandle*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, const string /*attributeName*/, void */*data*/)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
@@ -222,7 +222,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	else
 	{
 		bool needsToInsertOriginal = ret != rc::OK;
-		bool needsToInsertNonLeaf = false;
 		PageNum nextPage = insertDestination;
 		insertDestination = 0;
 
@@ -247,7 +246,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			// Save the result of the first split so that we can insert after initial cascading is done
 			if (postSplitIndexPage == 0)
 			{
-				needsToInsertNonLeaf = true;
 				postSplitIndexPage = rightPage;
 				postSplitIndexRid = rightRid;
 				postSplitKey = rightKey;
@@ -276,7 +274,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				fileHandle.writePage(postSplitIndexRid.pageNum, tempBuffer);
 
 				// Reset the split flags in case we need to cascade upwards
-				needsToInsertNonLeaf = true;
 				postSplitIndexPage = rightPage;
 				postSplitIndexRid = rightRid;
 				postSplitKey = rightKey;
@@ -364,7 +361,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	return rc::OK;
 }
 
-RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
+RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &/*rid*/)
 {
     // Pull in the root page
 	unsigned char pageBuffer[PAGE_SIZE] = {0};
@@ -518,7 +515,6 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 
 		int numEntries = 0;
 		int target = 0;
-		bool foundMatch = false;
 		while (currRid.pageNum > 0) // second condition implies the end of the chain
 		{
 			// Pull in the next entry
@@ -532,7 +528,6 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
 			numEntries++;
 			if (compareResult >= 0)
 			{
-				foundMatch = true;
 				target = numEntries;
 				targetPrevRid = prevRid;
 				targetRid = currRid;
@@ -940,9 +935,6 @@ RC IndexManager::findIndexEntry(FileHandle& fileHandle, const Attribute &attribu
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 	const PageNum rootPageNum = footer->pageNumber;
 	
-	// Determine what type of record descriptor we need
-	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
-
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum nextPage = rootPageNum;
 	while (footer->isLeafPage == false)
@@ -1253,7 +1245,7 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	return rc::OK;
 }
 
-RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& attribute, RID& rid)
+RC IndexManager::getNextRecord(FileHandle& fileHandle, const std::vector<Attribute>& recordDescriptor, const Attribute& /*attribute*/, RID& rid)
 {
 	if (rid.pageNum == 0)
 		return IX_EOF;
@@ -1325,15 +1317,17 @@ const std::vector<Attribute>& IndexManager::getIndexRecordDescriptor(AttrType ty
 }
 
 IX_ScanIterator::IX_ScanIterator()
-	: _fileHandle(NULL), 
+    :
+    _im(*IndexManager::instance()),
+    _fileHandle(NULL),
 	_attribute(),
 	_lowKeyInclusive(false), 
 	_highKeyInclusive(false),
 	_pastLastRecord(false),
-	_currentRecordRid(),
 	_beginRecordRid(),
 	_endRecordRid(),
-	_im(*IndexManager::instance())
+    _currentRecordRid(),
+    _nextRecordRid()
 {
 }
 
@@ -1517,7 +1511,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	}
 
 	// We have a valid record, pull the data RID and key value and return it
-	RID targetRid = _currentRecordRid;	
 	IndexRecord record;
 	ret = _im.readRecord(*_fileHandle, _recordDescriptor, _currentRecordRid, &record);
 	rid = record.rid;

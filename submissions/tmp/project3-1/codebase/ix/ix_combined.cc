@@ -720,7 +720,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
 
     // iterate
     int index = 0;
-    int comparePageNum = 0;
+    PageNum comparePageNum = 0;
 
     // create index file
     rc = indexManager->createFile(indexFileName);
@@ -2381,8 +2381,7 @@ void testSkewedDelete(const int numEntries)
     char stringBuffer[2004] = {0};
     char* c = stringBuffer + 4;
     int strlen = 256;
-    char pattern;
-    int i, j = 0;
+    int i = 0;
     void* data = (void*)stringBuffer;
 
     RID rid;

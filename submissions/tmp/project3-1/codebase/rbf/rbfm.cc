@@ -378,7 +378,7 @@ RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
 	return RBFM_EOF;
 }
 
-void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned numAttributes)
+void RBFM_ScanIterator::copyRecord(char* data, const char* record, unsigned /*numAttributes*/)
 {
 	// The offset array is just after the number of attributes
 	unsigned* offsets = (unsigned*)((char*)record + sizeof(unsigned));
