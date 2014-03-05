@@ -6,10 +6,12 @@ all: libutil.a
 # lib file dependencies
 libutil.a: libutil.a(dbgout.o)
 libutil.a: libutil.a(returncodes.o)
+libutil.a: libutil.a(hash.o)
 
 # c file dependencies
-dbgout.o: dbgout.h hash.h
-returncodes.o: returncodes.h hash.h
+dbgout.o: dbgout.h
+returncodes.o: returncodes.h
+hash.o: hash.h
 
 # binary dependencies
 
