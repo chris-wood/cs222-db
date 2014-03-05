@@ -75,9 +75,9 @@ Project::Project(Iterator* input, const vector<string> &attrNames)
 	_itr->getAttributes(_itrAttributes);
 
 	// Build and save projection attributes
-	for (int i = 0; i < _projectAttributeNames.size(); i++)
+	for (unsigned i = 0; i < _projectAttributeNames.size(); i++)
 	{
-		for (int j = 0; j < _itrAttributes.size(); j++)
+		for (unsigned j = 0; j < _itrAttributes.size(); j++)
 		{
 			if (_projectAttributeNames[i] == _itrAttributes[j].name)
 			{
@@ -92,7 +92,7 @@ Project::Project(Iterator* input, const vector<string> &attrNames)
 
 	// Save the entry record size
 	_entrySize = 0;
-	for (int i = 0; i < _itrAttributes.size(); i++)
+	for (unsigned i = 0; i < _itrAttributes.size(); i++)
 	{
 		_entrySize += _itrAttributes[i].length;
 	} 
@@ -110,7 +110,7 @@ Project::~Project()
 void Project::getAttributes(vector<Attribute> &attrs) const
 {
 	attrs.clear(); // ensure we don't add on more than what's expected
-	for (int i = 0; i < _projectAttributes.size(); i++)
+	for (unsigned i = 0; i < _projectAttributes.size(); i++)
 	{
 		attrs.push_back(_projectAttributes[i]);
 	}
@@ -133,7 +133,7 @@ RC Project::getNextTuple(void *data)
 	}
 
 	// Now filter out only the projections we want
-	for (int i = 0; i < _itrAttributes.size(); i++)
+	for (unsigned i = 0; i < _itrAttributes.size(); i++)
 	{
 
 		// TODO: refactor to use Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
@@ -158,7 +158,7 @@ RC Project::getNextTuple(void *data)
 		}
 
 		// Determine if we match or not, and if so, save the info to re-build the attribute
-		for (int j = 0; j < _projectAttributeNames.size(); j++)
+		for (unsigned j = 0; j < _projectAttributeNames.size(); j++)
 		{
 			if (attr.name == _projectAttributeNames[j])
 			{
@@ -170,7 +170,7 @@ RC Project::getNextTuple(void *data)
 
 	// Copy over the result
 	unsigned offset = 0;
-	for (int i = 0; i < saveIndices.size(); i++)
+	for (unsigned i = 0; i < saveIndices.size(); i++)
 	{
 		memcpy((char*)data + offset, (char*)_entryBuffer + offsets[saveIndices[i]], sizes[saveIndices[i]]);
 	}
