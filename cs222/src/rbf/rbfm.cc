@@ -406,6 +406,7 @@ bool RBFM_ScanIterator::compareData(AttrType type, CompOp op, void* a, void* b)
 	switch (type)
 	{
 	case TypeInt:
+		std::cout << "Comparing ints: " << *(int*)a << "vs" << *(int*)b << " == " << compareInt(op, a, b) << std::endl;
 		return compareInt(op, a, b);
 
 	case TypeReal:

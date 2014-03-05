@@ -206,15 +206,19 @@ class Filter : public Iterator {
 
 		RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+		void getAttributes(vector<Attribute> &attrs) const;
+
+		RC getDataOffset(const vector<Attribute>& attrs, const string& attrName, const void* data, unsigned& dataOffset);
 
 private:
 	Iterator* _input;
 	const Condition& _condition;
+	/*
 	string _lhsRel;
 	string _lhsAttr;
-	string _rhsRel;
-	string _rhsAttr;
+	*/
+	unsigned _lhsAttrIndex;
+	std::vector<Attribute> _lhsAttributes;
 };
 
 

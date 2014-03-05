@@ -11,9 +11,9 @@
 
 bool RUN_TEST_01 = true;
 bool RUN_TEST_02 = true;
-bool RUN_TEST_03 = false;
-bool RUN_TEST_04 = false;
-bool RUN_TEST_05 = true;
+bool RUN_TEST_03 = true;
+bool RUN_TEST_04 = true;
+bool RUN_TEST_05 = false;
 bool RUN_TEST_06 = false;
 bool RUN_TEST_07 = false;
 bool RUN_TEST_08 = false;
