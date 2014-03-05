@@ -510,7 +510,8 @@ std::string RelationManager::getIndexName(const string& baseTable, const string&
 	std::stringstream out;
 	out << baseTable;
 	out << '_';
-	out << util::strhash(attributeName);
+	//out << util::strhash(attributeName);
+	out << attributeName;
 
 	return out.str();
 }
