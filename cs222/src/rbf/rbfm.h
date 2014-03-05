@@ -24,11 +24,12 @@ public:
 
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
-private:
+	static bool compareData(AttrType type, CompOp op, void* a, void* b);
 	static bool compareInt(CompOp op, void* a, void* b);
 	static bool compareReal(CompOp op, void* a, void* b);
 	static bool compareVarChar(CompOp op, void* a, void* b);
 
+private:
 	void nextRecord(unsigned numSlots);
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
 	bool recordMatchesValue(char* record);

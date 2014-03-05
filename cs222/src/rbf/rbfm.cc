@@ -274,19 +274,7 @@ bool RBFM_ScanIterator::recordMatchesValue(char* record)
 	unsigned attributeDataOffset = offsets[_conditionAttributeIndex];
 	void* attributeData = record + attributeDataOffset;
 
-	switch(_conditionAttributeType)
-	{
-	case TypeInt:
-        return compareInt(_comparasionOp, attributeData, _comparasionValue);
-
-	case TypeReal:
-        return compareReal(_comparasionOp, attributeData, _comparasionValue);
-
-	case TypeVarChar:
-        return compareVarChar(_comparasionOp, attributeData, _comparasionValue);
-	}
-
-	return false;
+	return compareData(_conditionAttributeType, _comparasionOp, attributeData, _comparasionValue);
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID& rid, void* data)
@@ -411,6 +399,24 @@ RC RBFM_ScanIterator::close()
 	_returnAttributeTypes.clear();
 
 	return rc::OK;
+}
+
+bool RBFM_ScanIterator::compareData(AttrType type, CompOp op, void* a, void* b)
+{
+	switch (type)
+	{
+	case TypeInt:
+		return compareInt(op, a, b);
+
+	case TypeReal:
+		return compareReal(op, a, b);
+
+	case TypeVarChar:
+		return compareVarChar(op, a, b);
+
+	default:
+		return false;
+	}
 }
 
 bool RBFM_ScanIterator::compareInt(CompOp op, void* a, void* b)
