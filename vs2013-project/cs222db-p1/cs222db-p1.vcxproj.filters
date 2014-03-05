@@ -104,6 +104,9 @@
     <ClCompile Include="..\..\cs222\src\qe\qe.cc">
       <Filter>Source Files\qe</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cs222\src\util\hash.cc">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\cs222\src\qe\qetest.cc">
       <Filter>Source Files\qe</Filter>
     </ClCompile>

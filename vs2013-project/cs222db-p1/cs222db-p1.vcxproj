@@ -97,6 +97,7 @@
     <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc" />
     <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />
+    <ClCompile Include="..\..\cs222\src\util\hash.cc" />
     <ClCompile Include="..\..\cs222\src\util\returncodes.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
