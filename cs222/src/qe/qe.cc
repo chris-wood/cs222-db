@@ -242,6 +242,21 @@ Joiner::~Joiner()
 	free(_pageBuffer);
 }
 
+RC Joiner::copyoutData(const void* dataIn, void* dataOut, const vector<Attribute>& attributes)
+{
+	unsigned dataOffset = 0;
+	unsigned len = 0;
+
+	for (vector<Attribute>::const_iterator it = attributes.begin(); it != attributes.end(); ++it)
+	{
+		len = Attribute::sizeInBytes(it->type, (char*)dataIn + dataOffset);
+		memcpy((char*)dataOut + dataOffset, (char*)dataIn + dataOffset, len);
+		dataOffset += len;
+	}
+
+	return rc::OK;
+}
+
 RC Joiner::getNextTuple(void* data)
 {
 	// If both our loops have ended, we have nothing else to do
@@ -277,8 +292,8 @@ RC Joiner::getNextTuple(void* data)
 			// Compare the two values to see if this is a valid item to return
 			if (_condition.compare(_attrType, outerPage, innerPage))
 			{
-				// TODO: Copy data here
-				return rc::OK;
+				// TODO: Are we just assuming we use the outer attributes?
+				return copyoutData(outerPage, data, _outer.attributes);
 			}
 			else
 			{

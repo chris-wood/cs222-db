@@ -267,6 +267,8 @@ public:
 	// For attribute in vector<Attribute>, name it as rel.attr
 	void getAttributes(vector<Attribute> &attrs) const;
 
+	static RC copyoutData(const void* dataIn, void* dataOut, const vector<Attribute>& attributes);
+
 protected:
 	inline char* getPage(unsigned pageNum) { return _pageBuffer + (pageNum * PAGE_SIZE);  }
 	inline void clearPage(unsigned pageNum) { memset(getPage(pageNum), 0, PAGE_SIZE); }
