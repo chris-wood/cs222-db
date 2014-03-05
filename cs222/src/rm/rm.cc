@@ -1,6 +1,8 @@
 #include "rm.h"
 #include "../util/returncodes.h"
+#include "../util/hash.h"
 #include <assert.h>
+#include <sstream>
 
 #define SYSTEM_TABLE_CATALOG_NAME "RM_SYS_CATALOG_TABLE.db"
 #define SYSTEM_TABLE_ATTRIUBE_NAME "RM_SYS_ATTRIBUTE_TABLE.db"
@@ -501,6 +503,16 @@ RC RelationManager::reorganizePage(const string &tableName, const unsigned pageN
 
 	TableMetaData& tableData = _catalog[tableName];
 	return _rbfm->reorganizePage(tableData.fileHandle, tableData.recordDescriptor, pageNumber);
+}
+
+std::string RelationManager::getIndexName(const string& baseTable, const string& attributeName)
+{
+	std::stringstream out;
+	out << baseTable;
+	out << '_';
+	out << util::strhash(attributeName);
+
+	return out.str();
 }
 
 RC RelationManager::scan(const string &tableName,
