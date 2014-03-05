@@ -71,6 +71,24 @@ RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> 
 	return reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, pageNumber, pageBuffer);
 }
 
+RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
+{
+	RC ret = RecordBasedCoreManager::openFile(fileName, fileHandle);
+	if (ret != rc::OK)
+		return ret;
+
+	// Read the reserved page so that we can read the root page and store it in cache
+	unsigned char pageBuffer[PAGE_SIZE];
+	ret = fileHandle.readPage(0, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Cache the value
+	unsigned* rootPage = (unsigned*)((char*)pageBuffer + PAGE_SIZE - sizeof(unsigned));
+	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = *rootPage;
+
+	return rc::OK;
+}
+
 RC IndexManager::createFile(const string &fileName)
 {
 	RC ret = PagedFileManager::instance()->createFile(fileName.c_str());
@@ -127,7 +145,7 @@ RC IndexManager::updateRootPage(FileHandle& fileHandle, unsigned newRootPage)
 	RETURN_ON_ERR(ret);
 
 	// Cache the value
-	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = *rootPage;
+	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = newRootPage;
 
 	return rc::OK;
 }
@@ -777,15 +795,32 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 RC IndexManager::readRootPage(FileHandle& fileHandle, void* pageBuffer)
 {
-	// Read in the reserved page
-	RC ret = fileHandle.readPage(0, pageBuffer);
-	RETURN_ON_ERR(ret);
+	IndexManager& im = *IndexManager::instance();
+	const std::string& filename = fileHandle.getFilename();
+	PageNum rootPage = 1;
 
-	// Place the root page data at the very end of the page
-	unsigned* rootPage = (unsigned*)( (char*)pageBuffer + PAGE_SIZE - sizeof(unsigned) );
+	// Do we have the root page number cached?
+	std::map<std::string, PageNum>::const_iterator finder = im._rootPageMap.find(filename);
+	if (finder == im._rootPageMap.end())
+	{
+		// We need to pull in the reserved page and read in the root
+		RC ret = fileHandle.readPage(0, pageBuffer);
+		RETURN_ON_ERR(ret);
 
-	// Pull in the root page
-	ret = fileHandle.readPage(*rootPage, pageBuffer);
+		// Place the root page data at the very end of the page
+		rootPage = *(unsigned*)((char*)pageBuffer + PAGE_SIZE - sizeof(unsigned));
+
+		// Save it to our cache for later
+		im._rootPageMap[filename] = rootPage;
+	}
+	else
+	{
+		// We had the value cached, use that
+		rootPage = finder->second;
+	}
+	
+	// Read in the root page to the given buffer
+	RC ret = fileHandle.readPage(rootPage, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	return rc::OK;

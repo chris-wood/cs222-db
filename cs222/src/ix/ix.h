@@ -58,6 +58,7 @@ class IndexManager : public RecordBasedCoreManager {
 
   // Override parent createFile
   virtual RC createFile(const string &fileName);
+  virtual RC openFile(const string &fileName, FileHandle &fileHandle);
 
 	// From RecordBasedCoreManager
 	// virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
