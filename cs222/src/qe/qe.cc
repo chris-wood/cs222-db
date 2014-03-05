@@ -208,3 +208,32 @@ RC Filter::getNextTuple(void *data)
 	return ret;
 }
 
+NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition, const unsigned numPages)
+{
+}
+
+INLJoin::INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condition, const unsigned numPages)
+{
+}
+
+
+RC NLJoin::getNextTuple(void* data)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+RC INLJoin::getNextTuple(void* data)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+
+void NLJoin::getAttributes(vector<Attribute> &attrs) const
+{
+
+}
+
+void INLJoin::getAttributes(vector<Attribute> &attrs) const
+{
+
+}
