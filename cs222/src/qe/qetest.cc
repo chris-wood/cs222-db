@@ -527,7 +527,7 @@ int testCase_4() {
 	*(float *) value.data = compVal;
 	cond.rhsValue = value;
 
-	int expectedResultCnt = 125; //100.00 ~ 124.00;
+	int expectedResultCnt = 25; //100.00 ~ 124.00;
 	int actualResultCnt = 0;
 
 	// Create Filter
