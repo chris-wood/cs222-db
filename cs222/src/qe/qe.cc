@@ -135,6 +135,9 @@ RC Project::getNextTuple(void *data)
 	// Now filter out only the projections we want
 	for (int i = 0; i < _itrAttributes.size(); i++)
 	{
+
+		// TODO: refactor to use Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
+
 		Attribute attr = _itrAttributes[i];
 		switch (attr.type)
 		{
