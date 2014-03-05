@@ -43,7 +43,7 @@ struct TableMetaData
 {
 	FileHandle fileHandle;
 	std::vector<Attribute> recordDescriptor;
-	std::vector<IndexMetaData> indexes;
+	std::map<std::string, IndexMetaData> indexes;
 	RID rowRID;
 };
 

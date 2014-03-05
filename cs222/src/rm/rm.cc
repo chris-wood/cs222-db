@@ -484,14 +484,14 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
 	// Update indices if they exist
 	IndexManager* im = IndexManager::instance();
-	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	for (std::map<std::string, IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
 	{
 		// Find the offset into the tuple which has the data we care about in this index
 		unsigned dataOffset = 0;
-		ret = findDataOffset(data, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		ret = findDataOffset(data, tableData.recordDescriptor, it->second.attribute.name, dataOffset);
 		RETURN_ON_ERR(ret);
 		
-		ret = im->insertEntry(it->fileHandle, it->attribute, (char*)data + dataOffset, rid);
+		ret = im->insertEntry(it->second.fileHandle, it->second.attribute, (char*)data + dataOffset, rid);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -511,9 +511,9 @@ RC RelationManager::deleteTuples(const string &tableName)
 
 	// Update indices if they exist
 	IndexManager* im = IndexManager::instance();
-	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	for (std::map<std::string, IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
 	{
-		ret = im->deleteRecords(it->fileHandle);
+		ret = im->deleteRecords(it->second.fileHandle);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -540,14 +540,14 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 
 	// Update indices if they exist
 	IndexManager* im = IndexManager::instance();
-	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	for (std::map<std::string, IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
 	{
 		// Find the offset into the tuple which has the data we care about in this index
 		unsigned dataOffset = 0;
-		ret = findDataOffset(oldData, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		ret = findDataOffset(oldData, tableData.recordDescriptor, it->second.attribute.name, dataOffset);
 		RETURN_ON_ERR(ret);
 
-		ret = im->deleteEntry(it->fileHandle, it->attribute, oldData + dataOffset, rid);
+		ret = im->deleteEntry(it->second.fileHandle, it->second.attribute, oldData + dataOffset, rid);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -574,28 +574,28 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 
 	// Delete old index entries
 	IndexManager* im = IndexManager::instance();
-	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	for (std::map<std::string, IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
 	{
 		// Find the offset into the tuple which has the data we care about in this index
 		unsigned dataOffset = 0;
-		ret = findDataOffset(oldData, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		ret = findDataOffset(oldData, tableData.recordDescriptor, it->second.attribute.name, dataOffset);
 		RETURN_ON_ERR(ret);
 
 		// Delete the old index entry
-		ret = im->deleteEntry(it->fileHandle, it->attribute, oldData + dataOffset, rid);
+		ret = im->deleteEntry(it->second.fileHandle, it->second.attribute, oldData + dataOffset, rid);
 		RETURN_ON_ERR(ret);
 	}
 
 	// Insert new index entries
-	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	for (std::map<std::string, IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
 	{
 		// Find the offset into the tuple which has the data we care about in this index
 		unsigned dataOffset = 0;
-		ret = findDataOffset(data, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		ret = findDataOffset(data, tableData.recordDescriptor, it->second.attribute.name, dataOffset);
 		RETURN_ON_ERR(ret);
 
 		// Delete the old index entry
-		ret = im->insertEntry(it->fileHandle, it->attribute, (char*)data + dataOffset, rid);
+		ret = im->insertEntry(it->second.fileHandle, it->second.attribute, (char*)data + dataOffset, rid);
 		RETURN_ON_ERR(ret);
 	}
 
@@ -704,25 +704,24 @@ RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attribute
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
 	IndexManager* im = IndexManager::instance();
-
-	// Create the file that will hold our index
-	const std::string indexName = getIndexName(tableName, attributeName);
-	RC ret = im->createFile(indexName);
-	RETURN_ON_ERR(ret);
-
-	FileHandle indexFileHandle;
-	ret = im->openFile(indexName, indexFileHandle);
-	RETURN_ON_ERR(ret);
-
-	// TODO: Keep track that we have created this index in some system table?
-	
-	// Load in the table we are creating the index for
 	if (_catalog.find(tableName) == _catalog.end())
 	{
 		return rc::TABLE_NOT_FOUND;
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
+
+	// Create the file that will hold our index
+	const std::string indexName = getIndexName(tableName, attributeName);
+	RC ret = im->createFile(indexName);
+	RETURN_ON_ERR(ret);
+
+	// TODO: Keep track that we have created this index system index table
+
+	// Open a file handle and save it with the cached table data
+	IndexMetaData& indexData = tableData.indexes[indexName];
+	ret = im->openFile(indexName, indexData.fileHandle);
+	RETURN_ON_ERR(ret);
 
 	// We only want to extract the attribute for this index
 	std::vector<std::string> attributeNames;
@@ -732,6 +731,9 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	unsigned attributeIndex = 0;
 	ret = RBFM_ScanIterator::findAttributeByName(tableData.recordDescriptor, attributeName, attributeIndex);
 	RETURN_ON_ERR(ret);
+
+	// Save the attribute for this index in the cached table data
+	indexData.attribute = tableData.recordDescriptor[attributeIndex];
 	
 	RM_ScanIterator scanner;
 	ret = scan(tableName, attributeName, NO_OP, NULL, attributeNames, scanner);
@@ -743,7 +745,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	while((ret = scanner.getNextTuple(rid, tupleBuffer)) == rc::OK)
 	{
 		// Insert the value into our index now
-		ret = im->insertEntry(indexFileHandle, tableData.recordDescriptor[attributeIndex], tupleBuffer, rid);
+		ret = im->insertEntry(indexData.fileHandle, tableData.recordDescriptor[attributeIndex], tupleBuffer, rid);
 		RETURN_ON_ERR(ret);
 
 		memset(tupleBuffer, 0, PAGE_SIZE);
