@@ -573,12 +573,18 @@ RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attribute
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	RC ret = IndexManager::instance()->createFile(getIndexName(tableName, attributeName));
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
 }
 
 RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	RC ret = IndexManager::instance()->destroyFile(getIndexName(tableName, attributeName));
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
 }
 
 RC RelationManager::indexScan(const string &tableName,
