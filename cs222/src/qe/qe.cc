@@ -13,10 +13,8 @@ _condition(condition)
 	// TODO: What does this mean for a Filter if this is true?
 	assert(_condition.bRhsIsAttr == false);
 
-	/*
-	RC ret = Condition::splitAttr(_condition.lhsAttr, _lhsRel, _lhsAttr);
-	assert(ret == rc::OK);
-	*/
+	// TODO: What does it mean if the attributes list is empty?
+	assert(!_lhsAttributes.empty());
 
 	getAttributes(_lhsAttributes);
 	RC ret = RBFM_ScanIterator::findAttributeByName(_lhsAttributes, _condition.lhsAttr, _lhsAttrIndex);
@@ -118,6 +116,7 @@ void Project::getAttributes(vector<Attribute> &attrs) const
 
 RC Project::getNextTuple(void *data)
 {
+	unsigned len = 0;
 	unsigned dataSize = 0;
 	vector<unsigned> offsets;
 	vector<unsigned> sizes;
@@ -135,27 +134,24 @@ RC Project::getNextTuple(void *data)
 	// Now filter out only the projections we want
 	for (unsigned i = 0; i < _itrAttributes.size(); i++)
 	{
-
 		// TODO: refactor to use Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
 
 		Attribute attr = _itrAttributes[i];
+
+		offsets.push_back(dataSize);
 		switch (attr.type)
 		{
 			case TypeInt:
 			case TypeReal:
-				dataSize += 4;
-
-				offsets.push_back(dataSize);
-				sizes.push_back(4);
+				len = 4;
 				break;
 			case TypeVarChar:
-				dataSize += sizeof(unsigned);
-				int len = 0;
 				memcpy(&len, (char*)_entryBuffer + dataSize, sizeof(unsigned));
-
-				offsets.push_back(dataSize);
-				sizes.push_back(len);
+				len += sizeof(unsigned);
 		}
+
+		dataSize += len;
+		sizes.push_back(len);
 
 		// Determine if we match or not, and if so, save the info to re-build the attribute
 		for (unsigned j = 0; j < _projectAttributeNames.size(); j++)
@@ -172,7 +168,10 @@ RC Project::getNextTuple(void *data)
 	unsigned offset = 0;
 	for (unsigned i = 0; i < saveIndices.size(); i++)
 	{
-		memcpy((char*)data + offset, (char*)_entryBuffer + offsets[saveIndices[i]], sizes[saveIndices[i]]);
+		const unsigned index = saveIndices[i];
+		const unsigned length = sizes[index];
+		memcpy((char*)data + offset, (char*)_entryBuffer + offsets[index], length);
+		offset += length;
 	}
 
 	return rc::OK;
