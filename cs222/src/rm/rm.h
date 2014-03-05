@@ -33,10 +33,17 @@ struct TableMetadataRow
 	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 
+struct IndexMetaData
+{
+	FileHandle fileHandle;
+	Attribute attribute;
+};
+
 struct TableMetaData
 {
 	FileHandle fileHandle;
 	std::vector<Attribute> recordDescriptor;
+	std::vector<IndexMetaData> indexes;
 	RID rowRID;
 };
 
@@ -133,6 +140,7 @@ public:
   RC reorganizeTable(const string &tableName);
 
   static std::string getIndexName(const string& baseTable, const string& attributeName);
+  static RC findDataOffset(const void* data, const std::vector<Attribute>& recordDescriptor, const std::string& attributeName, unsigned& dataOffset);
 
 protected:
 	  RelationManager();
@@ -152,6 +160,7 @@ private:
 
 	std::vector<Attribute> _systemTableRecordDescriptor;
 	std::vector<Attribute> _systemTableAttributeRecordDescriptor;
+	std::vector<Attribute> _systemTableIndexRecordDescriptor;
 	RID _lastTableRID;
 
 	static RelationManager *_rm;

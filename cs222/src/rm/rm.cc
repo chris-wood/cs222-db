@@ -6,6 +6,7 @@
 
 #define SYSTEM_TABLE_CATALOG_NAME "RM_SYS_CATALOG_TABLE.db"
 #define SYSTEM_TABLE_ATTRIUBE_NAME "RM_SYS_ATTRIBUTE_TABLE.db"
+#define SYSTEM_TABLE_INDEX_NAME "RM_SYS_INDEX_TABLE.db"
 
 RelationManager* RelationManager::_rm = 0;
 
@@ -51,7 +52,15 @@ RelationManager::RelationManager()
 	attr.type = TypeVarChar;
 	attr.length = MAX_ATTRIBUTENAME_SIZE;
 	_systemTableAttributeRecordDescriptor.push_back(attr);
-	
+
+	// TODO: Figure out what other data we want to store here
+	// Columns of the index table
+	attr.type = TypeVarChar;
+	attr.length = MAX_ATTRIBUTENAME_SIZE;
+	attr.name = "SourceTable";					_systemTableIndexRecordDescriptor.push_back(attr);
+	attr.name = "FileName";						_systemTableIndexRecordDescriptor.push_back(attr);
+	attr.name = "AttrName";						_systemTableIndexRecordDescriptor.push_back(attr);
+
 	// Generate the system table which will hold data about all other created tables
 	ASSERT_ON_BAD_RETURN = false;
     if (loadSystemTables() != rc::OK)
@@ -81,9 +90,15 @@ RC RelationManager::loadSystemTables()
     RC ret = rc::OK;
 
     // If table exists in our catalog, it has been created and we know about it already
-    if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_ATTRIUBE_NAME) != _catalog.end())
+	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_ATTRIUBE_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
     {
         return rc::TABLE_ALREADY_CREATED;
+    }
+
+	// If one or more but not all are in our catalog, something went very wrong
+	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_ATTRIUBE_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
+    {
+        return rc::TABLE_SYSTEM_IN_BAD_STATE;
     }
 
     // Attempt to open the system catalog if it already exists
@@ -94,6 +109,11 @@ RC RelationManager::loadSystemTables()
     // Attempt to open the attribute table if it exists
     _catalog[SYSTEM_TABLE_ATTRIUBE_NAME] = TableMetaData();
     ret = _rbfm->openFile(SYSTEM_TABLE_ATTRIUBE_NAME, _catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle);
+    RETURN_ON_ERR(ret);
+
+	// Attempt to open the index table if it exists
+	_catalog[SYSTEM_TABLE_INDEX_NAME] = TableMetaData();
+	ret = _rbfm->openFile(SYSTEM_TABLE_INDEX_NAME, _catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle);
     RETURN_ON_ERR(ret);
 
     return rc::OK;
@@ -110,11 +130,17 @@ RC RelationManager::createSystemTables()
     ret = createCatalogEntry(SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
     RETURN_ON_ERR(ret);
 
+	ret = createCatalogEntry(SYSTEM_TABLE_INDEX_NAME, _systemTableIndexRecordDescriptor);
+    RETURN_ON_ERR(ret);
+
     // Write out entries in the system tables for the system data
     ret = insertTableMetadata(true, SYSTEM_TABLE_CATALOG_NAME, _systemTableRecordDescriptor);
     RETURN_ON_ERR(ret);
 
     ret = insertTableMetadata(true, SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
+    RETURN_ON_ERR(ret);
+
+	ret = insertTableMetadata(true, SYSTEM_TABLE_INDEX_NAME, _systemTableIndexRecordDescriptor);
     RETURN_ON_ERR(ret);
 
     return rc::OK;
@@ -271,7 +297,7 @@ RC RelationManager::loadTableMetadata()
 		RETURN_ON_ERR(ret);
 
         // Open a file handle for the table
-        if (tableName != SYSTEM_TABLE_CATALOG_NAME && tableName != SYSTEM_TABLE_ATTRIUBE_NAME)
+		if (tableName != SYSTEM_TABLE_CATALOG_NAME && tableName != SYSTEM_TABLE_ATTRIUBE_NAME && tableName != SYSTEM_TABLE_INDEX_NAME)
         {
             ret = _rbfm->openFile(tableName, _catalog[tableName].fileHandle);
             RETURN_ON_ERR(ret);
@@ -428,6 +454,23 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	return rc::OK;
 }
 
+RC RelationManager::findDataOffset(const void* data, const std::vector<Attribute>& recordDescriptor, const std::string& attributeName, unsigned& dataOffset)
+{
+	// Find where this attribute is in the list of valid attributes
+	unsigned attributeIndex = 0;
+	RC ret = RBFM_ScanIterator::findAttributeByName(recordDescriptor, attributeName, attributeIndex);
+	RETURN_ON_ERR(ret);
+	
+	// Iterate through the attributes and sum up the sizes of the ones before the one we care about
+	dataOffset = 0;
+	for (unsigned int i = 0; i < attributeIndex; ++i)
+	{
+		dataOffset += Attribute::sizeInBytes(recordDescriptor[i].type, (char*)data + dataOffset);
+	}
+
+	return rc::OK;
+}
+
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
 	if (_catalog.find(tableName) == _catalog.end())
@@ -436,7 +479,23 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
-	return _rbfm->insertRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
+	RC ret = _rbfm->insertRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
+	RETURN_ON_ERR(ret);
+
+	// Update indices if they exist
+	IndexManager* im = IndexManager::instance();
+	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	{
+		// Find the offset into the tuple which has the data we care about in this index
+		unsigned dataOffset = 0;
+		ret = findDataOffset(data, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		RETURN_ON_ERR(ret);
+		
+		ret = im->insertEntry(it->fileHandle, it->attribute, (char*)data + dataOffset, rid);
+		RETURN_ON_ERR(ret);
+	}
+
+	return rc::OK;
 }
 
 RC RelationManager::deleteTuples(const string &tableName)
@@ -447,7 +506,18 @@ RC RelationManager::deleteTuples(const string &tableName)
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
-	return _rbfm->deleteRecords(tableData.fileHandle);
+	RC ret = _rbfm->deleteRecords(tableData.fileHandle);
+	RETURN_ON_ERR(ret);
+
+	// Update indices if they exist
+	IndexManager* im = IndexManager::instance();
+	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	{
+		ret = im->deleteRecords(it->fileHandle);
+		RETURN_ON_ERR(ret);
+	}
+
+	return rc::OK;
 }
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
@@ -458,7 +528,30 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
-	return _rbfm->deleteRecord(tableData.fileHandle, tableData.recordDescriptor, rid);
+
+	// Read the tuple in since we need it to search for the corresponding values in the index
+	char oldData[PAGE_SIZE] = {0};
+	RC ret = _rbfm->readRecord(tableData.fileHandle, tableData.recordDescriptor, rid, oldData);
+	RETURN_ON_ERR(ret);
+
+	// Now we can delete the actual data
+	ret =  _rbfm->deleteRecord(tableData.fileHandle, tableData.recordDescriptor, rid);
+	RETURN_ON_ERR(ret);
+
+	// Update indices if they exist
+	IndexManager* im = IndexManager::instance();
+	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	{
+		// Find the offset into the tuple which has the data we care about in this index
+		unsigned dataOffset = 0;
+		ret = findDataOffset(oldData, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		RETURN_ON_ERR(ret);
+
+		ret = im->deleteEntry(it->fileHandle, it->attribute, oldData + dataOffset, rid);
+		RETURN_ON_ERR(ret);
+	}
+
+	return rc::OK;
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
@@ -469,7 +562,44 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
-	return _rbfm->updateRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
+
+	// Read the tuple in since we need it to search for the corresponding values in the index
+	char oldData[PAGE_SIZE] = {0};
+	RC ret = _rbfm->readRecord(tableData.fileHandle, tableData.recordDescriptor, rid, oldData);
+	RETURN_ON_ERR(ret);
+
+	// Now we can update the actual record entry
+	ret = _rbfm->updateRecord(tableData.fileHandle, tableData.recordDescriptor, data, rid);
+	RETURN_ON_ERR(ret);
+
+	// Delete old index entries
+	IndexManager* im = IndexManager::instance();
+	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	{
+		// Find the offset into the tuple which has the data we care about in this index
+		unsigned dataOffset = 0;
+		ret = findDataOffset(oldData, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		RETURN_ON_ERR(ret);
+
+		// Delete the old index entry
+		ret = im->deleteEntry(it->fileHandle, it->attribute, oldData + dataOffset, rid);
+		RETURN_ON_ERR(ret);
+	}
+
+	// Insert new index entries
+	for (std::vector<IndexMetaData>::iterator it = tableData.indexes.begin(); it != tableData.indexes.end(); ++it)
+	{
+		// Find the offset into the tuple which has the data we care about in this index
+		unsigned dataOffset = 0;
+		ret = findDataOffset(data, tableData.recordDescriptor, it->attribute.name, dataOffset);
+		RETURN_ON_ERR(ret);
+
+		// Delete the old index entry
+		ret = im->insertEntry(it->fileHandle, it->attribute, (char*)data + dataOffset, rid);
+		RETURN_ON_ERR(ret);
+	}
+
+	return rc::OK;
 }
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
