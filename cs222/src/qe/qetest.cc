@@ -37,8 +37,8 @@ const int fail = -1;
 #endif
 
 // Global Initialization
-RelationManager *rm = RelationManager::instance();
-IndexManager *im = IndexManager::instance();
+RelationManager *rm = NULL;
+IndexManager *im = NULL;
 
 // Number of tuples in each relation
 const int tupleCount = 100;
@@ -1457,6 +1457,27 @@ clean_up:
     return rc;
 }
 
+void cleanup()
+{
+	remove("RM_SYS_CATALOG_TABLE.db");
+	remove("RM_SYS_ATTRIBUTE_TABLE.db");
+
+	remove("left");
+	remove("left_A");
+	remove("left_B");
+	remove("left_C");
+
+	remove("right");
+	remove("right_A");
+	remove("right_B");
+	remove("right_C");
+
+	remove("rightvarchar");
+
+	remove("leftvarchar");
+
+	remove("group");
+}
 
 int main() {
 	int g_nTotalGradPoint = 0;
@@ -1469,19 +1490,30 @@ int main() {
 	int g_nUndergradPoint = 0;
 	int g_nUndergradExtraPoint = 0;
 
+	// Delete stuff that may be leftover from a previous run
+	cleanup();
+
+	// Now we can initialize our singletons
+	im = IndexManager::instance();
+	rm = RelationManager::instance();
+
 	// Create the left table
+	cout << "\n\n---- ";
 	cout << "PREP: createLeftTable" << endl;
 	if (createLeftTable() != success) {
+		cout << "\n!!!FAIL!!! createLeftTable\n";
 		goto print_point;
 	}
 
 	if (RUN_TEST_01)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_01()" << endl;
 
 		g_nTotalGradPoint += 5;
 		g_nTotalUndergradPoint += 5;
 		if (testCase_1() != success) {
+			cout << "\n!!!FAIL!!! testCase_1\n";
 			goto print_point;
 		}
 		g_nGradPoint += 5;
@@ -1491,16 +1523,19 @@ int main() {
 	// Create the right table
 	cout << "PREP: createRightTable" << endl;
 	if (createRightTable() != success) {
+		cout << "\n!!!FAIL!!! createRightTable\n";
 		goto print_point;
 	}
 
 	if (RUN_TEST_02)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_02()" << endl;
 
 		g_nTotalGradPoint += 5;
 		g_nTotalUndergradPoint += 5;
 		if (testCase_2() == success) {
+			cout << "\n!!!FAIL!!! testCase_2\n";
 			goto print_point;
 		}
 		g_nGradPoint += 5;
@@ -1509,6 +1544,7 @@ int main() {
 
 	if (RUN_TEST_03)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_03()" << endl;
 
 		g_nTotalGradPoint += 5;
@@ -1517,10 +1553,15 @@ int main() {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 5;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_3\n";
+		}
 	}
 
 	if (RUN_TEST_04)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_04()" << endl;
 
 		g_nTotalGradPoint += 5;
@@ -1529,10 +1570,15 @@ int main() {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 5;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_4\n";
+		}
 	}
 
 	if (RUN_TEST_05)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_05()" << endl;
 
 		g_nTotalGradPoint += 3;
@@ -1541,10 +1587,15 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_5\n";
+		}
 	}
 
 	if (RUN_TEST_06)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_06()" << endl;
 
 		g_nTotalGradPoint += 5;
@@ -1553,10 +1604,15 @@ int main() {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 10;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_6\n";
+		}
 	}
 
 	if (RUN_TEST_07)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_07()" << endl;
 
 		g_nTotalGradPoint += 5;
@@ -1565,10 +1621,15 @@ int main() {
 			g_nGradPoint += 5;
 			g_nUndergradExtraPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_7\n";
+		}
 	}
 
 	if (RUN_TEST_08)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_08()" << endl;
 
 		g_nTotalGradPoint += 3;
@@ -1577,10 +1638,15 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_8\n";
+		}
 	}
 
 	if (RUN_TEST_09)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_09grad()" << endl;
 
 		g_nTotalGradPoint += 3;
@@ -1589,10 +1655,15 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradExtraPoint += 2;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_9grad\n";
+		}
 	}
 
 	if (RUN_TEST_09)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_09undergrad()" << endl;
 
 		g_nTotalGradPoint += 2;
@@ -1601,10 +1672,15 @@ int main() {
 			g_nGradPoint += 2;
 			g_nUndergradPoint += 5;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_9undergrad\n";
+		}
 	}
 
 	if (RUN_TEST_10)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_10()" << endl;
 
 		g_nTotalGradPoint += 3;
@@ -1613,32 +1689,42 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_10\n";
+		}
 	}
 
 	if (RUN_TEST_11 || RUN_TEST_12)
 	{
+		cout << "\n\n---- ";
 		cout << "PREP: testCase_11 testCase_12" << endl;
 
 		// Create left/right large table, and populate the table
 		if (createLeftVarCharTable() != success) {
+			cout << "\n!!!FAIL!!! createLeftVarCharTable\n";
 			goto print_point;
 		}
 
 		if (populateLeftVarCharTable() != success) {
+			cout << "\n!!!FAIL!!! populateLeftVarCharTable\n";
 			goto print_point;
 		}
 
 		if (createRightVarCharTable() != success) {
+			cout << "\n!!!FAIL!!! createRightVarCharTable\n";
 			goto print_point;
 		}
 
 		if (populateRightVarCharTable() != success) {
+			cout << "\n!!!FAIL!!! populateLeftVarCharTable\n";
 			goto print_point;
 		}
 	}
 
 	if (RUN_TEST_11)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_11()" << endl;
 
 		g_nTotalGradPoint += 3;
@@ -1647,10 +1733,15 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_11\n";
+		}
 	}
 
 	if (RUN_TEST_12)
 	{
+		cout << "\n\n---- ";
 		cout << "testCase_12()" << endl;
 	
 		g_nTotalGradPoint += 3;
@@ -1659,11 +1750,16 @@ int main() {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! testCase_12\n";
+		}
 	}
 
     // Extra Credit
 	if (RUN_TEST_E1)
 	{
+		cout << "\n\n---- ";
 		cout << "extraTestCase_1()" << endl;
 		// Aggregate
 		g_nTotalGradExtraPoint += 3;
@@ -1672,10 +1768,15 @@ int main() {
 			g_nGradExtraPoint += 3;
 			g_nUndergradExtraPoint += 3;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! extraTestCase_1\n";
+		}
 	}
 
 	if (RUN_TEST_E2)
 	{
+		cout << "\n\n---- ";
 		cout << "extraTestCase_2()" << endl;
 
 		g_nTotalGradExtraPoint += 2;
@@ -1684,23 +1785,31 @@ int main() {
 			g_nGradExtraPoint += 2;
 			g_nUndergradExtraPoint += 2;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! extraTestCase_2\n";
+		}
 	}
 
 	if (RUN_TEST_E3 || RUN_TEST_E4)
 	{
+		cout << "\n\n---- ";
 		cout << "PREP: extraTestCase_3 extraTestCase_4" << endl;
 
 		if (createGroupTable() != success) {
+			cout << "\n!!!FAIL!!! createGroupTable\n";
 			goto print_point;
 		}
 
 		if (populateGroupTable() != success) {
+			cout << "\n!!!FAIL!!! populateGroupTable\n";
 			goto print_point;
 		}
 	}
 
 	if (RUN_TEST_E3)
 	{
+		cout << "\n\n---- ";
 		cout << "extraTestCase_3()" << endl;
 
 		g_nTotalGradExtraPoint += 5;
@@ -1710,10 +1819,15 @@ int main() {
 			g_nGradExtraPoint += 5;
 			g_nUndergradExtraPoint += 5;
 		}
+		else
+		{
+			cout << "\n!!!FAIL!!! extraTestCase_3\n";
+		}
 	}
 
 	if (RUN_TEST_E4)
 	{
+		cout << "\n\n---- ";
 		cout << "extraTestCase_4()" << endl;
 
 		g_nTotalGradExtraPoint += 5;
@@ -1721,6 +1835,10 @@ int main() {
 		if (extraTestCase_4() == success) {
 			g_nGradExtraPoint += 5;
 			g_nUndergradExtraPoint += 5;
+		}
+		else
+		{
+			cout << "\n!!!FAIL!!! extraTestCase_4\n";
 		}
 	}
 
