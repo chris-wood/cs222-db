@@ -9,6 +9,23 @@
 
 #include "qe.h"
 
+bool RUN_TEST_01 = true;
+bool RUN_TEST_02 = true;
+bool RUN_TEST_03 = true;
+bool RUN_TEST_04 = true;
+bool RUN_TEST_05 = true;
+bool RUN_TEST_06 = true;
+bool RUN_TEST_07 = true;
+bool RUN_TEST_08 = true;
+bool RUN_TEST_09 = true;
+bool RUN_TEST_10 = true;
+bool RUN_TEST_11 = true;
+bool RUN_TEST_12 = true;
+bool RUN_TEST_E1 = false;
+bool RUN_TEST_E2 = false;
+bool RUN_TEST_E3 = false;
+bool RUN_TEST_E4 = false;
+
 #ifndef _success_
 #define _success_
 const int success = 0;
@@ -1442,6 +1459,10 @@ clean_up:
 
 
 int main() {
+	int g_nTotalGradPoint = 0;
+	int g_nTotalGradExtraPoint = 0;
+	int g_nTotalUndergradPoint = 0;
+	int g_nTotalUndergradExtraPoint = 0;
 
 	int g_nGradPoint = 0;
 	int g_nGradExtraPoint = 0;
@@ -1449,136 +1470,268 @@ int main() {
 	int g_nUndergradExtraPoint = 0;
 
 	// Create the left table
+	cout << "PREP: createLeftTable" << endl;
 	if (createLeftTable() != success) {
 		goto print_point;
 	}
 
-	if (testCase_1() != success) {
-		goto print_point;
+	if (RUN_TEST_01)
+	{
+		cout << "testCase_01()" << endl;
+
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradPoint += 5;
+		if (testCase_1() != success) {
+			goto print_point;
+		}
+		g_nGradPoint += 5;
+		g_nUndergradPoint += 5;
 	}
-	g_nGradPoint += 5;
-	g_nUndergradPoint += 5;
 
 	// Create the right table
+	cout << "PREP: createRightTable" << endl;
 	if (createRightTable() != success) {
 		goto print_point;
 	}
 
-	if (testCase_2() == success) {
-		goto print_point;
-	}
-	g_nGradPoint += 5;
-	g_nUndergradPoint += 5;
+	if (RUN_TEST_02)
+	{
+		cout << "testCase_02()" << endl;
 
-	if (testCase_3() == success) {
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradPoint += 5;
+		if (testCase_2() == success) {
+			goto print_point;
+		}
 		g_nGradPoint += 5;
 		g_nUndergradPoint += 5;
 	}
 
-	if (testCase_4() == success) {
-		g_nGradPoint += 5;
-		g_nUndergradPoint += 5;
+	if (RUN_TEST_03)
+	{
+		cout << "testCase_03()" << endl;
+
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradPoint += 5;
+		if (testCase_3() == success) {
+			g_nGradPoint += 5;
+			g_nUndergradPoint += 5;
+		}
 	}
 
-	if (testCase_5() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradPoint += 3;
+	if (RUN_TEST_04)
+	{
+		cout << "testCase_04()" << endl;
+
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradPoint += 5;
+		if (testCase_4() == success) {
+			g_nGradPoint += 5;
+			g_nUndergradPoint += 5;
+		}
 	}
 
-	if (testCase_6() == success) {
-		g_nGradPoint += 5;
-		g_nUndergradPoint += 10;
+	if (RUN_TEST_05)
+	{
+		cout << "testCase_05()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (testCase_5() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+		}
 	}
 
-	if (testCase_7() == success) {
-		g_nGradPoint += 5;
-		g_nUndergradExtraPoint += 3;
+	if (RUN_TEST_06)
+	{
+		cout << "testCase_06()" << endl;
+
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradPoint += 10;
+		if (testCase_6() == success) {
+			g_nGradPoint += 5;
+			g_nUndergradPoint += 10;
+		}
 	}
 
-	if (testCase_8() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradPoint += 3;
+	if (RUN_TEST_07)
+	{
+		cout << "testCase_07()" << endl;
+
+		g_nTotalGradPoint += 5;
+		g_nTotalUndergradExtraPoint += 3;
+		if (testCase_7() == success) {
+			g_nGradPoint += 5;
+			g_nUndergradExtraPoint += 3;
+		}
 	}
 
-	if (testCase_9_Grad() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradExtraPoint += 2;
+	if (RUN_TEST_08)
+	{
+		cout << "testCase_08()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (testCase_8() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+		}
 	}
 
-	if (testCase_9_Undergrad() == success) {
-		g_nGradPoint += 2;
-		g_nUndergradPoint += 5;
+	if (RUN_TEST_09)
+	{
+		cout << "testCase_09grad()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradExtraPoint += 2;
+		if (testCase_9_Grad() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradExtraPoint += 2;
+		}
 	}
 
-	if (testCase_10() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradPoint += 3;
+	if (RUN_TEST_09)
+	{
+		cout << "testCase_09undergrad()" << endl;
+
+		g_nTotalGradPoint += 2;
+		g_nTotalUndergradPoint += 5;
+		if (testCase_9_Undergrad() == success) {
+			g_nGradPoint += 2;
+			g_nUndergradPoint += 5;
+		}
 	}
 
-	// Create left/right large table, and populate the table
-	if (createLeftVarCharTable() != success) {
-		goto print_point;
+	if (RUN_TEST_10)
+	{
+		cout << "testCase_10()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (testCase_10() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+		}
 	}
 
-	if (populateLeftVarCharTable() != success) {
-		goto print_point;
+	if (RUN_TEST_11 || RUN_TEST_12)
+	{
+		cout << "PREP: testCase_11 testCase_12" << endl;
+
+		// Create left/right large table, and populate the table
+		if (createLeftVarCharTable() != success) {
+			goto print_point;
+		}
+
+		if (populateLeftVarCharTable() != success) {
+			goto print_point;
+		}
+
+		if (createRightVarCharTable() != success) {
+			goto print_point;
+		}
+
+		if (populateRightVarCharTable() != success) {
+			goto print_point;
+		}
 	}
 
-	if (createRightVarCharTable() != success) {
-		goto print_point;
+	if (RUN_TEST_11)
+	{
+		cout << "testCase_11()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (testCase_11() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+		}
 	}
 
-	if (populateRightVarCharTable() != success) {
-		goto print_point;
-	}
-
-	if (testCase_11() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradPoint += 3;
-	}
-
-	if (testCase_12() == success) {
-		g_nGradPoint += 3;
-		g_nUndergradPoint += 3;
+	if (RUN_TEST_12)
+	{
+		cout << "testCase_12()" << endl;
+	
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (testCase_12() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+		}
 	}
 
     // Extra Credit
-	// Aggregate
-	if (extraTestCase_1() == success) {
-		g_nGradExtraPoint += 3;
-		g_nUndergradExtraPoint += 3;
+	if (RUN_TEST_E1)
+	{
+		cout << "extraTestCase_1()" << endl;
+		// Aggregate
+		g_nTotalGradExtraPoint += 3;
+		g_nTotalUndergradExtraPoint += 3;
+		if (extraTestCase_1() == success) {
+			g_nGradExtraPoint += 3;
+			g_nUndergradExtraPoint += 3;
+		}
 	}
 
-	if (extraTestCase_2() == success) {
-		g_nGradExtraPoint += 2;
-		g_nUndergradExtraPoint += 2;
+	if (RUN_TEST_E2)
+	{
+		cout << "extraTestCase_2()" << endl;
+
+		g_nTotalGradExtraPoint += 2;
+		g_nTotalUndergradExtraPoint += 2;
+		if (extraTestCase_2() == success) {
+			g_nGradExtraPoint += 2;
+			g_nUndergradExtraPoint += 2;
+		}
 	}
 
-	if (createGroupTable() != success) {
-		goto print_point;
+	if (RUN_TEST_E3 || RUN_TEST_E4)
+	{
+		cout << "PREP: extraTestCase_3 extraTestCase_4" << endl;
+
+		if (createGroupTable() != success) {
+			goto print_point;
+		}
+
+		if (populateGroupTable() != success) {
+			goto print_point;
+		}
 	}
 
-	if (populateGroupTable() != success) {
-		goto print_point;
+	if (RUN_TEST_E3)
+	{
+		cout << "extraTestCase_3()" << endl;
+
+		g_nTotalGradExtraPoint += 5;
+		g_nTotalUndergradExtraPoint += 5;
+		// Aggregate with GroupBy
+		if (extraTestCase_3() == success) {
+			g_nGradExtraPoint += 5;
+			g_nUndergradExtraPoint += 5;
+		}
 	}
 
-	// Aggregate with GroupBy
-    if (extraTestCase_3() == success) {
-		g_nGradExtraPoint += 5;
-		g_nUndergradExtraPoint += 5;
-    }
+	if (RUN_TEST_E4)
+	{
+		cout << "extraTestCase_4()" << endl;
 
-    if (extraTestCase_4() == success) {
-		g_nGradExtraPoint += 5;
-		g_nUndergradExtraPoint += 5;
-    }
+		g_nTotalGradExtraPoint += 5;
+		g_nTotalUndergradExtraPoint += 5;
+		if (extraTestCase_4() == success) {
+			g_nGradExtraPoint += 5;
+			g_nUndergradExtraPoint += 5;
+		}
+	}
 
+print_point: 
+	cout << "\n\n===========================================================\n";
+	cout << "grad-point: " << g_nGradPoint << "/" << g_nTotalGradPoint;
+	cout << "\t\t grad-extra-point: " << g_nGradExtraPoint << "/" << g_nTotalGradExtraPoint << endl;
 
-	print_point: cout << "grad-point: " << g_nGradPoint
-			<< "\t grad-extra-point: " << g_nGradExtraPoint << endl;
-	cout << "undergrad-point: " << g_nUndergradPoint
-			<< "\t undergrad-extra-point: " << g_nUndergradExtraPoint << endl;
-
+	cout << "undergrad-point: " << g_nUndergradPoint << "/" << g_nTotalUndergradPoint;
+	cout << "\t undergrad-extra-point: " << g_nUndergradExtraPoint << "/" << g_nTotalUndergradExtraPoint << endl;
+	
 	return 0;
 }
 
