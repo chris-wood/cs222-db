@@ -509,7 +509,7 @@ std::string RelationManager::getIndexName(const string& baseTable, const string&
 {
 	std::stringstream out;
 	out << baseTable;
-	out << '_';
+	out << '.';
 	//out << util::strhash(attributeName);
 	out << attributeName;
 
@@ -573,8 +573,51 @@ RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attribute
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
-	RC ret = IndexManager::instance()->createFile(getIndexName(tableName, attributeName));
+	IndexManager* im = IndexManager::instance();
+
+	// Create the file that will hold our index
+	const std::string indexName = getIndexName(tableName, attributeName);
+	RC ret = im->createFile(indexName);
 	RETURN_ON_ERR(ret);
+
+	FileHandle indexFileHandle;
+	ret = im->openFile(indexName, indexFileHandle);
+	RETURN_ON_ERR(ret);
+
+	// TODO: Keep track that we have created this index in some system table?
+	
+	// Load in the table we are creating the index for
+	if (_catalog.find(tableName) == _catalog.end())
+	{
+		return rc::TABLE_NOT_FOUND;
+	}
+
+	TableMetaData& tableData = _catalog[tableName];
+
+	// We only want to extract the attribute for this index
+	std::vector<std::string> attributeNames;
+	attributeNames.push_back(attributeName);
+
+	// Pull out the attribute data from the attribute name
+	unsigned attributeIndex = 0;
+	ret = RBFM_ScanIterator::findAttributeByName(tableData.recordDescriptor, attributeName, attributeIndex);
+	RETURN_ON_ERR(ret);
+	
+	RM_ScanIterator scanner;
+	ret = scan(tableName, attributeName, NO_OP, NULL, attributeNames, scanner);
+	RETURN_ON_ERR(ret);
+
+	// Iterate through everything in the input table and add entries into the new index
+	RID rid;
+	char tupleBuffer[PAGE_SIZE] = {0};
+	while((ret = scanner.getNextTuple(rid, tupleBuffer)) == rc::OK)
+	{
+		// Insert the value into our index now
+		ret = im->insertEntry(indexFileHandle, tableData.recordDescriptor[attributeIndex], tupleBuffer, rid);
+		RETURN_ON_ERR(ret);
+
+		memset(tupleBuffer, 0, PAGE_SIZE);
+	}
 
 	return rc::OK;
 }
@@ -583,6 +626,8 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 {
 	RC ret = IndexManager::instance()->destroyFile(getIndexName(tableName, attributeName));
 	RETURN_ON_ERR(ret);
+
+	// TODO: Remove any system table data we saved for this index
 
 	return rc::OK;
 }
@@ -595,6 +640,11 @@ RC RelationManager::indexScan(const string &tableName,
 	bool highKeyInclusive,
 	RM_IndexScanIterator &rm_IndexScanIterator)
 {
+	if (_catalog.find(tableName) == _catalog.end())
+	{
+		return rc::TABLE_NOT_FOUND;
+	}
+
 	TableMetaData& tableData = _catalog[tableName];
 
 	return rm_IndexScanIterator.init(tableData, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
