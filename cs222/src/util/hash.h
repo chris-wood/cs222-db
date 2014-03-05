@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <iostream>
+#include <cstring>
 
 namespace util
 {

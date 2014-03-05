@@ -32,6 +32,10 @@ struct Condition {
     bool    bRhsIsAttr;     // TRUE if right-hand side is an attribute and not a value; FALSE, otherwise.
     string rhsAttr;         // right-hand side attribute if bRhsIsAttr = TRUE
     Value   rhsValue;       // right-hand side value if bRhsIsAttr = FALSE
+
+	bool compare(void* thatData) const;
+
+	static RC splitAttr(const string& input, string& rel, string& attr);
 };
 
 
@@ -200,9 +204,17 @@ class Filter : public Iterator {
         );
         ~Filter(){};
 
-        RC getNextTuple(void *data) {return QE_EOF;};
+		RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const{};
+
+private:
+	Iterator* _input;
+	const Condition& _condition;
+	string _lhsRel;
+	string _lhsAttr;
+	string _rhsRel;
+	string _rhsAttr;
 };
 
 
