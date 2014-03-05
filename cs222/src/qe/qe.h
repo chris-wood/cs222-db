@@ -242,37 +242,57 @@ class Project : public Iterator {
         Iterator* _itr;
 };
 
+class Joiner : public Iterator {
+public:
+	Joiner(
+		Iterator *leftIn,                             // Iterator of input R
+		Iterator *rightIn,                            // Iterator of input S
+		const Condition &condition,                   // Join condition
+		const unsigned numPages                       // Number of pages can be used to do join (decided by the optimizer)
+		);
 
-class NLJoin : public Iterator {
+	virtual ~Joiner();
+
+	virtual RC resetRight() = 0;
+
+	RC getNextTuple(void *data);
+	// For attribute in vector<Attribute>, name it as rel.attr
+	void getAttributes(vector<Attribute> &attrs) const;
+
+public:
+	inline char* getPage(unsigned pageNum) { return _pageBuffer + (pageNum * PAGE_SIZE);  }
+	inline void clearPage(unsigned pageNum) { memset(getPage(pageNum), 0, PAGE_SIZE); }
+	inline void setPage(unsigned pageNum, void* data) { memcpy(getPage(pageNum), data, PAGE_SIZE); }
+
+	Iterator* _leftIter;
+	Iterator* _rightIter;
+	const Condition& _condition;
+	const unsigned _numPages;
+
+	char* _pageBuffer;
+};
+
+class NLJoin : public Joiner {
     // Nested-Loop join operator
     public:
-        NLJoin(Iterator *leftIn,                             // Iterator of input R
-               TableScan *rightIn,                           // TableScan Iterator of input S
-               const Condition &condition,                   // Join condition
-               const unsigned numPages                       // Number of pages can be used to do join (decided by the optimizer)
-        );
-        ~NLJoin(){};
+		NLJoin(Iterator* leftIn, TableScan* rightIn, const Condition& condition, const unsigned numPages)
+			: Joiner(leftIn, rightIn, condition, numPages) { }
 
-        RC getNextTuple(void *data);
-        // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const;
+		virtual ~NLJoin() { }
+
+		virtual RC resetRight();
 };
 
 
-class INLJoin : public Iterator {
+class INLJoin : public Joiner {
     // Index Nested-Loop join operator
     public:
-        INLJoin(Iterator *leftIn,                               // Iterator of input R
-                IndexScan *rightIn,                             // IndexScan Iterator of input S
-                const Condition &condition,                     // Join condition
-                const unsigned numPages                         // Number of pages can be used to do join (decided by the optimizer)
-        );
+		INLJoin(Iterator* leftIn, IndexScan* rightIn, const Condition& condition, const unsigned numPages)
+			: Joiner(leftIn, rightIn, condition, numPages) { }
 
-        ~INLJoin(){};
+		virtual ~INLJoin() { }
 
-        RC getNextTuple(void *data);
-        // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const;
+		virtual RC resetRight();
 };
 
 

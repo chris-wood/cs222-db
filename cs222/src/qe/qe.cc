@@ -208,32 +208,40 @@ RC Filter::getNextTuple(void *data)
 	return ret;
 }
 
-NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition, const unsigned numPages)
+Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned numPages)
+: _leftIter(leftIn), _rightIter(rightIn), _condition(condition), _numPages(numPages)
 {
+	_pageBuffer = (char*)malloc(PAGE_SIZE * _numPages);
 }
 
-INLJoin::INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condition, const unsigned numPages)
+Joiner::~Joiner()
 {
+	free(_pageBuffer);
 }
 
-
-RC NLJoin::getNextTuple(void* data)
+RC Joiner::getNextTuple(void* data)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
 
-RC INLJoin::getNextTuple(void* data)
+void Joiner::getAttributes(vector<Attribute> &attrs) const
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
-}
-
-
-void NLJoin::getAttributes(vector<Attribute> &attrs) const
-{
+	// TODO: Not sure what to return here?
 
 }
 
-void INLJoin::getAttributes(vector<Attribute> &attrs) const
+RC NLJoin::resetRight()
 {
+	TableScan* rightTableScan = static_cast<TableScan*>(_rightIter);
+	rightTableScan->setIterator();
 
+	return rc::OK;
+}
+
+RC INLJoin::resetRight()
+{
+	IndexScan* rightIndexScan = static_cast<IndexScan*>(_rightIter);
+	rightIndexScan->setIterator(NULL, NULL, true, true);
+
+	return rc::OK;
 }
