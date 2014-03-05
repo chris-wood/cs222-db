@@ -1072,7 +1072,7 @@ int testCase_10() {
 	cond.bRhsIsAttr = true;
 	cond.rhsAttr = "right.B";
 
-	int expectedResultcnt = 6840;
+	int expectedResultcnt = 5995;
 	int actualResultCnt = 0;
 
 	// Create NLJoin
@@ -1172,7 +1172,7 @@ int testCase_11() {
 		cout << "leftvarchar.B " << b << endl;
 
 		memset(data, 0, bufSize);
-		++actualResultCnt = 0;
+		++actualResultCnt;
 	}
 
 	if (expectedResultCnt != actualResultCnt) {
