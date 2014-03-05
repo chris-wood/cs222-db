@@ -1,5 +1,9 @@
 # Ignore built files and test files here
 rbftest
+qetest
+ix_combined
+ixtest1
+ixtest2
 out.txt
 out
 err.txt
@@ -14,6 +18,7 @@ testFile1.db
 testFile2.db
 RM_SYS_ATTRIBUTE_TABLE.db
 RM_SYS_CATALOG_TABLE.db
+RM_SYS_INDEX_TABLE.db
 tbl_employee0
 tbl_employee1
 tbl_employee2
@@ -30,10 +35,10 @@ Height_idx
 EmpName_idx
 testSkewedDelete
 left
-left_A
-left_B
-left_C
+left.A
+left.B
+left.C
 right
-right_A
-right_B
-right_C
+right.A
+right.B
+right.C

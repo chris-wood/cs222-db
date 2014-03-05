@@ -1464,16 +1464,17 @@ void cleanup()
 {
 	remove("RM_SYS_CATALOG_TABLE.db");
 	remove("RM_SYS_ATTRIBUTE_TABLE.db");
+	remove("RM_SYS_INDEX_TABLE.db");
 
 	remove("left");
-	remove("left_A");
-	remove("left_B");
-	remove("left_C");
+	remove("left.A");
+	remove("left.B");
+	remove("left.C");
 
 	remove("right");
-	remove("right_A");
-	remove("right_B");
-	remove("right_C");
+	remove("right.A");
+	remove("right.B");
+	remove("right.C");
 
 	remove("rightvarchar");
 
