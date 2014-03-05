@@ -13,9 +13,6 @@ _condition(condition)
 	// TODO: What does this mean for a Filter if this is true?
 	assert(_condition.bRhsIsAttr == false);
 
-	// TODO: What does it mean if the attributes list is empty?
-	assert(!_lhsAttributes.empty());
-
 	getAttributes(_lhsAttributes);
 	RC ret = RBFM_ScanIterator::findAttributeByName(_lhsAttributes, _condition.lhsAttr, _lhsAttrIndex);
 	assert(ret == rc::OK);

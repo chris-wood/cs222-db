@@ -1520,11 +1520,16 @@ int main() {
 			cout << "\n!!!FAIL!!! testCase_1\n";
 			goto print_point;
 		}
+		else
+		{
+			cout << "\ntestCase_1 SUCCESS\n";
+		}
 		g_nGradPoint += 5;
 		g_nUndergradPoint += 5;
 	}
 
 	// Create the right table
+	cout << "\n\n---- ";
 	cout << "PREP: createRightTable" << endl;
 	if (createRightTable() != success) {
 		cout << "\n!!!FAIL!!! createRightTable\n";
@@ -1542,6 +1547,10 @@ int main() {
 			cout << "\n!!!FAIL!!! testCase_2\n";
 			goto print_point;
 		}
+		else
+		{
+			cout << "\ntestCase_2 SUCCESS\n";
+		}
 		g_nGradPoint += 5;
 		g_nUndergradPoint += 5;
 	}
@@ -1556,6 +1565,7 @@ int main() {
 		if (testCase_3() == success) {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 5;
+			cout << "\ntestCase_3 SUCCESS\n";
 		}
 		else
 		{
@@ -1573,6 +1583,7 @@ int main() {
 		if (testCase_4() == success) {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 5;
+			cout << "\ntestCase_4 SUCCESS\n";
 		}
 		else
 		{
@@ -1590,6 +1601,7 @@ int main() {
 		if (testCase_5() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
+			cout << "\ntestCase_5 SUCCESS\n";
 		}
 		else
 		{
@@ -1607,6 +1619,7 @@ int main() {
 		if (testCase_6() == success) {
 			g_nGradPoint += 5;
 			g_nUndergradPoint += 10;
+			cout << "\ntestCase_6 SUCCESS\n";
 		}
 		else
 		{
@@ -1624,6 +1637,7 @@ int main() {
 		if (testCase_7() == success) {
 			g_nGradPoint += 5;
 			g_nUndergradExtraPoint += 3;
+			cout << "\ntestCase_7 SUCCESS\n";
 		}
 		else
 		{
@@ -1641,6 +1655,7 @@ int main() {
 		if (testCase_8() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
+			cout << "\ntestCase_8 SUCCESS\n";
 		}
 		else
 		{
@@ -1658,6 +1673,7 @@ int main() {
 		if (testCase_9_Grad() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradExtraPoint += 2;
+			cout << "\ntestCase_9grad SUCCESS\n";
 		}
 		else
 		{
@@ -1675,6 +1691,7 @@ int main() {
 		if (testCase_9_Undergrad() == success) {
 			g_nGradPoint += 2;
 			g_nUndergradPoint += 5;
+			cout << "\ntestCase_9undergrad SUCCESS\n";
 		}
 		else
 		{
@@ -1692,6 +1709,7 @@ int main() {
 		if (testCase_10() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
+			cout << "\ntestCase_10 SUCCESS\n";
 		}
 		else
 		{
@@ -1736,6 +1754,7 @@ int main() {
 		if (testCase_11() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
+			cout << "\ntestCase_11 SUCCESS\n";
 		}
 		else
 		{
@@ -1753,6 +1772,7 @@ int main() {
 		if (testCase_12() == success) {
 			g_nGradPoint += 3;
 			g_nUndergradPoint += 3;
+			cout << "\ntestCase_12 SUCCESS\n";
 		}
 		else
 		{
@@ -1771,6 +1791,7 @@ int main() {
 		if (extraTestCase_1() == success) {
 			g_nGradExtraPoint += 3;
 			g_nUndergradExtraPoint += 3;
+			cout << "\nextraTestCase_1 SUCCESS\n";
 		}
 		else
 		{
@@ -1788,6 +1809,7 @@ int main() {
 		if (extraTestCase_2() == success) {
 			g_nGradExtraPoint += 2;
 			g_nUndergradExtraPoint += 2;
+			cout << "\nextraTestCase_2 SUCCESS\n";
 		}
 		else
 		{
@@ -1822,6 +1844,7 @@ int main() {
 		if (extraTestCase_3() == success) {
 			g_nGradExtraPoint += 5;
 			g_nUndergradExtraPoint += 5;
+			cout << "\nextraTestCase_3 SUCCESS\n";
 		}
 		else
 		{
@@ -1839,6 +1862,7 @@ int main() {
 		if (extraTestCase_4() == success) {
 			g_nGradExtraPoint += 5;
 			g_nUndergradExtraPoint += 5;
+			cout << "\nextraTestCase_4 SUCCESS\n";
 		}
 		else
 		{
