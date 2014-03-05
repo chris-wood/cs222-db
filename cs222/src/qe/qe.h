@@ -34,6 +34,7 @@ struct Condition {
     Value   rhsValue;       // right-hand side value if bRhsIsAttr = FALSE
 
 	bool compare(void* thatData) const;
+	bool compare(AttrType type, void* left, void* right) const;
 
 	static RC splitAttr(const string& input, string& rel, string& attr);
 };
@@ -213,10 +214,6 @@ class Filter : public Iterator {
 private:
 	Iterator* _input;
 	const Condition& _condition;
-	/*
-	string _lhsRel;
-	string _lhsAttr;
-	*/
 	unsigned _lhsAttrIndex;
 	std::vector<Attribute> _lhsAttributes;
 };
@@ -242,6 +239,16 @@ class Project : public Iterator {
         Iterator* _itr;
 };
 
+struct JoinerData
+{
+	Iterator* iter;
+	vector<Attribute> attributes;
+	unsigned attributeIndex;
+	RC prevStatus;
+
+	JoinerData(Iterator* in, const string& attributeName);
+};
+
 class Joiner : public Iterator {
 public:
 	Joiner(
@@ -253,22 +260,24 @@ public:
 
 	virtual ~Joiner();
 
-	virtual RC resetRight() = 0;
+	virtual RC resetInner() = 0;
 
 	RC getNextTuple(void *data);
+
 	// For attribute in vector<Attribute>, name it as rel.attr
 	void getAttributes(vector<Attribute> &attrs) const;
 
-public:
+protected:
 	inline char* getPage(unsigned pageNum) { return _pageBuffer + (pageNum * PAGE_SIZE);  }
 	inline void clearPage(unsigned pageNum) { memset(getPage(pageNum), 0, PAGE_SIZE); }
 	inline void setPage(unsigned pageNum, void* data) { memcpy(getPage(pageNum), data, PAGE_SIZE); }
 
-	Iterator* _leftIter;
-	Iterator* _rightIter;
+	JoinerData _outer;
+	JoinerData _inner;
+	
+	AttrType _attrType;
 	const Condition& _condition;
 	const unsigned _numPages;
-
 	char* _pageBuffer;
 };
 
@@ -280,7 +289,7 @@ class NLJoin : public Joiner {
 
 		virtual ~NLJoin() { }
 
-		virtual RC resetRight();
+		virtual RC resetInner();
 };
 
 
@@ -292,7 +301,7 @@ class INLJoin : public Joiner {
 
 		virtual ~INLJoin() { }
 
-		virtual RC resetRight();
+		virtual RC resetInner();
 };
 
 

@@ -1,6 +1,11 @@
 #include "qe.h"
 #include <assert.h>
 
+bool Condition::compare(AttrType type, void* left, void* right) const
+{
+	return RBFM_ScanIterator::compareData(type, op, left, right);
+}
+
 bool Condition::compare(void* thatData) const
 {
 	return RBFM_ScanIterator::compareData(rhsValue.type, op, thatData, rhsValue.data);
@@ -208,10 +213,28 @@ RC Filter::getNextTuple(void *data)
 	return ret;
 }
 
-Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned numPages)
-: _leftIter(leftIn), _rightIter(rightIn), _condition(condition), _numPages(numPages)
+JoinerData::JoinerData(Iterator* in, const string& attributeName)
+: iter(in), attributeIndex(0), prevStatus(rc::ITERATOR_NEVER_CALLED)
 {
+	assert(iter != NULL);
+	iter->getAttributes(attributes);
+
+	RC ret = RBFM_ScanIterator::findAttributeByName(attributes, attributeName, attributeIndex);
+	assert(ret == rc::OK);
+}
+
+Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned numPages)
+: _outer(leftIn, condition.lhsAttr), _inner(rightIn, condition.rhsAttr), _condition(condition), _numPages(numPages)
+{
+	// TODO: Not sure what to do if this is false
+	assert(_condition.bRhsIsAttr);
+
 	_pageBuffer = (char*)malloc(PAGE_SIZE * _numPages);
+
+	assert(_pageBuffer != NULL);
+
+	_attrType = _outer.attributes[_outer.attributeIndex].type;
+	assert(_attrType == _inner.attributes[_inner.attributeIndex].type);
 }
 
 Joiner::~Joiner()
@@ -221,26 +244,78 @@ Joiner::~Joiner()
 
 RC Joiner::getNextTuple(void* data)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	// If both our loops have ended, we have nothing else to do
+	if (_outer.prevStatus == QE_EOF && _inner.prevStatus == QE_EOF)
+	{
+		return QE_EOF;
+	}
+
+	// A single buffer page for each iterator
+	assert(_numPages >= 2);
+	char* outerPage = getPage(0);
+	char* innerPage = getPage(1);
+	RC ret = rc::OK;
+
+	// Take care of initial loading of data
+	if (_outer.prevStatus == rc::ITERATOR_NEVER_CALLED)
+	{
+		ret = _outer.prevStatus = _outer.iter->getNextTuple(outerPage);
+		RETURN_ON_ERR(ret);
+	}
+
+	if (_inner.prevStatus == rc::ITERATOR_NEVER_CALLED)
+	{
+		ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
+		RETURN_ON_ERR(ret);
+	}
+
+	// Nested loops JOIN
+	while (_outer.prevStatus != QE_EOF)
+	{
+		while (_inner.prevStatus != QE_EOF)
+		{
+			// Compare the two values to see if this is a valid item to return
+			if (_condition.compare(_attrType, outerPage, innerPage))
+			{
+				// TODO: Copy data here
+				return rc::OK;
+			}
+			else
+			{
+				// We need to advance to the next inner value to compare it
+				ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
+			}
+		}
+
+		// We have reached the end of the inner loop, reset it
+		ret = resetInner();
+		RETURN_ON_ERR(ret);
+
+		// Now advance the outer loop by one
+		ret = _outer.prevStatus = _outer.iter->getNextTuple(outerPage);
+	}
+
+	// If we have reached the end of both iterators, we are done
+	return QE_EOF;
 }
 
 void Joiner::getAttributes(vector<Attribute> &attrs) const
 {
 	// TODO: Not sure what to return here?
-
+	_outer.iter->getAttributes(attrs);
 }
 
-RC NLJoin::resetRight()
+RC NLJoin::resetInner()
 {
-	TableScan* rightTableScan = static_cast<TableScan*>(_rightIter);
+	TableScan* rightTableScan = static_cast<TableScan*>(_inner.iter);
 	rightTableScan->setIterator();
 
 	return rc::OK;
 }
 
-RC INLJoin::resetRight()
+RC INLJoin::resetInner()
 {
-	IndexScan* rightIndexScan = static_cast<IndexScan*>(_rightIter);
+	IndexScan* rightIndexScan = static_cast<IndexScan*>(_inner.iter);
 	rightIndexScan->setIterator(NULL, NULL, true, true);
 
 	return rc::OK;
