@@ -97,7 +97,7 @@ public:
 	RC getNextEntry(RID &rid, void *key);
 	RC close();
 
-	RC init(TableMetaData& tableData, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
+	RC init(TableMetaData& tableData, const string& indexName, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
 
 	IX_ScanIterator iter;
 	TableMetaData* tableData;

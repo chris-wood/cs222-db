@@ -694,15 +694,22 @@ RC RM_IndexScanIterator::close()
 	return iter.close();
 }
 
-RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string& indexName, const string& attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
 {
 	tableData = &_tableData;
 	
+	// Find the attribute we care about
 	unsigned attributeIndex = 0;
 	RC ret = RBFM_ScanIterator::findAttributeByName(tableData->recordDescriptor, attributeName, attributeIndex);
 	RETURN_ON_ERR(ret);
 
-	return iter.init(&tableData->fileHandle, tableData->recordDescriptor[attributeIndex], lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+	// Find the index we care about
+	if (tableData->indexes.find(indexName) == tableData->indexes.end())
+	{
+		return rc::INDEX_NOT_FOUND;
+	}
+
+	return iter.init(&(tableData->indexes[indexName].fileHandle), tableData->recordDescriptor[attributeIndex], lowKey, highKey, lowKeyInclusive, highKeyInclusive);
 }
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
@@ -786,8 +793,9 @@ RC RelationManager::indexScan(const string &tableName,
 	}
 
 	TableMetaData& tableData = _catalog[tableName];
+	const std::string indexName = getIndexName(tableName, attributeName);
 
-	return rm_IndexScanIterator.init(tableData, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+	return rm_IndexScanIterator.init(tableData, indexName, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
 }
 
 IndexSystemRecord::IndexSystemRecord(const std::string& sourceTable, const std::string& fileName, const std::string& attrName)
