@@ -274,12 +274,14 @@ RC Joiner::getNextTuple(void* data)
 	// Take care of initial loading of data
 	if (_outer.prevStatus == rc::ITERATOR_NEVER_CALLED)
 	{
+		//std::cout << "Initializing outer loop" << std::endl;
 		ret = _outer.prevStatus = _outer.iter->getNextTuple(outerPage);
 		RETURN_ON_ERR(ret);
 	}
 
 	if (_inner.prevStatus == rc::ITERATOR_NEVER_CALLED)
 	{
+		//std::cout << "Initializing inner loop" << std::endl;
 		ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
 		RETURN_ON_ERR(ret);
 	}
@@ -292,18 +294,27 @@ RC Joiner::getNextTuple(void* data)
 			// Compare the two values to see if this is a valid item to return
 			if (_condition.compare(_attrType, outerPage, innerPage))
 			{
+				//std::cout << "FOUND MATCH!" << std::endl;
 				// TODO: Are we just assuming we use the outer attributes?
 				return copyoutData(outerPage, data, _outer.attributes);
 			}
 			else
 			{
+				//std::cout << " ++inner" << std::endl;
+
 				// We need to advance to the next inner value to compare it
 				ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
 			}
 		}
 
+		//std::cout << "++outer" << std::endl;
+
 		// We have reached the end of the inner loop, reset it
 		ret = resetInner();
+		RETURN_ON_ERR(ret);
+
+		// Get the first element of the inner loop again
+		ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
 		RETURN_ON_ERR(ret);
 
 		// Now advance the outer loop by one
@@ -322,16 +333,13 @@ void Joiner::getAttributes(vector<Attribute> &attrs) const
 
 RC NLJoin::resetInner()
 {
-	TableScan* rightTableScan = static_cast<TableScan*>(_inner.iter);
-	rightTableScan->setIterator();
-
+	static_cast<TableScan*>(_inner.iter)->setIterator();
 	return rc::OK;
 }
 
 RC INLJoin::resetInner()
 {
-	IndexScan* rightIndexScan = static_cast<IndexScan*>(_inner.iter);
-	rightIndexScan->setIterator(NULL, NULL, true, true);
-
+	// TODO: Do we ever need to remember the values from the iterator initialization before?
+	static_cast<IndexScan*>(_inner.iter)->setIterator(NULL, NULL, true, true);
 	return rc::OK;
 }
