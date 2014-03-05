@@ -11,11 +11,11 @@ qe.o: qe.h
 qetest.o: qe.h
 
 # binary dependencies
-qetest: qetest.o libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/util/libutil.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
+qetest: qetest.o libqe.a $(CODEROOT)/util/libutil.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
 
 # dependencies to compile used libraries
 .PHONY: $(CODEROOT)/util/libutil.a
-$(CODEROOT)/rbf/librbf.a:
+$(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 
 .PHONY: $(CODEROOT)/rbf/librbf.a

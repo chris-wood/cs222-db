@@ -11,16 +11,16 @@
 
 bool RUN_TEST_01 = true;
 bool RUN_TEST_02 = true;
-bool RUN_TEST_03 = true;
-bool RUN_TEST_04 = true;
+bool RUN_TEST_03 = false;
+bool RUN_TEST_04 = false;
 bool RUN_TEST_05 = true;
-bool RUN_TEST_06 = true;
-bool RUN_TEST_07 = true;
-bool RUN_TEST_08 = true;
-bool RUN_TEST_09 = true;
-bool RUN_TEST_10 = true;
-bool RUN_TEST_11 = true;
-bool RUN_TEST_12 = true;
+bool RUN_TEST_06 = false;
+bool RUN_TEST_07 = false;
+bool RUN_TEST_08 = false;
+bool RUN_TEST_09 = false;
+bool RUN_TEST_10 = false;
+bool RUN_TEST_11 = false;
+bool RUN_TEST_12 = false;
 bool RUN_TEST_E1 = false;
 bool RUN_TEST_E2 = false;
 bool RUN_TEST_E3 = false;
@@ -426,14 +426,17 @@ int testCase_2() {
 	cout << "****In Test Case 2****" << endl;
 	rc = createIndexforRightB();
 	if (rc != success) {
+		cout << "1" << endl;
 		return rc;
 	}
 	rc = populateRightTable();
 	if (rc != success) {
+		cout << "2" << endl;
 		return rc;
 	}
 	rc = createIndexforRightC();
 	if (rc != success) {
+		cout << "3" << endl;
 		return rc;
 	}
 	return rc;
@@ -1534,7 +1537,7 @@ int main() {
 
 		g_nTotalGradPoint += 5;
 		g_nTotalUndergradPoint += 5;
-		if (testCase_2() == success) {
+		if (testCase_2() != success) {
 			cout << "\n!!!FAIL!!! testCase_2\n";
 			goto print_point;
 		}
