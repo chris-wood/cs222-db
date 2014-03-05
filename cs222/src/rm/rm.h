@@ -57,6 +57,14 @@ struct AttributeRecord
 	char name[MAX_ATTRIBUTENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 
+struct IndexSystemRecord
+{
+	IndexSystemRecord() { memset(this, 0, sizeof(*this)); }
+	IndexSystemRecord(const std::string& sourceTable, const std::string& fileName, const std::string& attrName);
+
+	char buffer[PAGE_SIZE];
+};
+
 # define RM_EOF (-1)  // end of a scan operator
 
 // RM_ScanIterator is an iteratr to go through tuples

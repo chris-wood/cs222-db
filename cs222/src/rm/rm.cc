@@ -310,6 +310,8 @@ RC RelationManager::loadTableMetadata()
 		currentRID = currentRow.nextRow;
 	}
 
+	// TODO: Load in the index data stuff
+
 	return rc::OK;
 }
 
@@ -429,6 +431,8 @@ RC RelationManager::deleteTable(const string &tableName)
 	RETURN_ON_ERR(ret);
 
     // TODO: Delete stuff from the SYSTEM_TABLE_ATTRIBUTE_NAME table also
+
+	// TODO: Delete stuff from the SYSTEM_TABLE_INDEX_NAME table also
 
 	// Finally, update our in-memory representation of the catalog
 	_catalog.erase(it);
@@ -716,11 +720,15 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	RC ret = im->createFile(indexName);
 	RETURN_ON_ERR(ret);
 
-	// TODO: Keep track that we have created this index system index table
-
 	// Open a file handle and save it with the cached table data
 	IndexMetaData& indexData = tableData.indexes[indexName];
 	ret = im->openFile(indexName, indexData.fileHandle);
+	RETURN_ON_ERR(ret);
+
+	// Keep track that we have created this index system index table
+	RID indexRid;
+	IndexSystemRecord indexRecord(tableName, indexName, attributeName);
+	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRecord.buffer, indexRid);
 	RETURN_ON_ERR(ret);
 
 	// We only want to extract the attribute for this index
@@ -780,6 +788,32 @@ RC RelationManager::indexScan(const string &tableName,
 	TableMetaData& tableData = _catalog[tableName];
 
 	return rm_IndexScanIterator.init(tableData, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+}
+
+IndexSystemRecord::IndexSystemRecord(const std::string& sourceTable, const std::string& fileName, const std::string& attrName)
+{
+	memset(buffer, 0, sizeof(buffer));
+
+	unsigned offset = 0;
+	unsigned len = 0;
+	
+	len = sourceTable.length();
+	memcpy(buffer + offset, &len, sizeof(len));
+	offset += sizeof(len);
+	memcpy(buffer + offset, sourceTable.c_str(), len);
+	offset += len;
+
+	len = fileName.length();
+	memcpy(buffer + offset, &len, sizeof(len));
+	offset += sizeof(len);
+	memcpy(buffer + offset, fileName.c_str(), len);
+	offset += len;
+
+	len = attrName.length();
+	memcpy(buffer + offset, &len, sizeof(len));
+	offset += sizeof(len);
+	memcpy(buffer + offset, attrName.c_str(), len);
+	offset += len;
 }
 
 // Extra credit
