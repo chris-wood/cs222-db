@@ -21,8 +21,8 @@ bool RUN_TEST_07 = true;
 bool RUN_TEST_08 = true;
 bool RUN_TEST_09 = true;
 bool RUN_TEST_10 = true;
-bool RUN_TEST_11 = false;
-bool RUN_TEST_12 = false;
+bool RUN_TEST_11 = true;
+bool RUN_TEST_12 = true;
 bool RUN_TEST_E1 = false;
 bool RUN_TEST_E2 = false;
 bool RUN_TEST_E3 = false;
@@ -314,7 +314,7 @@ int populateLeftVarCharTable() {
 		int a = i + 20;
 
 		int length = (i % 26) + 1;
-		string b;
+		string b(length, '\0');
 		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
@@ -343,7 +343,7 @@ int populateRightVarCharTable() {
 
 		// Prepare the tuple data for insertion
 		int length = (i % 26) + 1;
-		string b;
+		string b(length, '\0');
 		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
