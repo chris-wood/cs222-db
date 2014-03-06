@@ -1,6 +1,7 @@
 #include "qe.h"
 #include <assert.h>
 #include <sstream>
+#include <limits>
 
 bool Condition::compare(AttrType type, const void* left, const void* right) const
 {
@@ -375,7 +376,6 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
 	_current.init(_attributes[_aggrigateAttributeIndex].type, _operation);
 }
 
-// TODO: What is a group attribute??
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
 : _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true)
 {
@@ -392,10 +392,7 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, Aggreg
 
 void AggregateData::init(AttrType type, AggregateOp op)
 {
-	_realValue = 0.0f;
-	_intValue = 0;
 	_count = 0;
-	
 	_readAsInt = (type == TypeInt);
 
 	// In most cases we write out the same format we read in
@@ -410,10 +407,34 @@ void AggregateData::init(AttrType type, AggregateOp op)
 		_writeAsInt = false;
 		break;
 	}
+
+	// Determine initial values based on what type of operation this is
+	switch (op)
+	{
+	default:
+	case SUM:
+	case AVG:
+	case COUNT:
+		_realValue = 0.0f;
+		_intValue = 0;
+		break;
+
+	case MIN:
+		_realValue = std::numeric_limits<float>::max();
+		_intValue  = std::numeric_limits<int>::max();
+		break;
+
+	case MAX:
+		_realValue = std::numeric_limits<float>::min();
+		_intValue = std::numeric_limits<int>::min();
+		break;
+	}
 }
 
 void AggregateData::append(AggregateOp op, float realData, int intData)
 {
+	++_count;
+
 	switch (op)
 	{
 	case MIN:
@@ -468,8 +489,26 @@ void AggregateData::read(const void* data, unsigned attributeOffset, float& f, i
 		f = *(float*)((char*)data + attributeOffset);
 		i = (int)f;
 	}
+}
 
-	++_count;
+template <typename T>
+AggregateData* Aggregate::getGroupedAggregate(T value, std::map<T, AggregateData>& groupMap)
+{
+	std::map<T, AggregateData>::iterator it = groupMap.find(value);
+	if (it == groupMap.end())
+	{
+		// We need to initialize this grouping fresh
+		AggregateData newGrouping;
+		newGrouping.init(_attributes[_groupAttributeIndex].type, _operation);
+
+		// And insert it into the group
+		groupMap[value] = newGrouping;
+		it = groupMap.find(value);
+	}
+	// else we can just return the existing grouping
+
+	assert(it != groupMap.end());
+	return &(it->second);
 }
 
 RC Aggregate::getNextTuple(void* data)
@@ -488,11 +527,49 @@ RC Aggregate::getNextTuple(void* data)
 		attributeOffset += Attribute::sizeInBytes(_attributes[i].type, _buffer + attributeOffset);
 	}
 
+	// Read the value the iterator provided
 	float realValue;
 	int intValue;
 	_current.read(_buffer, attributeOffset, realValue, intValue);
+
+	// Append the value into our current total aggregation
 	_current.append(_operation, realValue, intValue);
-	_current.write(data);
+
+	// If we are using grouped aggregates, determine which grouping this goes into
+	AggregateData* outputData = NULL;
+	unsigned writebackOffset = 0;
+	if (_hasGroup)
+	{
+		void* valueData = NULL;
+
+		// Determine which source mapping we're using
+		if (_current._readAsInt)
+		{
+			outputData = getGroupedAggregate<int>(intValue, _intGrouping);
+			valueData = &intValue;
+			writebackOffset = sizeof(intValue);
+		}
+		else
+		{
+			outputData = getGroupedAggregate<float>(realValue, _realGrouping);
+			valueData = &realValue;
+			writebackOffset = sizeof(realValue);
+		}
+
+		// Append the value into only this group's aggregate
+		outputData->append(_operation, realValue, intValue);
+
+		// With grouped aggregates, we write out the value we just read in first before the aggregate
+		memcpy(data, valueData, writebackOffset);
+	}
+	else
+	{
+		// Without grouping, just return the total aggregate data
+		outputData = &_current;
+	}
+
+	// Finally, Write out the aggregate value for the user
+	outputData->write((char*)data + writebackOffset);
 	
 	return rc::OK;
 }

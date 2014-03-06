@@ -311,13 +311,11 @@ class INLJoin : public Joiner {
 
 struct AggregateData
 {
-public:
 	void init(AttrType type, AggregateOp op);
 	void write(void* dest) const;
 	void read(const void* data, unsigned attributeOffset, float& f, int& i);
 	void append(AggregateOp op, float realData, int intData);
 
-private:
 	float _realValue;
 	int _intValue;
 	unsigned _count;
@@ -353,6 +351,9 @@ private:
 	static std::string constructAggregateAttribute(AggregateOp op, const std::string& attributeName);
 	static std::string getAggregateName(AggregateOp op);
 
+	template <typename T>
+	AggregateData* getGroupedAggregate(T value, std::map<T, AggregateData>& groupMap);
+
 	Iterator* _input;
 	Attribute _aggrigateAttribute;
 	Attribute _groupAttribute;
@@ -363,6 +364,8 @@ private:
 	unsigned _groupAttributeIndex;
 
 	AggregateData _current;
+	std::map<float, AggregateData> _realGrouping;
+	std::map<int, AggregateData> _intGrouping;
 
 	bool _hasGroup;
 	char _buffer[PAGE_SIZE];
