@@ -22,7 +22,7 @@ bool RUN_TEST_08 = true;
 bool RUN_TEST_09 = true;
 bool RUN_TEST_10 = true;
 bool RUN_TEST_11 = true;
-bool RUN_TEST_12 = true;
+bool RUN_TEST_12 = false;
 bool RUN_TEST_E1 = true;
 bool RUN_TEST_E2 = true;
 bool RUN_TEST_E3 = true;
@@ -1937,4 +1937,3 @@ print_point:
 	
 	return 0;
 }
-

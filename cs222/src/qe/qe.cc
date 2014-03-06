@@ -365,17 +365,19 @@ RC INLJoin::resetInner()
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curRealValue(0.0f), _curIntValue(0), _curCount(0)
+: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false)
 {
 	_input->getAttributes(_attributes);
 
 	RC ret = RBFM_ScanIterator::findAttributeByName(_attributes, _aggrigateAttribute.name, _aggrigateAttributeIndex);
 	assert(ret == rc::OK);
+
+	_current.init(_attributes[_aggrigateAttributeIndex].type, _operation);
 }
 
 // TODO: What is a group attribute??
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curRealValue(0.0f), _curIntValue(0), _curCount(0)
+: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true)
 {
 	_input->getAttributes(_attributes);
 
@@ -384,6 +386,90 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, Aggreg
 
 	ret = RBFM_ScanIterator::findAttributeByName(_attributes, _groupAttribute.name, _groupAttributeIndex);
 	assert(ret == rc::OK);
+
+	_current.init(_attributes[_aggrigateAttributeIndex].type, _operation);
+}
+
+void AggregateData::init(AttrType type, AggregateOp op)
+{
+	_realValue = 0.0f;
+	_intValue = 0;
+	_count = 0;
+	
+	_readAsInt = (type == TypeInt);
+
+	// In most cases we write out the same format we read in
+	_writeAsInt = _readAsInt;
+	switch (op)
+	{
+	case COUNT: // counts are always written out as integers
+		_writeAsInt = true;
+		break;
+
+	case AVG: // averages are always writen out as reals
+		_writeAsInt = false;
+		break;
+	}
+}
+
+void AggregateData::append(AggregateOp op, float realData, int intData)
+{
+	switch (op)
+	{
+	case MIN:
+		_realValue = (realData < _realValue) ? realData : _realValue;
+		_intValue = (intData  < _intValue) ? intData : _intValue;
+		break;
+
+	case MAX:
+		_realValue = (realData > _realValue) ? realData : _realValue;
+		_intValue = (intData  > _intValue) ? intData : _intValue;
+		break;
+
+	case SUM:
+		_realValue += realData;
+		_intValue += intData;
+		break;
+
+	case AVG:
+		_realValue = ((_realValue * (_count - 1)) + realData) / _count;
+		_intValue = (int)(_realValue);
+		break;
+
+	default:
+	case COUNT:
+		_realValue = (float)_count;
+		_intValue = _count;
+		break;
+	}
+}
+
+void AggregateData::write(void* dest) const
+{
+	if (_writeAsInt)
+	{
+		memcpy(dest, &_intValue, sizeof(_intValue));
+	}
+	else
+	{
+		memcpy(dest, &_realValue, sizeof(_realValue));
+	}
+}
+
+void AggregateData::read(const void* data, unsigned attributeOffset, float& f, int& i)
+{
+	if (_readAsInt)
+	{
+		i  = *(int*)((char*)data+ attributeOffset);
+		f = (float)i;
+	}
+	else
+	{
+		f = *(float*)((char*)data + attributeOffset);
+		i = (int)f;
+	}
+
+	++_count;
 }
 
 RC Aggregate::getNextTuple(void* data)
@@ -402,67 +488,12 @@ RC Aggregate::getNextTuple(void* data)
 		attributeOffset += Attribute::sizeInBytes(_attributes[i].type, _buffer + attributeOffset);
 	}
 
-	// Extract the data we want
-	bool usingInt = _attributes[_aggrigateAttributeIndex].type == TypeInt;
-
-	int intData;
-	float realData;
-	if (usingInt)
-	{
-		intData = *(int*)(_buffer + attributeOffset);
-		realData = (float)intData;
-	}
-	else
-	{
-		realData = *(float*)(_buffer + attributeOffset);
-		intData = (int)realData;
-	}
-
-	// Increment our count of how many values we've aggregated
-	++_curCount;
-
-	// Do aggregation
-	switch (_operation)
-	{
-	case MIN:
-		_curRealValue = (realData < _curRealValue) ? realData : _curRealValue;
-		_curIntValue  = (intData  < _curIntValue)  ? intData  : _curIntValue;
-		break;
-
-	case MAX:		
-		_curRealValue = (realData > _curRealValue) ? realData : _curRealValue;
-		_curIntValue  = (intData  > _curIntValue)  ? intData  : _curIntValue;
-		break;
-
-	case SUM:		
-		_curRealValue += realData;
-		_curIntValue  += intData;
-		break;
-
-	case AVG:
-		usingInt = false; // force averages to be floats
-		_curRealValue = ((_curRealValue * (_curCount - 1)) + realData) / _curCount;
-		_curIntValue  = (int)(_curRealValue);
-		break;
-
-	default:
-	case COUNT:
-		usingInt = false; // force counts to be ints
-		_curRealValue = (float)_curCount;
-		_curIntValue  = _curCount;
-		break;
-	}
+	float realValue;
+	int intValue;
+	_current.read(_buffer, attributeOffset, realValue, intValue);
+	_current.append(_operation, realValue, intValue);
+	_current.write(data);
 	
-	// Finally, write out the value for the user
-	if (usingInt)
-	{
-		memcpy(data, &_curIntValue, sizeof(int));
-	}
-	else
-	{
-		memcpy(data, &_curRealValue, sizeof(float));
-	}
-
 	return rc::OK;
 }
 
@@ -470,10 +501,11 @@ void Aggregate::getAttributes(vector<Attribute>& attrs) const
 {
 	attrs.clear();
 	
-	// TODO: I'm not sure if this is what we're supposed to do here
 	Attribute attribute = _aggrigateAttribute;
 	attribute.name = constructAggregateAttribute(_operation, _aggrigateAttribute.name);
 	attrs.push_back(attribute);
+
+	// TODO: Handle grouped attributes
 }
 
 std::string Aggregate::constructAggregateAttribute(AggregateOp op, const std::string& attributeName)

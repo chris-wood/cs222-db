@@ -309,6 +309,21 @@ class INLJoin : public Joiner {
 		virtual RC resetInner();
 };
 
+struct AggregateData
+{
+public:
+	void init(AttrType type, AggregateOp op);
+	void write(void* dest) const;
+	void read(const void* data, unsigned attributeOffset, float& f, int& i);
+	void append(AggregateOp op, float realData, int intData);
+
+private:
+	float _realValue;
+	int _intValue;
+	unsigned _count;
+	bool _readAsInt;
+	bool _writeAsInt;
+};
 
 class Aggregate : public Iterator {
     // Aggregation operator
@@ -347,9 +362,7 @@ private:
 	unsigned _aggrigateAttributeIndex;
 	unsigned _groupAttributeIndex;
 
-	float _curRealValue;
-	int _curIntValue;
-	unsigned _curCount;
+	AggregateData _current;
 
 	bool _hasGroup;
 	char _buffer[PAGE_SIZE];
