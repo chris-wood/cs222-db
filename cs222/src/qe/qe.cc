@@ -109,8 +109,7 @@ Project::~Project()
 
 void Project::getAttributes(vector<Attribute> &attrs) const
 {
-	// need to be able to concat attributes from the JOIN getAttributes()
-	//attrs.clear(); // ensure we don't add on more than what's expected
+	attrs.clear(); // ensure we don't add on more than what's expected
 	for (unsigned i = 0; i < _projectAttributes.size(); i++)
 	{
 		attrs.push_back(_projectAttributes[i]);
@@ -337,9 +336,18 @@ RC Joiner::getNextTuple(void* data)
 
 void Joiner::getAttributes(vector<Attribute> &attrs) const
 {
-	// Concat both?
-	_outer.iter->getAttributes(attrs);
-	_inner.iter->getAttributes(attrs);
+	attrs.clear();
+
+	// Concat both attributes together
+	for (vector<Attribute>::const_iterator it = _outer.attributes.begin(); it != _outer.attributes.end(); ++it)
+	{
+		attrs.push_back(*it);
+	}
+
+	for (vector<Attribute>::const_iterator it = _inner.attributes.begin(); it != _inner.attributes.end(); ++it)
+	{
+		attrs.push_back(*it);
+	}
 }
 
 RC NLJoin::resetInner()
