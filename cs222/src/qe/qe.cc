@@ -1,5 +1,6 @@
 #include "qe.h"
 #include <assert.h>
+#include <sstream>
 
 bool Condition::compare(AttrType type, const void* left, const void* right) const
 {
@@ -361,4 +362,48 @@ RC INLJoin::resetInner()
 	// TODO: Do we ever need to remember the values from the iterator initialization before?
 	static_cast<IndexScan*>(_inner.iter)->setIterator(NULL, NULL, true, true);
 	return rc::OK;
+}
+
+Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
+: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curValue(0.0f)
+{
+}
+
+Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
+: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curValue(0.0f)
+{
+}
+
+RC Aggregate::getNextTuple(void* data)
+{
+	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+}
+
+void Aggregate::getAttributes(vector<Attribute>& attrs) const
+{
+
+}
+
+std::string Aggregate::constructAggregateAttribute(AggregateOp op, const std::string& attributeName)
+{
+	std::stringstream s;
+	s << getAggregateName(op);
+	s << '(';
+	s << attributeName;
+	s << ')';
+
+	return s.str();
+}
+
+std::string Aggregate::getAggregateName(AggregateOp op)
+{
+	switch (op)
+	{
+	case MIN:		return "MIN";
+	case MAX:		return "MAX";
+	case SUM:		return "SUM";
+	case AVG:		return "AVG";
+	case COUNT:		return "COUNT";
+	default:		return "???";
+	}
 }

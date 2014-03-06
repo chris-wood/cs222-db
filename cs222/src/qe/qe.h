@@ -313,25 +313,38 @@ class INLJoin : public Joiner {
 class Aggregate : public Iterator {
     // Aggregation operator
     public:
-        Aggregate(Iterator *input,                              // Iterator of input R
+        Aggregate(Iterator* input,                              // Iterator of input R
                   Attribute aggAttr,                            // The attribute over which we are computing an aggregate
                   AggregateOp op                                // Aggregate operation
-        ){};
+        );
 
         // Extra Credit
-        Aggregate(Iterator *input,                              // Iterator of input R
+        Aggregate(Iterator* input,                              // Iterator of input R
                   Attribute aggAttr,                            // The attribute over which we are computing an aggregate
                   Attribute gAttr,                              // The attribute over which we are grouping the tuples
                   AggregateOp op                                // Aggregate operation
-        ){};
+        );
 
         ~Aggregate(){};
 
-        RC getNextTuple(void *data){return QE_EOF;};
+		RC getNextTuple(void* data);
+
         // Please name the output attribute as aggregateOp(aggAttr)
         // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
         // output attrname = "MAX(rel.attr)"
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute>& attrs) const;
+
+private:
+	static std::string constructAggregateAttribute(AggregateOp op, const std::string& attributeName);
+	static std::string getAggregateName(AggregateOp op);
+
+	Iterator* _input;
+	Attribute _aggrigateAttribute;
+	Attribute _groupAttribute;
+	AggregateOp _operation;
+
+	bool _hasGroup;
+	float _curValue;
 };
 
 #endif
