@@ -14,15 +14,15 @@ bool QUIET_TESTS = true;
 bool RUN_TEST_01 = true;
 bool RUN_TEST_02 = true;
 bool RUN_TEST_03 = true;
-bool RUN_TEST_04 = false;
-bool RUN_TEST_05 = false;
-bool RUN_TEST_06 = false;
-bool RUN_TEST_07 = false;
-bool RUN_TEST_08 = false;
-bool RUN_TEST_09 = false;
-bool RUN_TEST_10 = false;
-bool RUN_TEST_11 = false;
-bool RUN_TEST_12 = false;
+bool RUN_TEST_04 = true;
+bool RUN_TEST_05 = true;
+bool RUN_TEST_06 = true;
+bool RUN_TEST_07 = true;
+bool RUN_TEST_08 = true;
+bool RUN_TEST_09 = true;
+bool RUN_TEST_10 = true;
+bool RUN_TEST_11 = true;
+bool RUN_TEST_12 = true;
 bool RUN_TEST_E1 = true;
 bool RUN_TEST_E2 = true;
 bool RUN_TEST_E3 = true;
@@ -1335,7 +1335,8 @@ int extraTestCase_1()
     while(agg->getNextTuple(data) != QE_EOF)
     {
     	maxVal = *(int *)data;
-        cout << "MAX(left.B) " << maxVal << endl;
+		if (!QUIET_TESTS)
+			cout << "MAX(left.B) " << maxVal << endl;
         memset(data, 0, sizeof(int));
     }
 
@@ -1373,11 +1374,12 @@ int extraTestCase_2()
     while(agg->getNextTuple(data) != QE_EOF)
     {
     	average = *(float *)data;
-        cout << "AVG(right.B) " << average << endl;
+		if (!QUIET_TESTS)
+			cout << "AVG(right.B) " << average << endl;
         memset(data, 0, sizeof(float));
     }
 
-    if (average != 59.5) {
+    if (average != 69.5) {
     	rc = fail;
     }
 
