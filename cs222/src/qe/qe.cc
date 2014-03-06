@@ -365,7 +365,7 @@ RC INLJoin::resetInner()
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curValue(0.0f)
+: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curRealValue(0.0f), _curIntValue(0)
 {
 	_input->getAttributes(_attributes);
 
@@ -374,7 +374,7 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curValue(0.0f)
+: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curRealValue(0.0f), _curIntValue(0)
 {
 	_input->getAttributes(_attributes);
 
@@ -402,61 +402,65 @@ RC Aggregate::getNextTuple(void* data)
 	}
 
 	// Extract the data we want
+	const bool usingInt = _attributes[_aggrigateAttributeIndex].type == TypeInt;
+
 	int intData;
 	float realData;
-	switch (_attributes[_aggrigateAttributeIndex].type)
+	if (usingInt)
 	{
-	case TypeReal:
-		realData = *(float*)(_buffer + attributeOffset);
-		intData = (int)realData;
-		break;
-
-	default:
-		assert(false);
-	case TypeInt:
 		intData = *(int*)(_buffer + attributeOffset);
 		realData = (float)intData;
-		break;
+	}
+	else
+	{
+		realData = *(float*)(_buffer + attributeOffset);
+		intData = (int)realData;
 	}
 
-	// From here on out we'll just use the float version of the data
+	// Increment our count of how many values we've aggregated
 	++_curCount;
-	_curValue = aggregate(_operation, _curCount, _curValue, realData);
 
-	// TODO: What do we write out to data*?
-	memcpy(data, &_curValue, sizeof(float));
-
-	return rc::OK;
-}
-
-float Aggregate::aggregate(AggregateOp op, unsigned count, float current, float data)
-{
-	float newAggregate = current;
-	switch (op)
+	// Do aggregation
+	switch (_operation)
 	{
 	case MIN:
-		newAggregate = (data < current) ? data : current;
+		_curRealValue = (realData < _curRealValue) ? realData : _curRealValue;
+		_curIntValue  = (intData  < _curIntValue)  ? intData  : _curIntValue;
 		break;
 
-	case MAX:
-		newAggregate = (data > current) ? data : current;
+	case MAX:		
+		_curRealValue = (realData > _curRealValue) ? realData : _curRealValue;
+		_curIntValue  = (intData  > _curIntValue)  ? intData  : _curIntValue;
 		break;
 
-	case SUM:
-		newAggregate = data + current;
+	case SUM:		
+		_curRealValue += realData;
+		_curIntValue  += intData;
 		break;
 
 	case AVG:
-		newAggregate = 0.0f; // TODO: Average
+		_curRealValue = ((_curRealValue * (_curCount - 1)) + realData) / _curCount;
+		_curIntValue  = (int)(_curRealValue);
 		break;
 
 	default:
-	case COUNT:
-		newAggregate = (float)count; // TODO: Keep track of this as an int?
+	case COUNT:		
+		_curRealValue = (float)_curCount;
+		_curIntValue  = _curCount;
 		break;
 	}
+	
+	// Finally, write out the value for the user
+	if (usingInt)
+	{
+		memcpy(data, &_curIntValue, sizeof(int));
+	}
+	else
+	{
+		memcpy(data, &_curRealValue, sizeof(float));
+	}
 
-	return newAggregate;
+	return rc::OK;
 }
 
 void Aggregate::getAttributes(vector<Attribute>& attrs) const

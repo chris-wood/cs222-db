@@ -337,7 +337,6 @@ class Aggregate : public Iterator {
 private:
 	static std::string constructAggregateAttribute(AggregateOp op, const std::string& attributeName);
 	static std::string getAggregateName(AggregateOp op);
-	static float aggregate(AggregateOp op, unsigned count, float current, float data);
 
 	Iterator* _input;
 	Attribute _aggrigateAttribute;
@@ -348,7 +347,8 @@ private:
 	unsigned _aggrigateAttributeIndex;
 	unsigned _groupAttributeIndex;
 
-	float _curValue;
+	float _curRealValue;
+	int _curIntValue;
 	unsigned _curCount;
 
 	bool _hasGroup;

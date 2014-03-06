@@ -24,9 +24,9 @@ bool RUN_TEST_10 = false;
 bool RUN_TEST_11 = false;
 bool RUN_TEST_12 = false;
 bool RUN_TEST_E1 = true;
-bool RUN_TEST_E2 = false;
-bool RUN_TEST_E3 = false;
-bool RUN_TEST_E4 = false;
+bool RUN_TEST_E2 = true;
+bool RUN_TEST_E3 = true;
+bool RUN_TEST_E4 = true;
 
 #ifndef _success_
 #define _success_
