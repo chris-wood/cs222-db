@@ -9,6 +9,8 @@
 
 #include "qe.h"
 
+bool QUIET_TESTS = true;
+
 bool RUN_TEST_01 = true;
 bool RUN_TEST_02 = true;
 bool RUN_TEST_03 = true;
@@ -19,8 +21,8 @@ bool RUN_TEST_07 = true;
 bool RUN_TEST_08 = true;
 bool RUN_TEST_09 = true;
 bool RUN_TEST_10 = true;
-bool RUN_TEST_11 = true;
-bool RUN_TEST_12 = true;
+bool RUN_TEST_11 = false;
+bool RUN_TEST_12 = false;
 bool RUN_TEST_E1 = false;
 bool RUN_TEST_E2 = false;
 bool RUN_TEST_E3 = false;
@@ -474,12 +476,14 @@ int testCase_3() {
 	while (filter->getNextTuple(data) != QE_EOF) {
 		int offset = 0;
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.B
 		valueB = *(int *) ((char *) data + offset);
-		cout << "left.B " << valueB << endl;
+		if (!QUIET_TESTS)
+			cout << "left.B " << valueB << endl;
 		offset += sizeof(int);
 		if (valueB > compVal) {
 			rc = fail;
@@ -487,7 +491,8 @@ int testCase_3() {
 		}
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		memset(data, 0, bufSize);
@@ -538,12 +543,14 @@ int testCase_4() {
 	while (filter->getNextTuple(data) != QE_EOF) {
 		int offset = 0;
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print right.C
 		valueC = *(float *) ((char *) data + offset);
-		cout << "right.C " << valueC << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << valueC << endl;
 		offset += sizeof(float);
 		if (valueC < compVal) {
 			rc = fail;
@@ -551,7 +558,8 @@ int testCase_4() {
 		}
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -594,12 +602,14 @@ int testCase_5() {
 		int offset = 0;
 
 		// Print right.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.D
 		valueD = *(int *) ((char *) data + offset);
-		cout << "right.D " << valueD << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << valueD << endl;
 		offset += sizeof(int);
 		if (valueD < 0 || valueD > 99) {
 			rc = fail;
@@ -650,20 +660,24 @@ int testCase_6() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.B
-		cout << "left.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
 		valueB =  *(int *) ((char *) data + offset);
-		cout << "right.B " << valueB << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << valueB << endl;
 		offset += sizeof(int);
 
 		if (valueB < 20 || valueB > 109) {
@@ -672,11 +686,13 @@ int testCase_6() {
 		}
 
 		// Print right.C
-		cout << "right.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -724,24 +740,29 @@ int testCase_7() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.B
-		cout << "left.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print right.C
 		valueC = *(float *) ((char *) data + offset);
-		cout << "right.C " << valueC << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << valueC << endl;
 		offset += sizeof(float);
 		if (valueC < 50.0 || valueC > 124.0) {
 			rc = fail;
@@ -749,7 +770,8 @@ int testCase_7() {
 		}
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -813,12 +835,14 @@ int testCase_8() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.B
 		valueB = *(int *) ((char *) data + offset);
-		cout << "left.B " << valueB << endl;
+		if (!QUIET_TESTS)
+			cout << "left.B " << valueB << endl;
 		offset += sizeof(int);
 		if (valueB < 100 || valueB > 109) {
 			rc = fail;
@@ -826,20 +850,24 @@ int testCase_8() {
 		}
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 
 		// Print right.C
-		cout << "right.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -915,20 +943,24 @@ int testCase_9_Grad() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print right.C
 		valueC = *(float *) ((char *) data + offset);
-		cout << "right.C " << valueC << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << valueC << endl;
 		offset += sizeof(float);
 		if (valueC < 50.0 || valueC > 114.0) {
 			rc = fail;
@@ -936,7 +968,8 @@ int testCase_9_Grad() {
 		}
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -1013,20 +1046,24 @@ int testCase_9_Undergrad() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print right.C
 		valueC = *(float *) ((char *) data + offset);
-		cout << "right.C " << valueC << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << valueC << endl;
 		offset += sizeof(float);
 		if (valueC < 50.0 || valueC > 114.0) {
 			rc = fail;
@@ -1034,7 +1071,8 @@ int testCase_9_Undergrad() {
 		}
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -1084,27 +1122,33 @@ int testCase_10() {
 		int offset = 0;
 
 		// Print left.A
-		cout << "left.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.B
-		cout << "left.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print left.C
-		cout << "left.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "left.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.B
-		cout << "right.B " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.B " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print right.C
-		cout << "right.C " << *(float *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		// Print right.D
-		cout << "right.D " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "right.D " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		memset(data, 0, bufSize);
@@ -1157,19 +1201,22 @@ int testCase_11() {
 		int offset = 0;
 
 		// Print leftvarchar.A
-		cout << "leftvarchar.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print leftvarchar.B
 		int length = *(int *) ((char *) data + offset);
 		offset += 4;
-		cout << "leftvarchar.B.length " << length << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.B.length " << length << endl;
 
 		char *b = (char *) malloc(100);
 		memcpy(b, (char *) data + offset, length);
 		b[length] = '\0';
 		offset += length;
-		cout << "leftvarchar.B " << b << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.B " << b << endl;
 
 		memset(data, 0, bufSize);
 		++actualResultCnt;
@@ -1214,34 +1261,39 @@ int testCase_12() {
 		int offset = 0;
 
 		// Print leftvarchar.A
-		cout << "leftvarchar.A " << *(int *) ((char *) data + offset) << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
 		// Print leftvarchar.B
 		int length = *(int *) ((char *) data + offset);
 		offset += 4;
-		cout << "leftvarchar.B.length " << length << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.B.length " << length << endl;
 
 		char *b = (char *) malloc(100);
 		memcpy(b, (char *) data + offset, length);
 		b[length] = '\0';
 		offset += length;
-		cout << "leftvarchar.B " << b << endl;
+		if (!QUIET_TESTS)
+			cout << "leftvarchar.B " << b << endl;
 
 		// Print rightvarchar.B
 		length = *(int *) ((char *) data + offset);
 		offset += 4;
-		cout << "rightvarchar.B.length " << length << endl;
+		if (!QUIET_TESTS)
+			cout << "rightvarchar.B.length " << length << endl;
 
 		b = (char *) malloc(100);
 		memcpy(b, (char *) data + offset, length);
 		b[length] = '\0';
 		offset += length;
-		cout << "rightvarchar.B " << b << endl;
+		if (!QUIET_TESTS)
+			cout << "rightvarchar.B " << b << endl;
 
 		// Print rightvarchar.B
-		cout << "rightvarchar.C " << *(float *) ((char *) data + offset)
-				<< endl;
+		if (!QUIET_TESTS)
+			cout << "rightvarchar.C " << *(float *) ((char *) data + offset) << endl;
 		offset += sizeof(float);
 
 		memset(data, 0, bufSize);
@@ -1475,6 +1527,7 @@ void cleanup()
 	remove("right.A");
 	remove("right.B");
 	remove("right.C");
+	remove("right.D");
 
 	remove("rightvarchar");
 
@@ -1871,6 +1924,8 @@ int main() {
 	}
 
 print_point: 
+	cleanup();
+
 	cout << "\n\n===========================================================\n";
 	cout << "grad-point: " << g_nGradPoint << "/" << g_nTotalGradPoint;
 	cout << "\t\t grad-extra-point: " << g_nGradExtraPoint << "/" << g_nTotalGradExtraPoint << endl;
