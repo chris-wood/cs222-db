@@ -373,7 +373,7 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
 	RC ret = RBFM_ScanIterator::findAttributeByName(_attributes, _aggrigateAttribute.name, _aggrigateAttributeIndex);
 	assert(ret == rc::OK);
 
-	_current.init(_attributes[_aggrigateAttributeIndex].type, _operation);
+	_totalAggregate.init(_attributes[_aggrigateAttributeIndex].type, _operation);
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
@@ -387,7 +387,8 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, Aggreg
 	ret = RBFM_ScanIterator::findAttributeByName(_attributes, _groupAttribute.name, _groupAttributeIndex);
 	assert(ret == rc::OK);
 
-	_current.init(_attributes[_aggrigateAttributeIndex].type, _operation);
+	_totalAggregate.init(_attributes[_aggrigateAttributeIndex].type, _operation);
+	_groupingAggregate.init(_attributes[_groupAttributeIndex].type, _operation);
 }
 
 void AggregateData::init(AttrType type, AggregateOp op)
@@ -530,10 +531,10 @@ RC Aggregate::getNextTuple(void* data)
 	// Read the value the iterator provided
 	float realValue;
 	int intValue;
-	_current.read(_buffer, attributeOffset, realValue, intValue);
+	_totalAggregate.read(_buffer, attributeOffset, realValue, intValue);
 
 	// Append the value into our current total aggregation
-	_current.append(_operation, realValue, intValue);
+	_totalAggregate.append(_operation, realValue, intValue);
 
 	// If we are using grouped aggregates, determine which grouping this goes into
 	AggregateData* outputData = NULL;
@@ -541,31 +542,42 @@ RC Aggregate::getNextTuple(void* data)
 	if (_hasGroup)
 	{
 		void* valueData = NULL;
+		float groupingRealValue;
+		int groupingIntValue;
 
-		// Determine which source mapping we're using
-		if (_current._readAsInt)
+		// Find the offset of the attribute we want
+		attributeOffset = 0;
+		for (unsigned int i = 0; i < _groupAttributeIndex; ++i)
 		{
-			outputData = getGroupedAggregate<int>(intValue, _intGrouping);
+			attributeOffset += Attribute::sizeInBytes(_attributes[i].type, _buffer + attributeOffset);
+		}
+
+		_groupingAggregate.read(_buffer, attributeOffset, groupingRealValue, groupingIntValue);
+
+		// Determine which source mapping we're using based on the GROUPING values
+		if (_groupingAggregate._readAsInt)
+		{
+			outputData = getGroupedAggregate<int>(groupingIntValue, _intGrouping);
 			valueData = &intValue;
 			writebackOffset = sizeof(intValue);
 		}
 		else
 		{
-			outputData = getGroupedAggregate<float>(realValue, _realGrouping);
+			outputData = getGroupedAggregate<float>(groupingRealValue, _realGrouping);
 			valueData = &realValue;
 			writebackOffset = sizeof(realValue);
 		}
 
-		// Append the value into only this group's aggregate
+		// Append the AGGREGATE value into only this group's aggregate
 		outputData->append(_operation, realValue, intValue);
 
-		// With grouped aggregates, we write out the value we just read in first before the aggregate
+		// With grouped aggregates, we write out the AGREGATE value we just read in first before the aggregate
 		memcpy(data, valueData, writebackOffset);
 	}
 	else
 	{
 		// Without grouping, just return the total aggregate data
-		outputData = &_current;
+		outputData = &_totalAggregate;
 	}
 
 	// Finally, Write out the aggregate value for the user

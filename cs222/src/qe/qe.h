@@ -319,6 +319,7 @@ struct AggregateData
 	float _realValue;
 	int _intValue;
 	unsigned _count;
+	
 	bool _readAsInt;
 	bool _writeAsInt;
 };
@@ -363,7 +364,9 @@ private:
 	unsigned _aggrigateAttributeIndex;
 	unsigned _groupAttributeIndex;
 
-	AggregateData _current;
+	AggregateData _totalAggregate;
+
+	AggregateData _groupingAggregate; // used only for metadata
 	std::map<float, AggregateData> _realGrouping;
 	std::map<int, AggregateData> _intGrouping;
 
