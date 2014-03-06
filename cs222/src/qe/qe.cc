@@ -365,7 +365,7 @@ RC INLJoin::resetInner()
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curRealValue(0.0f), _curIntValue(0)
+: _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curRealValue(0.0f), _curIntValue(0), _curCount(0)
 {
 	_input->getAttributes(_attributes);
 
@@ -373,8 +373,9 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
 	assert(ret == rc::OK);
 }
 
+// TODO: What is a group attribute??
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
-: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curRealValue(0.0f), _curIntValue(0)
+: _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curRealValue(0.0f), _curIntValue(0), _curCount(0)
 {
 	_input->getAttributes(_attributes);
 
@@ -402,7 +403,7 @@ RC Aggregate::getNextTuple(void* data)
 	}
 
 	// Extract the data we want
-	const bool usingInt = _attributes[_aggrigateAttributeIndex].type == TypeInt;
+	bool usingInt = _attributes[_aggrigateAttributeIndex].type == TypeInt;
 
 	int intData;
 	float realData;
@@ -439,12 +440,14 @@ RC Aggregate::getNextTuple(void* data)
 		break;
 
 	case AVG:
+		usingInt = false; // force averages to be floats
 		_curRealValue = ((_curRealValue * (_curCount - 1)) + realData) / _curCount;
 		_curIntValue  = (int)(_curRealValue);
 		break;
 
 	default:
-	case COUNT:		
+	case COUNT:
+		usingInt = false; // force counts to be ints
 		_curRealValue = (float)_curCount;
 		_curIntValue  = _curCount;
 		break;
