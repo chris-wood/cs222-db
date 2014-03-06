@@ -558,20 +558,20 @@ RC Aggregate::getNextTuple(void* data)
 		if (_groupingAggregate._readAsInt)
 		{
 			outputData = getGroupedAggregate<int>(groupingIntValue, _intGrouping);
-			valueData = &intValue;
-			writebackOffset = sizeof(intValue);
+			valueData = &groupingIntValue;
+			writebackOffset = sizeof(groupingIntValue);
 		}
 		else
 		{
 			outputData = getGroupedAggregate<float>(groupingRealValue, _realGrouping);
-			valueData = &realValue;
-			writebackOffset = sizeof(realValue);
+			valueData = &groupingRealValue;
+			writebackOffset = sizeof(groupingRealValue);
 		}
 
 		// Append the AGGREGATE value into only this group's aggregate
 		outputData->append(_operation, realValue, intValue);
 
-		// With grouped aggregates, we write out the AGREGATE value we just read in first before the aggregate
+		// With grouped aggregates, we write out the GROUPING value we just read in first before the aggregate
 		memcpy(data, valueData, writebackOffset);
 	}
 	else
@@ -590,6 +590,13 @@ void Aggregate::getAttributes(vector<Attribute>& attrs) const
 {
 	attrs.clear();
 	
+	// If we are grouping, we will output the grouping attributes first
+	if (_hasGroup)
+	{
+		attrs.push_back(_groupAttribute);
+	}
+
+	// No matter what, we output the aggregation attribute
 	Attribute attribute = _aggrigateAttribute;
 	attribute.name = constructAggregateAttribute(_operation, _aggrigateAttribute.name);
 	attrs.push_back(attribute);
