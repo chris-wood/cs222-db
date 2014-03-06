@@ -244,9 +244,11 @@ struct JoinerData
 	Iterator* iter;
 	vector<Attribute> attributes;
 	unsigned attributeIndex;
-	RC prevStatus;
+	unsigned attributeOffset;
+	RC status;
 
 	JoinerData(Iterator* in, const string& attributeName);
+	RC advance(void* data);
 };
 
 class Joiner : public Iterator {
@@ -267,8 +269,8 @@ public:
 	// For attribute in vector<Attribute>, name it as rel.attr
 	void getAttributes(vector<Attribute> &attrs) const;
 
-	static RC copyoutData(const void* dataIn, void* dataOut, const vector<Attribute>& attributes);
-	static RC comapreData(const Condition& condition, const void* dataLeft, const void* dataRight, const vector<Attribute>& attributesLeft, const vector<Attribute>& attributesRight, unsigned attributeIndexLeft, unsigned attributeIndexRight);
+	RC copyoutData(void* dataOut, const void* dataOuter, const void* dataInner);
+	static RC compareData(const Condition& condition, AttrType attrType, const void* dataLeft, const void* dataRight);
 
 protected:
 	inline char* getPage(unsigned pageNum) { return _pageBuffer + (pageNum * PAGE_SIZE);  }

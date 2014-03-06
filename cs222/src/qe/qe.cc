@@ -109,7 +109,8 @@ Project::~Project()
 
 void Project::getAttributes(vector<Attribute> &attrs) const
 {
-	attrs.clear(); // ensure we don't add on more than what's expected
+	// need to be able to concat attributes from the JOIN getAttributes()
+	//attrs.clear(); // ensure we don't add on more than what's expected
 	for (unsigned i = 0; i < _projectAttributes.size(); i++)
 	{
 		attrs.push_back(_projectAttributes[i]);
@@ -202,13 +203,27 @@ RC Filter::getNextTuple(void *data)
 }
 
 JoinerData::JoinerData(Iterator* in, const string& attributeName)
-: iter(in), attributeIndex(0), prevStatus(rc::ITERATOR_NEVER_CALLED)
+: iter(in), attributeIndex(0), status(rc::ITERATOR_NEVER_CALLED)
 {
 	assert(iter != NULL);
 	iter->getAttributes(attributes);
 
 	RC ret = RBFM_ScanIterator::findAttributeByName(attributes, attributeName, attributeIndex);
 	assert(ret == rc::OK);
+}
+
+RC JoinerData::advance(void* data)
+{
+	status = iter->getNextTuple(data);
+
+	// Calculate the offset of the attribute we are using in the input tuple
+	attributeOffset = 0;
+	for (unsigned int i = 0; i < attributeIndex; ++i)
+	{
+		attributeOffset += Attribute::sizeInBytes(attributes[i].type, (char*)data + attributeOffset);
+	}
+
+	return status;
 }
 
 Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned numPages)
@@ -230,44 +245,43 @@ Joiner::~Joiner()
 	free(_pageBuffer);
 }
 
-RC Joiner::copyoutData(const void* dataIn, void* dataOut, const vector<Attribute>& attributes)
+RC Joiner::copyoutData(void* dataOut, const void* dataOuter, const void* dataInner)
 {
-	unsigned dataOffset = 0;
+	unsigned dataOutOffset = 0;
+	unsigned dataInOffset = 0;
 	unsigned len = 0;
 
-	for (vector<Attribute>::const_iterator it = attributes.begin(); it != attributes.end(); ++it)
+	// first copy out the outer attributes
+	for (vector<Attribute>::const_iterator it = _outer.attributes.begin(); it != _outer.attributes.end(); ++it)
 	{
-		len = Attribute::sizeInBytes(it->type, (char*)dataIn + dataOffset);
-		memcpy((char*)dataOut + dataOffset, (char*)dataIn + dataOffset, len);
-		dataOffset += len;
+		len = Attribute::sizeInBytes(it->type, (char*)dataOuter + dataInOffset);
+		memcpy((char*)dataOut + dataOutOffset, (char*)dataOuter + dataInOffset, len);
+		dataOutOffset += len;
+		dataInOffset += len;
+	}
+
+	// next copy the inner attributes
+	dataInOffset = 0;
+	for (vector<Attribute>::const_iterator it = _inner.attributes.begin(); it != _inner.attributes.end(); ++it)
+	{
+		len = Attribute::sizeInBytes(it->type, (char*)dataInner + dataInOffset);
+		memcpy((char*)dataOut + dataOutOffset, (char*)dataInner + dataInOffset, len);
+		dataOutOffset += len;
+		dataInOffset += len;
 	}
 
 	return rc::OK;
 }
 
-RC Joiner::comapreData(const Condition& condition, const void* dataLeft, const void* dataRight, const vector<Attribute>& attributesLeft, const vector<Attribute>& attributesRight, unsigned attributeIndexLeft, unsigned attributeIndexRight)
+RC Joiner::compareData(const Condition& condition, AttrType attrType, const void* dataLeft, const void* dataRight)
 {
-	RC ret = rc::OK;
-	const char* compareLeft = (const char*)dataLeft;
-	const char* compareRight = (const char*)dataRight;
-	
-	for (unsigned int i = 0; i < attributeIndexLeft; ++i)
-	{
-		compareLeft += Attribute::sizeInBytes(attributesLeft[i].type, compareLeft);
-	}
-
-	for (unsigned int i = 0; i < attributeIndexRight; ++i)
-	{
-		compareRight += Attribute::sizeInBytes(attributesRight[i].type, compareRight);
-	}
-
-	return condition.compare(attributesLeft[attributeIndexLeft].type, compareLeft, compareRight);
+	return condition.compare(attrType, dataLeft, dataRight);
 }
 
 RC Joiner::getNextTuple(void* data)
 {
 	// If both our loops have ended, we have nothing else to do
-	if (_outer.prevStatus == QE_EOF && _inner.prevStatus == QE_EOF)
+	if (_outer.status == QE_EOF && _inner.status == QE_EOF)
 	{
 		return QE_EOF;
 	}
@@ -278,54 +292,43 @@ RC Joiner::getNextTuple(void* data)
 	char* innerPage = getPage(1);
 	RC ret = rc::OK;
 
-	// Take care of initial loading of data
-	if (_outer.prevStatus == rc::ITERATOR_NEVER_CALLED)
+	// Take care of initial loading of the outer buffer
+	if (_outer.status == rc::ITERATOR_NEVER_CALLED)
 	{
-		//std::cout << "Initializing outer loop" << std::endl;
-		ret = _outer.prevStatus = _outer.iter->getNextTuple(outerPage);
+		ret = _outer.advance(outerPage);
 		RETURN_ON_ERR(ret);
 	}
 
-	if (_inner.prevStatus == rc::ITERATOR_NEVER_CALLED)
-	{
-		//std::cout << "Initializing inner loop" << std::endl;
-		ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
-		RETURN_ON_ERR(ret);
-	}
+	// We're always advancing the inner buffer
+	ret = _inner.advance(innerPage);
 
 	// Nested loops JOIN
-	while (_outer.prevStatus != QE_EOF)
+	while (_outer.status != QE_EOF)
 	{
-		while (_inner.prevStatus != QE_EOF)
+		while (_inner.status != QE_EOF)
 		{
 			// Compare the two values to see if this is a valid item to return
-			if (_condition.compare(_attrType, outerPage, innerPage))
+			if (compareData(_condition, _attrType, outerPage + _outer.attributeOffset, innerPage + _inner.attributeOffset))
 			{
-				//std::cout << "FOUND MATCH!" << std::endl;
-				// TODO: Are we just assuming we use the outer attributes?
-				return copyoutData(outerPage, data, _outer.attributes);
+				return copyoutData(data, outerPage, innerPage);
 			}
 			else
 			{
-				//std::cout << " ++inner" << std::endl;
-
 				// We need to advance to the next inner value to compare it
-				ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
+				ret = _inner.advance(innerPage);
 			}
 		}
-
-		//std::cout << "++outer" << std::endl;
 
 		// We have reached the end of the inner loop, reset it
 		ret = resetInner();
 		RETURN_ON_ERR(ret);
 
 		// Get the first element of the inner loop again
-		ret = _inner.prevStatus = _inner.iter->getNextTuple(innerPage);
+		ret = _inner.advance(innerPage);
 		RETURN_ON_ERR(ret);
 
-		// Now advance the outer loop by one
-		ret = _outer.prevStatus = _outer.iter->getNextTuple(outerPage);
+		// Now advance the outer loop by one and we'll restart the next inner loop iteration
+		ret = _outer.advance(outerPage);
 	}
 
 	// If we have reached the end of both iterators, we are done
@@ -334,8 +337,9 @@ RC Joiner::getNextTuple(void* data)
 
 void Joiner::getAttributes(vector<Attribute> &attrs) const
 {
-	// TODO: Not sure what to return here?
+	// Concat both?
 	_outer.iter->getAttributes(attrs);
+	_inner.iter->getAttributes(attrs);
 }
 
 RC NLJoin::resetInner()

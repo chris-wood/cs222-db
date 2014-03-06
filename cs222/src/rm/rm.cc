@@ -447,7 +447,8 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	attrs.clear();
+	// need to be able to concat attributes from the JOIN getAttributes()
+	//attrs.clear();
 
 	TableMetaData& tableData = _catalog[tableName];
 	for (vector<Attribute>::const_iterator it = tableData.recordDescriptor.begin(); it != tableData.recordDescriptor.end(); ++it)
