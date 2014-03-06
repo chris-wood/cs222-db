@@ -575,6 +575,9 @@ RC Aggregate::getNextSingleTuple()
 			aggregate = getGroupedAggregate<float>(groupingRealValue, _realGrouping);
 			memcpy(aggregate->_groupingData, &groupingRealValue, sizeof(groupingRealValue));
 		}
+
+		// Apppend the actual AGGREGATION data to the appropriate bucket
+		aggregate->append(_operation, realValue, intValue);
 	}
 
 	return rc::OK;
