@@ -1,12 +1,12 @@
 #include "qe.h"
 #include <assert.h>
 
-bool Condition::compare(AttrType type, void* left, void* right) const
+bool Condition::compare(AttrType type, const void* left, const void* right) const
 {
 	return RBFM_ScanIterator::compareData(type, op, left, right);
 }
 
-bool Condition::compare(void* thatData) const
+bool Condition::compare(const void* thatData) const
 {
 	return RBFM_ScanIterator::compareData(rhsValue.type, op, thatData, rhsValue.data);
 }
@@ -255,6 +255,25 @@ RC Joiner::copyoutData(const void* dataIn, void* dataOut, const vector<Attribute
 	}
 
 	return rc::OK;
+}
+
+RC Joiner::comapreData(const Condition& condition, const void* dataLeft, const void* dataRight, const vector<Attribute>& attributesLeft, const vector<Attribute>& attributesRight, unsigned attributeIndexLeft, unsigned attributeIndexRight)
+{
+	RC ret = rc::OK;
+	const char* compareLeft = (const char*)dataLeft;
+	const char* compareRight = (const char*)dataRight;
+	
+	for (unsigned int i = 0; i < attributeIndexLeft; ++i)
+	{
+		compareLeft += Attribute::sizeInBytes(attributesLeft[i].type, compareLeft);
+	}
+
+	for (unsigned int i = 0; i < attributeIndexRight; ++i)
+	{
+		compareRight += Attribute::sizeInBytes(attributesRight[i].type, compareRight);
+	}
+
+	return condition.compare(attributesLeft[attributeIndexLeft].type, compareLeft, compareRight);
 }
 
 RC Joiner::getNextTuple(void* data)

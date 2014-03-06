@@ -24,10 +24,10 @@ public:
 
 	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
-	static bool compareData(AttrType type, CompOp op, void* a, void* b);
-	static bool compareInt(CompOp op, void* a, void* b);
-	static bool compareReal(CompOp op, void* a, void* b);
-	static bool compareVarChar(CompOp op, void* a, void* b);
+	static bool compareData(AttrType type, CompOp op, const void* a, const void* b);
+	static bool compareInt(CompOp op, const void* a, const void* b);
+	static bool compareReal(CompOp op, const void* a, const void* b);
+	static bool compareVarChar(CompOp op, const void* a, const void* b);
 
 private:
 	void nextRecord(unsigned numSlots);

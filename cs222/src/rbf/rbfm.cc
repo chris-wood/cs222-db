@@ -401,7 +401,7 @@ RC RBFM_ScanIterator::close()
 	return rc::OK;
 }
 
-bool RBFM_ScanIterator::compareData(AttrType type, CompOp op, void* a, void* b)
+bool RBFM_ScanIterator::compareData(AttrType type, CompOp op, const void* a, const void* b)
 {
 	switch (type)
 	{
@@ -419,7 +419,7 @@ bool RBFM_ScanIterator::compareData(AttrType type, CompOp op, void* a, void* b)
 	}
 }
 
-bool RBFM_ScanIterator::compareInt(CompOp op, void* a, void* b)
+bool RBFM_ScanIterator::compareInt(CompOp op, const void* a, const void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
@@ -438,7 +438,7 @@ bool RBFM_ScanIterator::compareInt(CompOp op, void* a, void* b)
 	}
 }
 
-bool RBFM_ScanIterator::compareReal(CompOp op, void* a, void* b)
+bool RBFM_ScanIterator::compareReal(CompOp op, const void* a, const void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
@@ -457,7 +457,7 @@ bool RBFM_ScanIterator::compareReal(CompOp op, void* a, void* b)
 	}
 }
 
-bool RBFM_ScanIterator::compareVarChar(CompOp op, void* a, void* b)
+bool RBFM_ScanIterator::compareVarChar(CompOp op, const void* a, const void* b)
 {
 	assert(a != NULL);
 	assert(b != NULL);

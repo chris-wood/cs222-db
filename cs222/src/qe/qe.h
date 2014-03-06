@@ -33,8 +33,8 @@ struct Condition {
     string rhsAttr;         // right-hand side attribute if bRhsIsAttr = TRUE
     Value   rhsValue;       // right-hand side value if bRhsIsAttr = FALSE
 
-	bool compare(void* thatData) const;
-	bool compare(AttrType type, void* left, void* right) const;
+	bool compare(const void* thatData) const;
+	bool compare(AttrType type, const void* left, const void* right) const;
 
 	static RC splitAttr(const string& input, string& rel, string& attr);
 };
@@ -268,6 +268,7 @@ public:
 	void getAttributes(vector<Attribute> &attrs) const;
 
 	static RC copyoutData(const void* dataIn, void* dataOut, const vector<Attribute>& attributes);
+	static RC comapreData(const Condition& condition, const void* dataLeft, const void* dataRight, const vector<Attribute>& attributesLeft, const vector<Attribute>& attributesRight, unsigned attributeIndexLeft, unsigned attributeIndexRight);
 
 protected:
 	inline char* getPage(unsigned pageNum) { return _pageBuffer + (pageNum * PAGE_SIZE);  }
