@@ -389,6 +389,18 @@ Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, Aggreg
 
 	_totalAggregate.init(_attributes[_aggrigateAttributeIndex].type, _operation);
 	_groupingAggregate.init(_attributes[_groupAttributeIndex].type, _operation);
+
+	// Scan through the entire table and populate our hash map with grouped aggregate data
+	ret = rc::OK;
+	while ((ret = getNextSingleTuple()) == rc::OK)
+	{
+	}
+
+	assert(ret == QE_EOF);
+
+	// Intialize our iterators
+	_realGroupingIterator = _realGrouping.begin();
+	_intGroupingIterator = _intGrouping.begin();
 }
 
 void AggregateData::init(AttrType type, AggregateOp op)
@@ -512,7 +524,7 @@ AggregateData* Aggregate::getGroupedAggregate(T value, std::map<T, AggregateData
 	return &(it->second);
 }
 
-RC Aggregate::getNextTuple(void* data)
+RC Aggregate::getNextSingleTuple()
 {
 	RC ret = rc::OK;
 	memset(_buffer, 0, sizeof(_buffer));
@@ -537,11 +549,9 @@ RC Aggregate::getNextTuple(void* data)
 	_totalAggregate.append(_operation, realValue, intValue);
 
 	// If we are using grouped aggregates, determine which grouping this goes into
-	AggregateData* outputData = NULL;
-	unsigned writebackOffset = 0;
 	if (_hasGroup)
 	{
-		void* valueData = NULL;
+		AggregateData* aggregate = NULL;
 		float groupingRealValue;
 		int groupingIntValue;
 
@@ -557,33 +567,67 @@ RC Aggregate::getNextTuple(void* data)
 		// Determine which source mapping we're using based on the GROUPING values
 		if (_groupingAggregate._readAsInt)
 		{
-			outputData = getGroupedAggregate<int>(groupingIntValue, _intGrouping);
-			valueData = &groupingIntValue;
-			writebackOffset = sizeof(groupingIntValue);
+			aggregate = getGroupedAggregate<int>(groupingIntValue, _intGrouping);
+			memcpy(aggregate->_groupingData, &groupingIntValue, sizeof(groupingIntValue));
 		}
 		else
 		{
-			outputData = getGroupedAggregate<float>(groupingRealValue, _realGrouping);
-			valueData = &groupingRealValue;
-			writebackOffset = sizeof(groupingRealValue);
+			aggregate = getGroupedAggregate<float>(groupingRealValue, _realGrouping);
+			memcpy(aggregate->_groupingData, &groupingRealValue, sizeof(groupingRealValue));
 		}
+	}
 
-		// Append the AGGREGATE value into only this group's aggregate
-		outputData->append(_operation, realValue, intValue);
+	return rc::OK;
+}
 
-		// With grouped aggregates, we write out the GROUPING value we just read in first before the aggregate
-		memcpy(data, valueData, writebackOffset);
+template <typename T>
+RC Aggregate::getNextGroup(void* data, std::map<T, AggregateData>& groupMap, typename std::map<T, AggregateData>::const_iterator& groupIter)
+{
+	// Have we run out of groups to return?
+	if (groupIter == groupMap.end())
+	{
+		return QE_EOF;
+	}
+
+	void* groupingValue = (void*)groupIter->second._groupingData;
+
+	// Output the GROUPING value
+	memcpy(data, groupingValue, 4);
+
+	// Output the AGGREAGTE value
+	groupIter->second.write((char*)data + 4);
+
+	// Advance our iterator and we're done
+	++groupIter;
+
+	return rc::OK;
+}
+
+RC Aggregate::getNextTuple(void* data)
+{
+	RC ret = QE_EOF;
+	if (!_hasGroup)
+	{
+		// Without grouping, we simply get the next tuple and output the current total aggregate data
+		ret = getNextSingleTuple();
+		if (ret == rc::OK)
+			_totalAggregate.write(data);
 	}
 	else
 	{
-		// Without grouping, just return the total aggregate data
-		outputData = &_totalAggregate;
+		// With grouping, we must iterate through each of the grouping data values
+		// Assume we have already scanned the entire table and populated our hash map
+		if (_groupingAggregate._readAsInt)
+		{
+			ret = getNextGroup<int>(data, _intGrouping, _intGroupingIterator);
+		}
+		else
+		{
+			ret = getNextGroup<float>(data, _realGrouping, _realGroupingIterator);
+		}
 	}
 
-	// Finally, Write out the aggregate value for the user
-	outputData->write((char*)data + writebackOffset);
-	
-	return rc::OK;
+	return ret;
 }
 
 void Aggregate::getAttributes(vector<Attribute>& attrs) const
@@ -600,8 +644,6 @@ void Aggregate::getAttributes(vector<Attribute>& attrs) const
 	Attribute attribute = _aggrigateAttribute;
 	attribute.name = constructAggregateAttribute(_operation, _aggrigateAttribute.name);
 	attrs.push_back(attribute);
-
-	// TODO: Handle grouped attributes
 }
 
 std::string Aggregate::constructAggregateAttribute(AggregateOp op, const std::string& attributeName)

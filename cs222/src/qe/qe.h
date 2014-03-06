@@ -320,6 +320,7 @@ struct AggregateData
 	int _intValue;
 	unsigned _count;
 	
+	char _groupingData[4];
 	bool _readAsInt;
 	bool _writeAsInt;
 };
@@ -355,6 +356,11 @@ private:
 	template <typename T>
 	AggregateData* getGroupedAggregate(T value, std::map<T, AggregateData>& groupMap);
 
+	template <typename T>
+	RC getNextGroup(void* data, std::map<T, AggregateData>& groupMap, typename std::map<T, AggregateData>::const_iterator& groupIter);
+
+	RC getNextSingleTuple();
+
 	Iterator* _input;
 	Attribute _aggrigateAttribute;
 	Attribute _groupAttribute;
@@ -365,10 +371,13 @@ private:
 	unsigned _groupAttributeIndex;
 
 	AggregateData _totalAggregate;
-
 	AggregateData _groupingAggregate; // used only for metadata
+
 	std::map<float, AggregateData> _realGrouping;
 	std::map<int, AggregateData> _intGrouping;
+
+	std::map<float, AggregateData>::const_iterator _realGroupingIterator;
+	std::map<int, AggregateData>::const_iterator _intGroupingIterator;
 
 	bool _hasGroup;
 	char _buffer[PAGE_SIZE];
