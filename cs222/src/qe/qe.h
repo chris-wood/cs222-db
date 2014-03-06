@@ -337,14 +337,22 @@ class Aggregate : public Iterator {
 private:
 	static std::string constructAggregateAttribute(AggregateOp op, const std::string& attributeName);
 	static std::string getAggregateName(AggregateOp op);
+	static float aggregate(AggregateOp op, unsigned count, float current, float data);
 
 	Iterator* _input;
 	Attribute _aggrigateAttribute;
 	Attribute _groupAttribute;
 	AggregateOp _operation;
 
-	bool _hasGroup;
+	vector<Attribute> _attributes;
+	unsigned _aggrigateAttributeIndex;
+	unsigned _groupAttributeIndex;
+
 	float _curValue;
+	unsigned _curCount;
+
+	bool _hasGroup;
+	char _buffer[PAGE_SIZE];
 };
 
 #endif

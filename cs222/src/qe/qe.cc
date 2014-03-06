@@ -367,21 +367,106 @@ RC INLJoin::resetInner()
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, AggregateOp op)
 : _input(input), _aggrigateAttribute(aggAttr), _operation(op), _hasGroup(false), _curValue(0.0f)
 {
+	_input->getAttributes(_attributes);
+
+	RC ret = RBFM_ScanIterator::findAttributeByName(_attributes, _aggrigateAttribute.name, _aggrigateAttributeIndex);
+	assert(ret == rc::OK);
 }
 
 Aggregate::Aggregate(Iterator* input, Attribute aggAttr, Attribute gAttr, AggregateOp op)
 : _input(input), _aggrigateAttribute(aggAttr), _groupAttribute(gAttr), _operation(op), _hasGroup(true), _curValue(0.0f)
 {
+	_input->getAttributes(_attributes);
+
+	RC ret = RBFM_ScanIterator::findAttributeByName(_attributes, _aggrigateAttribute.name, _aggrigateAttributeIndex);
+	assert(ret == rc::OK);
+
+	ret = RBFM_ScanIterator::findAttributeByName(_attributes, _groupAttribute.name, _groupAttributeIndex);
+	assert(ret == rc::OK);
 }
 
 RC Aggregate::getNextTuple(void* data)
 {
-	return rc::FEATURE_NOT_YET_IMPLEMENTED;
+	RC ret = rc::OK;
+	memset(_buffer, 0, sizeof(_buffer));
+
+	// Read in the next tuple into our buffer
+	ret = _input->getNextTuple(_buffer);
+	RETURN_ON_ERR(ret);
+
+	// Find the offset of the attribute we want
+	unsigned attributeOffset = 0;
+	for (unsigned int i = 0; i < _aggrigateAttributeIndex; ++i)
+	{
+		attributeOffset += Attribute::sizeInBytes(_attributes[i].type, _buffer + attributeOffset);
+	}
+
+	// Extract the data we want
+	int intData;
+	float realData;
+	switch (_attributes[_aggrigateAttributeIndex].type)
+	{
+	case TypeReal:
+		realData = *(float*)(_buffer + attributeOffset);
+		intData = (int)realData;
+		break;
+
+	default:
+		assert(false);
+	case TypeInt:
+		intData = *(int*)(_buffer + attributeOffset);
+		realData = (float)intData;
+		break;
+	}
+
+	// From here on out we'll just use the float version of the data
+	++_curCount;
+	_curValue = aggregate(_operation, _curCount, _curValue, realData);
+
+	// TODO: What do we write out to data*?
+	memcpy(data, &_curValue, sizeof(float));
+
+	return rc::OK;
+}
+
+float Aggregate::aggregate(AggregateOp op, unsigned count, float current, float data)
+{
+	float newAggregate = current;
+	switch (op)
+	{
+	case MIN:
+		newAggregate = (data < current) ? data : current;
+		break;
+
+	case MAX:
+		newAggregate = (data > current) ? data : current;
+		break;
+
+	case SUM:
+		newAggregate = data + current;
+		break;
+
+	case AVG:
+		newAggregate = 0.0f; // TODO: Average
+		break;
+
+	default:
+	case COUNT:
+		newAggregate = (float)count; // TODO: Keep track of this as an int?
+		break;
+	}
+
+	return newAggregate;
 }
 
 void Aggregate::getAttributes(vector<Attribute>& attrs) const
 {
-
+	attrs.clear();
+	
+	// TODO: I'm not sure if this is what we're supposed to do here
+	Attribute attribute = _aggrigateAttribute;
+	attribute.name = constructAggregateAttribute(_operation, _aggrigateAttribute.name);
+	attrs.push_back(attribute);
 }
 
 std::string Aggregate::constructAggregateAttribute(AggregateOp op, const std::string& attributeName)
