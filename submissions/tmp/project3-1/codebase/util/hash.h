@@ -3,13 +3,19 @@
 
 #include <limits>
 #include <iostream>
+#include <cstring>
 
-typedef unsigned int(*fn_one_integer_hash)(unsigned int);
-typedef unsigned int(*fn_two_integer_hash)(unsigned int, unsigned int);
-
-
-namespace hash
+namespace util
 {
+	typedef unsigned int(*fn_one_integer_hash)(unsigned int);
+	typedef unsigned int(*fn_two_integer_hash)(unsigned int, unsigned int);
+
+	// hash arbitrary data to an int
+	unsigned int datahash(const void* data, size_t length, fn_one_integer_hash hash);
+
+	// hash a string to an int
+	inline unsigned int strhash(const char* str, fn_one_integer_hash hash) { return datahash(str, strlen(str), hash); }
+
     // https://gist.github.com/badboy/6267743
     inline unsigned int multiplicitive(unsigned int x)
     {
@@ -85,7 +91,7 @@ namespace hash
     // Designed so that hash(x,y) = hash(y,x) but keeps true hash(x,0) != hash(0.5x, 0.5x) etc...
     inline unsigned int commutative_xy(unsigned int x, unsigned int y)
     {
-        return parallel_multiply_hash(x * y + x + y);
+		return multiplicitive(x * y + x + y);
     }
 
     // Designed so that hash(x,y) != hash(y,x)
@@ -96,6 +102,27 @@ namespace hash
             ? (x * x) + (x + y)
             : (y * y) + x;
     }
+
+	// arbitrary data hashes based on the various kinds of single integer hashes
+	inline unsigned int datahash_ml(const void* data, size_t length) { return datahash(data, length, multiplicitive); }
+	inline unsigned int datahash_sh(const void* data, size_t length) { return datahash(data, length, shift32); }
+	inline unsigned int datahash_jk(const void* data, size_t length) { return datahash(data, length, jenkins); }
+	inline unsigned int datahash_ps(const void* data, size_t length) { return datahash(data, length, parallel_shift); }
+	inline unsigned int datahash_pm(const void* data, size_t length) { return datahash(data, length, parallel_multiply); }
+	inline unsigned int datahash_ha(const void* data, size_t length) { return datahash(data, length, half_avalanche); }
+	inline unsigned int datahash_tw(const void* data, size_t length) { return datahash(data, length, thomas_wang); }
+
+	// String data hashes based on the various kinds of single integer hashes
+	inline unsigned int strhash_ml(const char* str) { return strhash(str, multiplicitive); }
+	inline unsigned int strhash_sh(const char* str) { return strhash(str, shift32); }
+	inline unsigned int strhash_jk(const char* str) { return strhash(str, jenkins); }
+	inline unsigned int strhash_ps(const char* str) { return strhash(str, parallel_shift); }
+	inline unsigned int strhash_pm(const char* str) { return strhash(str, parallel_multiply); }
+	inline unsigned int strhash_ha(const char* str) { return strhash(str, half_avalanche); }
+	inline unsigned int strhash_tw(const char* str) { return strhash(str, thomas_wang); }
+
+	inline unsigned int strhash(const char* str) { return strhash_ps(str); }
+	inline unsigned int strhash(const std::string& str) { return strhash_ps(str.c_str()); }
 }
 
 #endif // _util_hash_h_

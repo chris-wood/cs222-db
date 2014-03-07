@@ -812,7 +812,7 @@ int testCase_6(const string &indexFileName, const Attribute &attribute)
 		outRidPageNumSum += rid.pageNum;
 
 		comparePageNum = validPageNums[index++];
-        cout << "got " << rid.pageNum << "," << rid.slotNum << endl;
+        //cout << "got " << rid.pageNum << "," << rid.slotNum << endl;
         if (rid.pageNum != comparePageNum)
         {
             indexManager->printIndex(fileHandle, attribute, true);

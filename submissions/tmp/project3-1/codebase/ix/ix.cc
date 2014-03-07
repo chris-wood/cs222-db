@@ -57,7 +57,7 @@ IndexManager::~IndexManager()
     _index_manager = NULL;
 }
 
-RC IndexManager::readAttribute(FileHandle &/*fileHandle*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, const string /*attributeName*/, void */*data*/)
+RC IndexManager::readAttribute(FileHandle &/*fileHandle*/, const vector<Attribute> &/*recordDescriptor*/, const RID &/*rid*/, const string /*attributeName*/, void * /*data*/)
 {
 	return rc::FEATURE_NOT_YET_IMPLEMENTED;
 }
@@ -69,6 +69,24 @@ RC IndexManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> 
     RETURN_ON_ERR(ret);
 
 	return reorganizeBufferedPage(fileHandle, sizeof(IX_PageIndexFooter), recordDescriptor, pageNumber, pageBuffer);
+}
+
+RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
+{
+	RC ret = RecordBasedCoreManager::openFile(fileName, fileHandle);
+	if (ret != rc::OK)
+		return ret;
+
+	// Read the reserved page so that we can read the root page and store it in cache
+	unsigned char pageBuffer[PAGE_SIZE];
+	ret = fileHandle.readPage(0, pageBuffer);
+	RETURN_ON_ERR(ret);
+
+	// Cache the value
+	unsigned* rootPage = (unsigned*)((char*)pageBuffer + PAGE_SIZE - sizeof(unsigned));
+	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = *rootPage;
+
+	return rc::OK;
 }
 
 RC IndexManager::createFile(const string &fileName)
@@ -126,6 +144,9 @@ RC IndexManager::updateRootPage(FileHandle& fileHandle, unsigned newRootPage)
 	ret = fileHandle.writePage(0, pageBuffer);
 	RETURN_ON_ERR(ret);
 
+	// Cache the value
+	IndexManager::instance()->_rootPageMap[fileHandle.getFilename()] = newRootPage;
+
 	return rc::OK;
 }
 
@@ -136,7 +157,6 @@ RC IndexManager::newPage(FileHandle& fileHandle, PageNum pageNum, bool isLeaf, P
 	footerTemplate.isLeafPage = isLeaf; 
 	footerTemplate.firstRecord.pageNum = pageNum;
 	footerTemplate.firstRecord.slotNum = 0;
-	footerTemplate.parent = 0;
 	footerTemplate.nextLeafPage = isLeaf ? nextLeafPage : 0;
 	footerTemplate.freespacePrevPage = 0;
 	footerTemplate.freespaceNextPage = 0;
@@ -193,10 +213,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
 	const PageNum rootPage = footer->pageNumber;
 
+	// Keep track of pages we've traversed so we can find parent pointers
+	std::vector<PageNum> parents;
+
 	// Traverse down the tree to the leaf, using non-leaves along the way
 	PageNum insertDestination = rootPage;
 	while (footer->isLeafPage == false)
 	{
+		parents.push_back(insertDestination);
+
 		ret = findNonLeafIndexEntry(fileHandle, footer, attribute, &keyData, insertDestination);
 		RETURN_ON_ERR(ret);
 
@@ -230,10 +255,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		KeyValueData postSplitKey;
 
 		// Handle cascading splits
-		while (ret == rc::BTREE_INDEX_PAGE_FULL)
+		while (ret == rc::BTREE_INDEX_PAGE_FULL && nextPage != 0)
 		{
 			// Split the page (no difference between leaves and non-leaves)
-			PageNum parent;
+			PageNum parent = parents.empty() ? 0 : parents.back();
 			PageNum leftPage = nextPage;
 			PageNum rightPage;
 			KeyValueData rightKey;
@@ -265,14 +290,6 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = insertIntoNonLeaf(fileHandle, targetCascadePage, attribute, postSplitKey, postSplitIndexRid);
 				RETURN_ON_ERR(ret); // split just occurred, so this insertion should always postSplitIndexRid
 
-				// Update parent pointer for this new guy
-				unsigned char tempBuffer[PAGE_SIZE] = {0};
-				ret = fileHandle.readPage(postSplitIndexRid.pageNum, tempBuffer);
-				RETURN_ON_ERR(ret);
-				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				tempFooter->parent = targetCascadePage;
-				fileHandle.writePage(postSplitIndexRid.pageNum, tempBuffer);
-
 				// Reset the split flags in case we need to cascade upwards
 				postSplitIndexPage = rightPage;
 				postSplitIndexRid = rightRid;
@@ -294,49 +311,9 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				ret = newPage(fileHandle, newRootPage, false, 0, leftPage);
 				RETURN_ON_ERR(ret);
 
-				// Update the left/right children parents to point to the new root
-				unsigned char tempBuffer[PAGE_SIZE] = {0};
-				ret = fileHandle.readPage(leftPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-
-				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				tempFooter->parent = newRootPage;
-
-				// Write the new page information to disk
-				ret = fileHandle.writePage(leftPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-
-				// Reset the buffer and then read in the right page
-				memset(tempBuffer, 0, PAGE_SIZE);
-				ret = fileHandle.readPage(rightPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-
-				tempFooter->parent = newRootPage;
+				// Update the parent since we just increased the size of the tree
+				parents.push_back(newRootPage);
 				parent = newRootPage;
-
-				// Write the new page information to disk
-				ret = fileHandle.writePage(rightPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-
-				// Read the new non-leaf page back in
-				memset(tempBuffer, 0, PAGE_SIZE);
-				RC ret = fileHandle.readPage(newRootPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-
-				tempFooter = getIXPageIndexFooter(tempBuffer);
-				assert(tempFooter->isLeafPage == false);
-
-				// Update the footer to point left to the left page
-				tempFooter->leftChild = leftPage;
-			}
-			else
-			{
-				// Make sure we have the right parent
-				unsigned char tempBuffer[PAGE_SIZE] = {0};
-				ret = fileHandle.readPage(leftPage, tempBuffer);
-				RETURN_ON_ERR(ret);
-				IX_PageIndexFooter* tempFooter = getIXPageIndexFooter(tempBuffer);
-				parent = tempFooter->parent;
 			}
 
 			// Insert the right child into the parent of the left
@@ -347,6 +324,11 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			}
 
 			// Recurse up the tree!
+			if (!parents.empty())
+			{
+				parents.pop_back();
+			}
+
 			nextPage = parent;
 		}
 
@@ -813,15 +795,32 @@ RC IndexManager::findNonLeafIndexEntry(FileHandle& fileHandle, IX_PageIndexFoote
 
 RC IndexManager::readRootPage(FileHandle& fileHandle, void* pageBuffer)
 {
-	// Read in the reserved page
-	RC ret = fileHandle.readPage(0, pageBuffer);
-	RETURN_ON_ERR(ret);
+	IndexManager& im = *IndexManager::instance();
+	const std::string& filename = fileHandle.getFilename();
+	PageNum rootPage = 1;
 
-	// Place the root page data at the very end of the page
-	unsigned* rootPage = (unsigned*)( (char*)pageBuffer + PAGE_SIZE - sizeof(unsigned) );
+	// Do we have the root page number cached?
+	std::map<std::string, PageNum>::const_iterator finder = im._rootPageMap.find(filename);
+	if (finder == im._rootPageMap.end())
+	{
+		// We need to pull in the reserved page and read in the root
+		RC ret = fileHandle.readPage(0, pageBuffer);
+		RETURN_ON_ERR(ret);
 
-	// Pull in the root page
-	ret = fileHandle.readPage(*rootPage, pageBuffer);
+		// Place the root page data at the very end of the page
+		rootPage = *(unsigned*)((char*)pageBuffer + PAGE_SIZE - sizeof(unsigned));
+
+		// Save it to our cache for later
+		im._rootPageMap[filename] = rootPage;
+	}
+	else
+	{
+		// We had the value cached, use that
+		rootPage = finder->second;
+	}
+	
+	// Read in the root page to the given buffer
+	RC ret = fileHandle.readPage(rootPage, pageBuffer);
 	RETURN_ON_ERR(ret);
 
 	return rc::OK;
@@ -1091,10 +1090,6 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	// Verify new pages are correct with leaf status
 	assert(rightFooter->isLeafPage == isLeaf && leftFooter->isLeafPage == isLeaf);
 
-	// Update known footer data
-	rightFooter->parent = inputFooter->parent;
-	leftFooter->parent = inputFooter->parent;
-
 	// Determine how many to move...
 	IndexRecord tempRecord;
 	RID curRid = inputFooter->firstRecord;
@@ -1161,10 +1156,6 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	RETURN_ON_ERR(ret);
 	memcpy(&rightKey, &tempRecord.key, sizeof(rightKey));
 
-	// Space to pull in the child pointers
-	unsigned char childBuffer[PAGE_SIZE] = {0};
-	IX_PageIndexFooter* childFooter;
-
 	// Read in the first entry in the second half - this entry now points to the left
 	if (!isLeaf)
 	{
@@ -1175,13 +1166,6 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		// Copy over the page pointer into the footer
 		rightFooter->leftChild = tempRecord.rid.pageNum;
 		curRid = tempRecord.nextSlot;
-
-		// Update the child's parent pointer to newPageNum
-		ret = fileHandle.readPage(rightFooter->leftChild, childBuffer);
-		RETURN_ON_ERR(ret);
-		childFooter = getIXPageIndexFooter(childBuffer);
-		childFooter->parent = newPageNum;
-		fileHandle.writePage(rightFooter->leftChild, childBuffer);
 	}
 
 	// The currRid variable now points to the correct spot in the list from which we should start moving
@@ -1196,16 +1180,6 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		// Read in the record from our input buffer
 		ret = readRecord(fileHandle, recordDescriptor, curRid, &tempRecord, inputBuffer);
 		RETURN_ON_ERR(ret);
-
-		// Update the child's parent pointer to newPageNum
-		if (!isLeaf)
-		{
-			ret = fileHandle.readPage(tempRecord.rid.pageNum, childBuffer);
-			RETURN_ON_ERR(ret);
-			childFooter = getIXPageIndexFooter(childBuffer);
-			childFooter->parent = newPageNum;
-			fileHandle.writePage(tempRecord.rid.pageNum, childBuffer);
-		}
 
 		// Compute the record length and add it to the running total
 		unsigned recLength = 0;
@@ -1693,14 +1667,14 @@ std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f)
 	{
 		os << "Leaf Page: ";
 		os << "firstRecord: " << f.firstRecord;
-		os << " Parent=" << f.parent << " leftChild=" << f.leftChild << " nextLeafPage=" << f.nextLeafPage;
+		os << " leftChild=" << f.leftChild << " nextLeafPage=" << f.nextLeafPage;
 		os << " gap=" << f.gapSize << " free=" << IndexManager::instance()->calculateFreespace(f.freeSpaceOffset, f.numSlots, sizeof(IX_PageIndexFooter)) << " slots=" << f.numSlots;
 	}
 	else
 	{
 		os << "Non-Leaf Page: ";
 		os << "firstRecord=" << f.firstRecord;
-		os << " Parent=" << f.parent << " leftChild=" << f.leftChild;
+		os << " leftChild=" << f.leftChild;
 		os << " gap=" << f.gapSize << " free=" << IndexManager::instance()->calculateFreespace(f.freeSpaceOffset, f.numSlots, sizeof(IX_PageIndexFooter)) << " slots=" << f.numSlots;
 	}
 

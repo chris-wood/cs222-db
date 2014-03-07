@@ -18,10 +18,11 @@ ixtest2: ixtest2.o libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
 ix_combined: ix_combined.o libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
 
 # dependencies to compile used libraries
-.PHONY: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a
+.PHONY: $(CODEROOT)/rbf/librbf.a
 $(CODEROOT)/rbf/librbf.a:
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
 
+.PHONY: $(CODEROOT)/util/libutil.a
 $(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 

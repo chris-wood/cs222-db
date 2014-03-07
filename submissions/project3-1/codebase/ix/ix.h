@@ -18,9 +18,8 @@ struct IX_PageIndexFooter : CorePageIndexFooter
 	RID firstRecord;
 
 	// Tree pointers
-	PageNum parent;
 	PageNum nextLeafPage; // ignored by non-leaf pages
-	PageNum leftChild;
+	PageNum leftChild; // ignored by leaf pages
 
 	friend std::ostream& operator<<(std::ostream& os, const IX_PageIndexFooter& f);
 };
@@ -59,6 +58,7 @@ class IndexManager : public RecordBasedCoreManager {
 
   // Override parent createFile
   virtual RC createFile(const string &fileName);
+  virtual RC openFile(const string &fileName, FileHandle &fileHandle);
 
 	// From RecordBasedCoreManager
 	// virtual RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
@@ -117,6 +117,8 @@ class IndexManager : public RecordBasedCoreManager {
  private:
 	static IndexManager *_index_manager;
 	
+	std::map<std::string, PageNum> _rootPageMap;
+
 	std::vector<Attribute> _indexIntRecordDescriptor;
 	std::vector<Attribute> _indexRealRecordDescriptor;
 	std::vector<Attribute> _indexVarCharRecordDescriptor;

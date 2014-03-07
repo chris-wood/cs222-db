@@ -22,12 +22,14 @@ public:
 	
     RC init(FileHandle& fileHandle, const vector<Attribute> &recordDescriptor, const string &conditionAttributeString, const CompOp compOp, const void *value, const vector<string> &attributeNames);
 
-private:
+	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
+
+	static bool compareData(AttrType type, CompOp op, void* a, void* b);
 	static bool compareInt(CompOp op, void* a, void* b);
 	static bool compareReal(CompOp op, void* a, void* b);
 	static bool compareVarChar(CompOp op, void* a, void* b);
-	static RC findAttributeByName(const vector<Attribute>& recordDescriptor, const string& conditionAttribute, unsigned& index);
 
+private:
 	void nextRecord(unsigned numSlots);
 	void copyRecord(char* data, const char* record, unsigned numAttributes);
 	bool recordMatchesValue(char* record);

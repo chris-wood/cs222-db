@@ -1,6 +1,8 @@
 #include "rm.h"
 #include "../util/returncodes.h"
+#include "../util/hash.h"
 #include <assert.h>
+#include <sstream>
 
 #define SYSTEM_TABLE_CATALOG_NAME "RM_SYS_CATALOG_TABLE.db"
 #define SYSTEM_TABLE_ATTRIUBE_NAME "RM_SYS_ATTRIBUTE_TABLE.db"
@@ -503,6 +505,17 @@ RC RelationManager::reorganizePage(const string &tableName, const unsigned pageN
 	return _rbfm->reorganizePage(tableData.fileHandle, tableData.recordDescriptor, pageNumber);
 }
 
+std::string RelationManager::getIndexName(const string& baseTable, const string& attributeName)
+{
+	std::stringstream out;
+	out << baseTable;
+	out << '_';
+	//out << util::strhash(attributeName);
+	out << attributeName;
+
+	return out.str();
+}
+
 RC RelationManager::scan(const string &tableName,
       const string &conditionAttribute,
       const CompOp compOp,                  
@@ -534,6 +547,57 @@ RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 RC RM_ScanIterator::close()
 {
 	return iter.close();
+}
+
+RC RM_IndexScanIterator::getNextEntry(RID &rid, void *key)
+{
+	return iter.getNextEntry(rid, key);
+}
+
+RC RM_IndexScanIterator::close()
+{
+	tableData = NULL;
+	return iter.close();
+}
+
+RC RM_IndexScanIterator::init(TableMetaData& _tableData, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+{
+	tableData = &_tableData;
+	
+	unsigned attributeIndex = 0;
+	RC ret = RBFM_ScanIterator::findAttributeByName(tableData->recordDescriptor, attributeName, attributeIndex);
+	RETURN_ON_ERR(ret);
+
+	return iter.init(&tableData->fileHandle, tableData->recordDescriptor[attributeIndex], lowKey, highKey, lowKeyInclusive, highKeyInclusive);
+}
+
+RC RelationManager::createIndex(const string &tableName, const string &attributeName)
+{
+	RC ret = IndexManager::instance()->createFile(getIndexName(tableName, attributeName));
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+{
+	RC ret = IndexManager::instance()->destroyFile(getIndexName(tableName, attributeName));
+	RETURN_ON_ERR(ret);
+
+	return rc::OK;
+}
+
+RC RelationManager::indexScan(const string &tableName,
+	const string &attributeName,
+	const void *lowKey,
+	const void *highKey,
+	bool lowKeyInclusive,
+	bool highKeyInclusive,
+	RM_IndexScanIterator &rm_IndexScanIterator)
+{
+	TableMetaData& tableData = _catalog[tableName];
+
+	return rm_IndexScanIterator.init(tableData, attributeName, lowKey, highKey, lowKeyInclusive, highKeyInclusive);
 }
 
 // Extra credit
