@@ -507,7 +507,7 @@ void AggregateData::read(const void* data, unsigned attributeOffset, float& f, i
 template <typename T>
 AggregateData* Aggregate::getGroupedAggregate(T value, std::map<T, AggregateData>& groupMap)
 {
-	std::map<T, AggregateData>::iterator it = groupMap.find(value);
+	typename std::map<T, AggregateData>::iterator it = groupMap.find(value);
 	if (it == groupMap.end())
 	{
 		// We need to initialize this grouping fresh
