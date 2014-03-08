@@ -50,3 +50,7 @@ cli_indexes
 cli_tables
 tbl_employee
 tbl_employeeReal
+tbl_employee.Age
+tbl_employee2.Age
+tbl_employee2.EmpName
+tbl_employee2.Height

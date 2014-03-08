@@ -13,7 +13,7 @@
 
 // CVS file read delimiters
 #ifdef WIN32
-#define DATABASE_FOLDER "./cli"
+#define DATABASE_FOLDER "./../../cs222/src/cli"
 #endif
 
 #define CVS_DELIMITERS ","
@@ -1150,7 +1150,7 @@ RC CLI::load()
 
   // read file
   ifstream ifs;
-  string file_url = DATABASE_FOLDER"../data/" + fileName;
+  string file_url = string(DATABASE_FOLDER) + "/../data/" + fileName;
   ifs.open (file_url, ifstream::in);
 
   if (!ifs.is_open())
