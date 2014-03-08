@@ -6,6 +6,12 @@
 #define NO_HISTORY_LIST
 #endif
 
+#ifdef WIN32
+#define uint uint32_t
+#define NO_HISTORY_LIST
+#endif
+
+
 #include <iostream>
 #include <string>
 #include <stdint.h>

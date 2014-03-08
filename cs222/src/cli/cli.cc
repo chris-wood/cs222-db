@@ -1,7 +1,10 @@
 #include "cli.h"
 
+#ifndef WIN32
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
+
 #include <fstream>
 
 // Command parsing delimiters
@@ -9,6 +12,10 @@
 #define DELIMITERS " ,()\""
 
 // CVS file read delimiters
+#ifdef WIN32
+#define DATABASE_FOLDER "./cli"
+#endif
+
 #define CVS_DELIMITERS ","
 #define CLI_TABLES "cli_tables"
 #define CLI_COLUMNS "cli_columns"
@@ -158,7 +165,11 @@ RC CLI::start()
 
     // Create prompt string from user name and current working directory.
     //snprintf(shell_prompt, sizeof(shell_prompt), "%s >>> ", getenv("USER"));
-    snprintf(shell_prompt, sizeof(shell_prompt), ">>> ");
+#ifdef WIN32
+    _snprintf(shell_prompt, sizeof(shell_prompt), ">>> ");
+#else
+	snprintf(shell_prompt, sizeof(shell_prompt), ">>> ");
+#endif WIN32
     // Display prompt and read input (n.b. input must be freed after use)...
     input = readline(shell_prompt);
 

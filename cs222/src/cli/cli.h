@@ -15,6 +15,11 @@
 #include "../ix/ix.h"
 #include "../qe/qe.h"
 
+#ifdef WIN32
+#include "../readline/readline.h"
+#include "../readline/history.h"
+#endif
+
 using namespace std;
 
 typedef enum{ FILTER = 0, PROJECT, NL, INL, AGG, INDEXSCAN, TABLESCAN } QUERY_OP;

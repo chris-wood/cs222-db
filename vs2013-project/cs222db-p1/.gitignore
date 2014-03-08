@@ -45,3 +45,8 @@ right.C
 leftvarchar
 rightvarchar
 group
+cli_columns
+cli_indexes
+cli_tables
+tbl_employee
+tbl_employeeReal

@@ -40,7 +40,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -49,13 +49,14 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;REDIRECT_PRINT_RECORD</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -73,17 +74,42 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalOptions>/FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h" />
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.h" />
+    <ClInclude Include="..\..\cs222\src\cli\cli.h" />
     <ClInclude Include="..\..\cs222\src\ix\ix.h" />
     <ClInclude Include="..\..\cs222\src\ix\ixtest_util.h" />
     <ClInclude Include="..\..\cs222\src\qe\qe.h" />
     <ClInclude Include="..\..\cs222\src\rbf\rbcm.h" />
+    <ClInclude Include="..\..\cs222\src\readline\ansi_stdlib.h" />
+    <ClInclude Include="..\..\cs222\src\readline\chardefs.h" />
+    <ClInclude Include="..\..\cs222\src\readline\histlib.h" />
+    <ClInclude Include="..\..\cs222\src\readline\history.h" />
+    <ClInclude Include="..\..\cs222\src\readline\keymaps.h" />
+    <ClInclude Include="..\..\cs222\src\readline\posixdir.h" />
+    <ClInclude Include="..\..\cs222\src\readline\posixjmp.h" />
+    <ClInclude Include="..\..\cs222\src\readline\posixstat.h" />
+    <ClInclude Include="..\..\cs222\src\readline\readline.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlconf.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rldefs.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlmbutil.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlprivate.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlshell.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlstdc.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rltty.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rltypedefs.h" />
+    <ClInclude Include="..\..\cs222\src\readline\rlwinsize.h" />
+    <ClInclude Include="..\..\cs222\src\readline\strings.h" />
+    <ClInclude Include="..\..\cs222\src\readline\tcap.h" />
+    <ClInclude Include="..\..\cs222\src\readline\tilde.h" />
+    <ClInclude Include="..\..\cs222\src\readline\xmalloc.h" />
     <ClInclude Include="..\..\cs222\src\rm\rm.h" />
     <ClInclude Include="..\..\cs222\src\rm\test_util.h" />
+    <ClInclude Include="..\..\cs222\src\shared.h" />
     <ClInclude Include="..\..\cs222\src\util\dbgout.h" />
     <ClInclude Include="..\..\cs222\src\util\hash.h" />
     <ClInclude Include="..\..\cs222\src\util\returncodes.h" />
@@ -91,10 +117,46 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc" />
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
+    <ClCompile Include="..\..\cs222\src\cli\cli.cc" />
+    <ClCompile Include="..\..\cs222\src\cli\clitest.cc" />
+    <ClCompile Include="..\..\cs222\src\cli\start.cc" />
     <ClCompile Include="..\..\cs222\src\ix\ix.cc" />
     <ClCompile Include="..\..\cs222\src\qe\qe.cc" />
-    <ClCompile Include="..\..\cs222\src\qe\qetest.cc" />
     <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc" />
+    <ClCompile Include="..\..\cs222\src\readline\bind.c" />
+    <ClCompile Include="..\..\cs222\src\readline\callback.c" />
+    <ClCompile Include="..\..\cs222\src\readline\compat.c" />
+    <ClCompile Include="..\..\cs222\src\readline\complete.c" />
+    <ClCompile Include="..\..\cs222\src\readline\display.c" />
+    <ClCompile Include="..\..\cs222\src\readline\emacs_keymap.c" />
+    <ClCompile Include="..\..\cs222\src\readline\funmap.c" />
+    <ClCompile Include="..\..\cs222\src\readline\histexpand.c" />
+    <ClCompile Include="..\..\cs222\src\readline\histfile.c" />
+    <ClCompile Include="..\..\cs222\src\readline\history.c" />
+    <ClCompile Include="..\..\cs222\src\readline\histsearch.c" />
+    <ClCompile Include="..\..\cs222\src\readline\input.c" />
+    <ClCompile Include="..\..\cs222\src\readline\isearch.c" />
+    <ClCompile Include="..\..\cs222\src\readline\keymaps.c" />
+    <ClCompile Include="..\..\cs222\src\readline\kill.c" />
+    <ClCompile Include="..\..\cs222\src\readline\macro.c" />
+    <ClCompile Include="..\..\cs222\src\readline\mbutil.c" />
+    <ClCompile Include="..\..\cs222\src\readline\misc.c" />
+    <ClCompile Include="..\..\cs222\src\readline\nls.c" />
+    <ClCompile Include="..\..\cs222\src\readline\parens.c" />
+    <ClCompile Include="..\..\cs222\src\readline\readline.c" />
+    <ClCompile Include="..\..\cs222\src\readline\rltty.c" />
+    <ClCompile Include="..\..\cs222\src\readline\savestring.c" />
+    <ClCompile Include="..\..\cs222\src\readline\search.c" />
+    <ClCompile Include="..\..\cs222\src\readline\shell.c" />
+    <ClCompile Include="..\..\cs222\src\readline\signals.c" />
+    <ClCompile Include="..\..\cs222\src\readline\terminal.c" />
+    <ClCompile Include="..\..\cs222\src\readline\text.c" />
+    <ClCompile Include="..\..\cs222\src\readline\tilde.c" />
+    <ClCompile Include="..\..\cs222\src\readline\undo.c" />
+    <ClCompile Include="..\..\cs222\src\readline\util.c" />
+    <ClCompile Include="..\..\cs222\src\readline\vi_keymap.c" />
+    <ClCompile Include="..\..\cs222\src\readline\vi_mode.c" />
+    <ClCompile Include="..\..\cs222\src\readline\xmalloc.c" />
     <ClCompile Include="..\..\cs222\src\rm\rm.cc" />
     <ClCompile Include="..\..\cs222\src\util\dbgout.cc" />
     <ClCompile Include="..\..\cs222\src\util\hash.cc" />
