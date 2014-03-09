@@ -30,7 +30,7 @@ struct TableMetadataRow
 	RID nextRow;
 	RID prevRow;
 	RID firstAttribute;
-  RID firstIndex;
+	RID firstIndex;
 	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 

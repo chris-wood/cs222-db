@@ -36,6 +36,8 @@ RelationManager::RelationManager()
     attr.name = "PrevRowRID_slot";				_systemTableRecordDescriptor.push_back(attr);
 	attr.name = "RecordDescriptorRID_page";		_systemTableRecordDescriptor.push_back(attr);
 	attr.name = "RecordDescriptorRID_slot";		_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "FirstIndexRID_page";			_systemTableRecordDescriptor.push_back(attr);
+	attr.name = "FirstIndexRID_slot";			_systemTableRecordDescriptor.push_back(attr);
 	attr.name = "TableName";
 	attr.type = TypeVarChar;
 	attr.length = MAX_TABLENAME_SIZE;
