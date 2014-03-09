@@ -64,7 +64,7 @@ struct IndexSystemRecord
 	IndexSystemRecord(const std::string& sourceTable, const std::string& fileName, const std::string& attrName);
 
   RID nextIndex;
-	char buffer[PAGE_SIZE - (2 * sizeof(RID))];
+	char buffer[PAGE_SIZE - sizeof(RID)];
 };
 
 # define RM_EOF (-1)  // end of a scan operator
