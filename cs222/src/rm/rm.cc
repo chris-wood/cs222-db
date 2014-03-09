@@ -5,7 +5,7 @@
 #include <sstream>
 
 #define SYSTEM_TABLE_CATALOG_NAME "RM_SYS_CATALOG_TABLE.db"
-#define SYSTEM_TABLE_ATTRIUBE_NAME "RM_SYS_ATTRIBUTE_TABLE.db"
+#define SYSTEM_TABLE_ATTRIBUTE_NAME "RM_SYS_ATTRIBUTE_TABLE.db"
 #define SYSTEM_TABLE_INDEX_NAME "RM_SYS_INDEX_TABLE.db"
 
 RelationManager* RelationManager::_rm = 0;
@@ -53,8 +53,11 @@ RelationManager::RelationManager()
 	attr.length = MAX_ATTRIBUTENAME_SIZE;
 	_systemTableAttributeRecordDescriptor.push_back(attr);
 
-	// TODO: Figure out what other data we want to store here
 	// Columns of the index table
+	// attr.type = TypeInt;
+	// attr.length = sizeof(int);
+	// attr.name = "NextIndexRID_page";			_systemTableIndexRecordDescriptor.push_back(attr);
+	// attr.name = "NextIndexRID_slot";			_systemTableIndexRecordDescriptor.push_back(attr);
 	attr.type = TypeVarChar;
 	attr.length = MAX_ATTRIBUTENAME_SIZE;
 	attr.name = "SourceTable";					_systemTableIndexRecordDescriptor.push_back(attr);
@@ -90,13 +93,13 @@ RC RelationManager::loadSystemTables()
     RC ret = rc::OK;
 
     // If table exists in our catalog, it has been created and we know about it already
-	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_ATTRIUBE_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
+	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_ATTRIBUTE_NAME) != _catalog.end() && _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
     {
         return rc::TABLE_ALREADY_CREATED;
     }
 
 	// If one or more but not all are in our catalog, something went very wrong
-	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_ATTRIUBE_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
+	if (_catalog.find(SYSTEM_TABLE_CATALOG_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_ATTRIBUTE_NAME) != _catalog.end() || _catalog.find(SYSTEM_TABLE_INDEX_NAME) != _catalog.end())
     {
         return rc::TABLE_SYSTEM_IN_BAD_STATE;
     }
@@ -107,8 +110,8 @@ RC RelationManager::loadSystemTables()
     RETURN_ON_ERR(ret);
 
     // Attempt to open the attribute table if it exists
-    _catalog[SYSTEM_TABLE_ATTRIUBE_NAME] = TableMetaData();
-    ret = _rbfm->openFile(SYSTEM_TABLE_ATTRIUBE_NAME, _catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle);
+    _catalog[SYSTEM_TABLE_ATTRIBUTE_NAME] = TableMetaData();
+    ret = _rbfm->openFile(SYSTEM_TABLE_ATTRIBUTE_NAME, _catalog[SYSTEM_TABLE_ATTRIBUTE_NAME].fileHandle);
     RETURN_ON_ERR(ret);
 
 	// Attempt to open the index table if it exists
@@ -127,7 +130,7 @@ RC RelationManager::createSystemTables()
     ret = createCatalogEntry(SYSTEM_TABLE_CATALOG_NAME, _systemTableRecordDescriptor);
     RETURN_ON_ERR(ret);
 
-    ret = createCatalogEntry(SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
+    ret = createCatalogEntry(SYSTEM_TABLE_ATTRIBUTE_NAME, _systemTableAttributeRecordDescriptor);
     RETURN_ON_ERR(ret);
 
 	ret = createCatalogEntry(SYSTEM_TABLE_INDEX_NAME, _systemTableIndexRecordDescriptor);
@@ -137,7 +140,7 @@ RC RelationManager::createSystemTables()
     ret = insertTableMetadata(true, SYSTEM_TABLE_CATALOG_NAME, _systemTableRecordDescriptor);
     RETURN_ON_ERR(ret);
 
-    ret = insertTableMetadata(true, SYSTEM_TABLE_ATTRIUBE_NAME, _systemTableAttributeRecordDescriptor);
+    ret = insertTableMetadata(true, SYSTEM_TABLE_ATTRIBUTE_NAME, _systemTableAttributeRecordDescriptor);
     RETURN_ON_ERR(ret);
 
 	ret = insertTableMetadata(true, SYSTEM_TABLE_INDEX_NAME, _systemTableIndexRecordDescriptor);
@@ -176,6 +179,8 @@ RC RelationManager::insertTableMetadata(bool isSystemTable, const string &tableN
     newRow.nextRow.slotNum = 0;
     newRow.firstAttribute.pageNum = 0;
     newRow.firstAttribute.slotNum = 0;
+    newRow.firstIndex.pageNum = 0;
+    newRow.firstIndex.slotNum = 0;
     newRow.numAttributes = attrs.size();
     newRow.owner = isSystemTable ? TableOwnerSystem : TableOwnerUser;
 
@@ -220,7 +225,7 @@ RC RelationManager::insertTableMetadata(bool isSystemTable, const string &tableN
         memcpy(attrRec.name + sizeof(int), attr.name.c_str(), nameLen);
 
         // Write out the record with the attribute data
-        ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, &attrRec, attributeRID);
+        ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_ATTRIBUTE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, &attrRec, attributeRID);
         RETURN_ON_ERR(ret);
     }
 
@@ -290,6 +295,7 @@ RC RelationManager::loadTableMetadata()
 
         // Clear out any old data we have about this table
         const std::string tableName((char*)(currentRow.tableName + sizeof(int)));
+        cout << "table name = " << tableName << endl;
         _catalog[tableName].recordDescriptor.clear();
 
         // Load in the attribute table data for this row
@@ -297,7 +303,7 @@ RC RelationManager::loadTableMetadata()
 		RETURN_ON_ERR(ret);
 
         // Open a file handle for the table
-		if (tableName != SYSTEM_TABLE_CATALOG_NAME && tableName != SYSTEM_TABLE_ATTRIUBE_NAME && tableName != SYSTEM_TABLE_INDEX_NAME)
+		if (tableName != SYSTEM_TABLE_CATALOG_NAME && tableName != SYSTEM_TABLE_ATTRIBUTE_NAME && tableName != SYSTEM_TABLE_INDEX_NAME)
         {
             ret = _rbfm->openFile(tableName, _catalog[tableName].fileHandle);
             RETURN_ON_ERR(ret);
@@ -328,7 +334,7 @@ RC RelationManager::loadTableColumnMetadata(int numAttributes, RID firstAttribut
 		memset(&attrRec, 0, sizeof(attrRec));
 
 		// Read in the attribute record
-        ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, currentRID, &attrRec);
+        ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIBUTE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, currentRID, &attrRec);
 		RETURN_ON_ERR(ret);
 
 		// Copy over the data into a regular attribute and add this attribute to the recordDescriptor 
@@ -382,12 +388,12 @@ RC RelationManager::deleteTable(const string &tableName)
 		memset(&attributeBuffer, 0, sizeof(attributeBuffer));
 
 		// Read in the attribute so we can continue along the chain
-		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid, &attributeBuffer);
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_ATTRIBUTE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid, &attributeBuffer);
 		RETURN_ON_ERR(ret);
 
 		// Delete the current attribute
 		++deletedAttributes;
-		ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_ATTRIUBE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid);
+		ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_ATTRIBUTE_NAME].fileHandle, _systemTableAttributeRecordDescriptor, attributeRid);
 		RETURN_ON_ERR(ret);
 
 		// Determine the next attribute
@@ -430,9 +436,14 @@ RC RelationManager::deleteTable(const string &tableName)
     ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
 	RETURN_ON_ERR(ret);
 
-    // TODO: Delete stuff from the SYSTEM_TABLE_ATTRIBUTE_NAME table also
-
 	// TODO: Delete stuff from the SYSTEM_TABLE_INDEX_NAME table also
+	// TableMetadataRow currentRow;
+ //    ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
+	// RETURN_ON_ERR(ret);	
+
+	// IndexSystemRecord indexRecord;
+	// ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRecord.buffer, indexRid);
+	// RETURN_ON_ERR(ret);
 
 	// Finally, update our in-memory representation of the catalog
 	_catalog.erase(it);
@@ -735,8 +746,45 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	// Keep track that we have created this index system index table
 	RID indexRid;
 	IndexSystemRecord indexRecord(tableName, indexName, attributeName);
-	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRecord.buffer, indexRid);
+	indexRecord.nextIndex.pageNum = 0;
+	indexRecord.nextIndex.slotNum = 0;
+	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &indexRecord, indexRid);
 	RETURN_ON_ERR(ret);
+
+	// Store the RID of this row in the in-memory catalog for easy access
+	RID newIndexRid;
+    RID tableRid = _catalog[tableName].rowRID;
+    TableMetadataRow tableRow;
+	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, tableRid, (void*)(&tableRow));
+    RETURN_ON_ERR(ret);
+
+    // Save the new index entry to the right spot in the index table
+    IndexSystemRecord prevIndexRow;
+    IndexSystemRecord indexRow;
+    RID prevIndexRid;
+    newIndexRid = tableRow.firstIndex;
+    if (newIndexRid.pageNum > 0)
+    {
+		while (newIndexRid.pageNum > 0)
+	    {
+	    	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, newIndexRid, (void*)(&indexRow));
+	    	RETURN_ON_ERR(ret);
+	    	prevIndexRow = indexRow;
+	    	prevIndexRid = newIndexRid;
+	    	newIndexRid = indexRow.nextIndex;
+	    }
+
+	    // newIndex points to the end
+	    prevIndexRow.nextIndex = indexRid;
+	    ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &prevIndexRow, prevIndexRid);
+    	RETURN_ON_ERR(ret);
+    }
+    else // first index for this table...
+    {
+    	tableRow.firstIndex = newIndexRid;
+    	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &tableRow, tableRid);
+    	RETURN_ON_ERR(ret);
+	}
 
 	// We only want to extract the attribute for this index
 	std::vector<std::string> attributeNames;
@@ -755,6 +803,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	RETURN_ON_ERR(ret);
 
 	// Iterate through everything in the input table and add entries into the new index
+	// Repeated insert, oh well...
 	RID rid;
 	char tupleBuffer[PAGE_SIZE] = {0};
 	while((ret = scanner.getNextTuple(rid, tupleBuffer)) == rc::OK)
@@ -775,6 +824,11 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	RETURN_ON_ERR(ret);
 
 	// TODO: Remove any system table data we saved for this index
+
+	// RID indexRid;
+	// IndexSystemRecord indexRecord(tableName, indexName, attributeName);
+	// ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRecord.buffer, indexRid);
+	// RETURN_ON_ERR(ret);
 
 	return rc::OK;
 }

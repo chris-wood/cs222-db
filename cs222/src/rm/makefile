@@ -26,7 +26,7 @@ $(CODEROOT)/rbf/librbf.a:
 	
 .PHONY: $(CODEROOT)/ix/libix.a 
 $(CODEROOT)/ix/libix.a:
-	$(MAKE) -C $(CODEROOT)/rbf libix.a
+	$(MAKE) -C $(CODEROOT)/ix libix.a
 
 .PHONY: $(CODEROOT)/util/libutil.a	
 $(CODEROOT)/util/libutil.a:

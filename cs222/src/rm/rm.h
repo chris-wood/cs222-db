@@ -30,6 +30,7 @@ struct TableMetadataRow
 	RID nextRow;
 	RID prevRow;
 	RID firstAttribute;
+  RID firstIndex;
 	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
 };
 
@@ -62,7 +63,8 @@ struct IndexSystemRecord
 	IndexSystemRecord() { memset(this, 0, sizeof(*this)); }
 	IndexSystemRecord(const std::string& sourceTable, const std::string& fileName, const std::string& attrName);
 
-	char buffer[PAGE_SIZE];
+  RID nextIndex;
+	char buffer[PAGE_SIZE - (2 * sizeof(RID))];
 };
 
 # define RM_EOF (-1)  // end of a scan operator
