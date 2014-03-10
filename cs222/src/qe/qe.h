@@ -213,7 +213,7 @@ class Filter : public Iterator {
 
 private:
 	Iterator* _input;
-	const Condition& _condition;
+	const Condition _condition;
 	unsigned _lhsAttrIndex;
 	std::vector<Attribute> _lhsAttributes;
 };
@@ -281,7 +281,7 @@ protected:
 	JoinerData _inner;
 	
 	AttrType _attrType;
-	const Condition& _condition;
+	const Condition _condition;
 	const unsigned _numPages;
 	char* _pageBuffer;
 };
