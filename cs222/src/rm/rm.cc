@@ -962,6 +962,16 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 			ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRids.at(i));
 			RETURN_ON_ERR(ret);
 
+			// Find the index's open FileHandle
+			IndexManager* im = IndexManager::instance();
+			std::map<std::string, IndexMetaData>::iterator indexMeta = it->second.indexes.find(indexFileNames.at(i));
+			if (indexMeta != it->second.indexes.end())
+			{
+				// Close the file
+				im->closeFile(indexMeta->second.fileHandle);
+			}
+
+			// Finally we can destroy the file
 			ret = IndexManager::instance()->destroyFile(indexFileNames.at(i));
 			RETURN_ON_ERR(ret);
 		}
@@ -969,6 +979,16 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	else
 	{
 		// After the catalog is patched, destroy the file on disk
+		// Find the index's open FileHandle
+		IndexManager* im = IndexManager::instance();
+		std::map<std::string, IndexMetaData>::iterator indexMeta = it->second.indexes.find(indexName);
+		if (indexMeta != it->second.indexes.end())
+		{
+			// Close the file
+			im->closeFile(indexMeta->second.fileHandle);
+		}
+		
+		// Finally we can destroy the file
 		ret = IndexManager::instance()->destroyFile(indexName);
 		RETURN_ON_ERR(ret);
 	}
