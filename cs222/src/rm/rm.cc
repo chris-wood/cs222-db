@@ -56,10 +56,10 @@ RelationManager::RelationManager()
 	_systemTableAttributeRecordDescriptor.push_back(attr);
 
 	// Columns of the index table
-	// attr.type = TypeInt;
-	// attr.length = sizeof(int);
-	// attr.name = "NextIndexRID_page";			_systemTableIndexRecordDescriptor.push_back(attr);
-	// attr.name = "NextIndexRID_slot";			_systemTableIndexRecordDescriptor.push_back(attr);
+	attr.type = TypeInt;
+	attr.length = sizeof(int);
+	attr.name = "NextIndexRID_page";			_systemTableIndexRecordDescriptor.push_back(attr);
+	attr.name = "NextIndexRID_slot";			_systemTableIndexRecordDescriptor.push_back(attr);
 	attr.type = TypeVarChar;
 	attr.length = MAX_ATTRIBUTENAME_SIZE;
 	attr.name = "SourceTable";					_systemTableIndexRecordDescriptor.push_back(attr);
@@ -297,7 +297,6 @@ RC RelationManager::loadTableMetadata()
 
         // Clear out any old data we have about this table
         const std::string tableName((char*)(currentRow.tableName + sizeof(int)));
-        cout << "table name = " << tableName << endl;
         _catalog[tableName].recordDescriptor.clear();
 
         // Load in the attribute table data for this row
@@ -733,8 +732,6 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 		return rc::TABLE_NOT_FOUND;
 	}
 
-	return rc::OK;
-
 	TableMetaData& tableData = _catalog[tableName];
 
 	// Create the file that will hold our index
@@ -755,16 +752,12 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &indexRecord, indexRid);
 	RETURN_ON_ERR(ret);
 
-	cout << "pulling in the catalog entry" << endl;
-
 	// Store the RID of this row in the in-memory catalog for easy access
 	RID newIndexRid;
     RID tableRid = _catalog[tableName].rowRID;
     TableMetadataRow tableRow;
 	ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, tableRid, (void*)(&tableRow));
     RETURN_ON_ERR(ret);
-
-    cout << "HERE" << endl;
 
     // Save the new index entry to the right spot in the index table
     IndexSystemRecord prevIndexRow;
@@ -789,12 +782,10 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
     }
     else // first index for this table...
     {
-    	tableRow.firstIndex = newIndexRid;
+    	tableRow.firstIndex = indexRid;
     	ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &tableRow, tableRid);
     	RETURN_ON_ERR(ret);
 	}
-
-	cout << "SAVED OKAY" << endl;
 
 	// We only want to extract the attribute for this index
 	std::vector<std::string> attributeNames;
@@ -836,9 +827,12 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 		return rc::TABLE_NOT_FOUND;
 	}
 
+	// Recover the name that stores the index
+	const std::string indexName = getIndexName(tableName, attributeName);
+
 	// Load in the row that is to be deleted
 	TableMetadataRow currentRow;
-    ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
+    RC ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
 	RETURN_ON_ERR(ret);
 
 	// Walk the index list until we find the one that needs to be deleted
@@ -846,29 +840,39 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	RID indexRid;
 	IndexSystemRecord prevIndexRow;
 	IndexSystemRecord indexRow;
-	indexRow = currentRow.firstAttribute;
+	indexRid = currentRow.firstIndex;
 
 	bool first = true;
-	while (indexRow.pageNum > 0)
+	bool done = false;
+	indexRid = currentRow.firstIndex;
+	while (indexRid.pageNum > 0 && !done)
 	{
-		ret = _rbfm->insertRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid, &indexRecord);
+		ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid, &indexRow);
 		RETURN_ON_ERR(ret);
 
-		int offset = sizeof(RID);
-		int len1 = 0;
-		memcpy(&len1, indexRecord.buffer + offset, sizeof(int));
-		offset += len1;
+		int offset = 0;
+		int sourceNameLen = 0;
+		memcpy(&sourceNameLen, indexRow.buffer + offset, sizeof(int));
+		char* pulledTableName = (char*)malloc(sourceNameLen + 1);
+		memcpy(pulledTableName, indexRow.buffer + offset + sizeof(int), sourceNameLen);
+		offset += sourceNameLen + sizeof(int);
+		pulledTableName[sourceNameLen] = 0;
 
-		char* pulledTableName = (char*)malloc(len1);
-		
-		int len2 = 0;
-		memcpy(&len2, indexRecord.buffer + offset, sizeof(int));
-		offset += len2;
+		int indexNameLen = 0;
+		memcpy(&indexNameLen, indexRow.buffer + offset, sizeof(int));
+		char* pulledIndexName = (char*)malloc(indexNameLen + 1);
+		memcpy(pulledIndexName, indexRow.buffer + offset + sizeof(int), indexNameLen);
+		offset += indexNameLen + sizeof(int);
+		pulledIndexName[indexNameLen] = 0;
 
-		char* pulledAttrName = (char*)malloc(len2);
-		cout << "length1 = " << len1 << ", length2 = " << len2 << endl;
+		int attrNameLen = 0;
+		memcpy(&attrNameLen, indexRow.buffer + offset, sizeof(int));
+		char* pulledAttrName = (char*)malloc(attrNameLen + 1);
+		memcpy(pulledAttrName, indexRow.buffer + offset + sizeof(int), attrNameLen);
+		offset += attrNameLen;
+		pulledAttrName[attrNameLen] = 0;
 
-		if (strncmp(tableName.c_str(), pulledTableName, len1) == 0 && strncmp(attributeName.c_str(), pulledAttrName) == 0)
+		if (strncmp(tableName.c_str(), pulledTableName, sourceNameLen) == 0 && strncmp(attributeName.c_str(), pulledAttrName, attrNameLen) == 0)
 		{
 			ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid);
 			RETURN_ON_ERR(ret);
@@ -879,47 +883,30 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 				currentRow.firstIndex = indexRow.nextIndex;
 				ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &currentRow, it->second.rowRID);
     			RETURN_ON_ERR(ret);
+    			done = true;
 			}
 			else // otherwise, update the list internally
 			{
 				prevIndexRow.nextIndex = indexRow.nextIndex;
 				ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &prevIndexRow, prevIndexRid);
     			RETURN_ON_ERR(ret);
+    			done = true;
 			}
-
-    		return rc::OK;
 		}
 		
 		// Advance...
 		first = false;
 		prevIndexRow = indexRow;
-		prevIndexRid = indexRow;
+		prevIndexRid = indexRid;
 		indexRid = indexRow.nextIndex;
 	}
 
-	// If we get here, then something bad went wront
-	// return rc::BTREE_NO_MATCHING_INDEX;
-	RC ret = IndexManager::instance()->destroyFile(getIndexName(tableName, attributeName));
+	// After the catalog is patched, destroy the file on disk
+	ret = IndexManager::instance()->destroyFile(indexName);
 	RETURN_ON_ERR(ret);
+
+	return rc::OK;
 }
-
-// len = sourceTable.length();
-// memcpy(buffer + offset, &len, sizeof(len));
-// offset += sizeof(len);
-// memcpy(buffer + offset, sourceTable.c_str(), len);
-// offset += len;
-
-// len = fileName.length();
-// memcpy(buffer + offset, &len, sizeof(len));
-// offset += sizeof(len);
-// memcpy(buffer + offset, fileName.c_str(), len);
-// offset += len;
-
-// len = attrName.length();
-// memcpy(buffer + offset, &len, sizeof(len));
-// offset += sizeof(len);
-// memcpy(buffer + offset, attrName.c_str(), len);
-// offset += len;
 
 RC RelationManager::indexScan(const string &tableName,
 	const string &attributeName,
