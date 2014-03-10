@@ -692,8 +692,42 @@ void Test24() {
   exec(("drop table salary"));
 }
 
+void cleanup()
+{
+	remove("RM_SYS_ATTRIBUTE_TABLE.db");
+	remove("RM_SYS_CATALOG_TABLE.db");
+	remove("RM_SYS_INDEX_TABLE.db");
+
+	remove("tbl_employee");
+	remove("tbl_employee.Age");
+	remove("tbl_employee.EmpName");
+	remove("tbl_employee.Height");
+	remove("tbl_employee2");
+	remove("tbl_employee2.Age");
+	remove("tbl_employee2.EmpName");
+	remove("tbl_employee2.Height");
+
+	remove("left");
+	remove("left.A");
+	remove("left.B");
+	remove("left.C");
+	remove("right");
+	remove("right.A");
+	remove("right.B");
+	remove("right.C");
+
+	remove("cli_columns");
+	remove("cli_indexes");
+	remove("cli_tables");
+	remove("group");
+	remove("leftvarchar");
+	remove("rightvarchar");
+
+}
+
 int main()
 {
+	cleanup();
 
   cli = CLI::Instance();
 
@@ -726,5 +760,6 @@ int main()
     cli->start();
   }
   
+  cleanup();
   return 0;
 }
