@@ -182,9 +182,6 @@
     <ClCompile Include="..\..\cs222\src\cli\cli.cc">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\cli\clitest.cc">
-      <Filter>Source Files\cli</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cs222\src\cli\start.cc">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
@@ -289,6 +286,9 @@
     </ClCompile>
     <ClCompile Include="..\..\cs222\src\readline\xmalloc.c">
       <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\cli\clitest_1.cc">
+      <Filter>Source Files\cli</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
