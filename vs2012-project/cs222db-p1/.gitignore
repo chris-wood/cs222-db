@@ -43,3 +43,15 @@ right.A
 right.B
 right.C
 group
+cli_columns
+cli_indexes
+cli_tables
+leftvarchar
+rightvarchar
+tbl_employee
+tbl_employee.Age
+tbl_employee.EmpName
+tbl_employee.Height
+tbl_employee2.Age
+tbl_employee2.EmpName
+tbl_employee2.Height

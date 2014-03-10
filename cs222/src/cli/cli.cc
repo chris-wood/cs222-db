@@ -6,6 +6,7 @@
 #endif
 
 #include <fstream>
+#include <cmath>
 
 // Command parsing delimiters
 // TODO: update delimiters later
@@ -1764,7 +1765,11 @@ RC CLI::printOutputBuffer(vector<string> &buffer, uint mod)
   int index;
   for (uint i=0; i < buffer.size(); i++) {
     index = i%mod;
-    maxLengths[index] = fmax(maxLengths[index], buffer[i].size());
+#ifndef fmax
+    maxLengths[index] = std::max(maxLengths[index], buffer[i].size());
+#else
+	maxLengths[index] = fmax(maxLengths[index], buffer[i].size());
+#endif
   }
 
   uint startIndex = 0;

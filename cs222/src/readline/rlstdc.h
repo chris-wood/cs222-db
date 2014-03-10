@@ -50,20 +50,20 @@
 # define __DLL_EXPORT__  __attribute__((dllexport)) extern
 #endif 
 
-#if (defined __WIN32__) || (defined _WIN32)
-# ifdef BUILD_READLINE_DLL
-#  define      __DLL_EXPORT__
-# elif defined(READLINE_STATIC)
-#  define       
-# elif defined (USE_READLINE_DLL)
-#  define      __DLL_IMPORT__
-# elif defined (USE_READLINE_STATIC)
-#  define       
-# else /* assume USE_READLINE_DLL */
-#  define      __DLL_IMPORT__
-# endif
-#else /* __WIN32__ */
-# define   
-#endif
+//#if (defined __WIN32__) || (defined _WIN32)
+//# ifdef BUILD_READLINE_DLL
+//#  define      __DLL_EXPORT__
+//# elif defined(READLINE_STATIC)
+//#  define       
+//# elif defined (USE_READLINE_DLL)
+//#  define      __DLL_IMPORT__
+//# elif defined (USE_READLINE_STATIC)
+//#  define       
+//# else /* assume USE_READLINE_DLL */
+//#  define      __DLL_IMPORT__
+//# endif
+//#else /* __WIN32__ */
+//# define   
+//#endif
 
 #endif /* !_RL_STDC_H_ */

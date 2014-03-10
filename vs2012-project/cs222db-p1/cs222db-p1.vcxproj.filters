@@ -43,6 +43,18 @@
     <Filter Include="Source Files\qe">
       <UniqueIdentifier>{2ad9cc56-8707-43d0-bb2e-b07ab9d02820}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\cli">
+      <UniqueIdentifier>{40dd3a7a-d96d-487a-975c-4eed1227e57b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\cli">
+      <UniqueIdentifier>{de1eff78-a571-4e0d-8810-c6348ce943af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\readline">
+      <UniqueIdentifier>{5038e5b7-3f53-4d32-af26-974ecc469a10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\readline">
+      <UniqueIdentifier>{76ea51b1-1ffa-4660-be76-c333091f9fed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.h">
@@ -78,6 +90,69 @@
     <ClInclude Include="..\..\cs222\src\qe\qe.h">
       <Filter>Header Files\qe</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\cs222\src\cli\cli.h">
+      <Filter>Header Files\cli</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\chardefs.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\histlib.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\history.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\keymaps.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\posixdir.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\posixjmp.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\posixstat.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\readline.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlconf.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rldefs.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlmbutil.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlprivate.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlshell.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlstdc.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rltty.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rltypedefs.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\rlwinsize.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\tcap.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\tilde.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cs222\src\readline\xmalloc.h">
+      <Filter>Header Files\readline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\pfm.cc">
@@ -104,8 +179,116 @@
     <ClCompile Include="..\..\cs222\src\qe\qe.cc">
       <Filter>Source Files\qe</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\qe\qetest.cc">
-      <Filter>Source Files\qe</Filter>
+    <ClCompile Include="..\..\cs222\src\cli\cli.cc">
+      <Filter>Source Files\cli</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\cli\clitest.cc">
+      <Filter>Source Files\cli</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\cli\start.cc">
+      <Filter>Source Files\cli</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\bind.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\callback.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\compat.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\complete.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\display.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\emacs_keymap.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\funmap.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\histexpand.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\histfile.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\history.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\histsearch.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\input.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\isearch.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\keymaps.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\kill.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\macro.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\mbutil.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\misc.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\nls.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\parens.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\readline.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\rltty.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\savestring.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\search.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\shell.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\signals.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\terminal.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\text.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\tilde.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\undo.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\util.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\vi_keymap.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\vi_mode.c">
+      <Filter>Source Files\readline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cs222\src\readline\xmalloc.c">
+      <Filter>Source Files\readline</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
