@@ -131,6 +131,7 @@ public:
       RM_ScanIterator &rm_ScanIterator);
 
   RC createIndex(const string &tableName, const string &attributeName);
+  RC destroyIndex(const string &tableName, const string &attributeName, bool wipeAll);
   RC destroyIndex(const string &tableName, const string &attributeName);
 
   // indexScan returns an iterator to allow the caller to go through qualified entries in index

@@ -315,9 +315,61 @@ RC RelationManager::loadTableMetadata()
 
 		// Advance to the next row to read in more table data
 		currentRID = currentRow.nextRow;
-	}
 
-	// TODO: Load in the index data stuff
+		// Now read in the indices for this 
+		IndexSystemRecord indexRow;
+		RID indexRid = currentRow.firstIndex;
+		while (indexRid.pageNum > 0)
+		{
+			memset(&indexRow, 0, sizeof(indexRow));
+			ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid, &indexRow);
+			RETURN_ON_ERR(ret);
+
+			int offset = 0;
+			int sourceNameLen = 0;
+			memcpy(&sourceNameLen, indexRow.buffer + offset, sizeof(int));
+			char* pulledTableName = (char*)malloc(sourceNameLen + 1);
+			memcpy(pulledTableName, indexRow.buffer + offset + sizeof(int), sourceNameLen);
+			offset += sourceNameLen + sizeof(int);
+			pulledTableName[sourceNameLen] = 0;
+
+			int indexNameLen = 0;
+			memcpy(&indexNameLen, indexRow.buffer + offset, sizeof(int));
+			char* pulledIndexName = (char*)malloc(indexNameLen + 1);
+			memcpy(pulledIndexName, indexRow.buffer + offset + sizeof(int), indexNameLen);
+			offset += indexNameLen + sizeof(int);
+			pulledIndexName[indexNameLen] = 0;
+			std::string indexName = string(pulledIndexName);
+
+			int attrNameLen = 0;
+			memcpy(&attrNameLen, indexRow.buffer + offset, sizeof(int));
+			char* pulledAttrName = (char*)malloc(attrNameLen + 1);
+			memcpy(pulledAttrName, indexRow.buffer + offset + sizeof(int), attrNameLen);
+			offset += attrNameLen;
+			pulledAttrName[attrNameLen] = 0;
+			std::string attrName = string(pulledAttrName);
+
+			// Open a handle to the index
+			IndexMetaData indexData;
+			ret = _rbfm->openFile(pulledIndexName, indexData.fileHandle);
+			RETURN_ON_ERR(ret);
+
+			// Create a new metadata record for the index
+			IndexMetaData indexMetaData;
+			Attribute indexAttr;
+			indexAttr.type = TypeVarChar;
+			indexAttr.length = attrNameLen;
+			indexAttr.name = attrName;
+			indexMetaData.fileHandle = indexData.fileHandle;
+			indexMetaData.attribute = indexAttr;
+
+			// Now add this index entry to the catalog
+			_catalog[tableName].indexes.insert(std::pair<std::string,IndexMetaData>(indexName, indexMetaData));
+
+			// Advance!
+			indexRid = indexRow.nextIndex;
+		}
+	}
 
 	return rc::OK;
 }
@@ -436,15 +488,6 @@ RC RelationManager::deleteTable(const string &tableName)
 	// Now delete the old table record from disk
     ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID);
 	RETURN_ON_ERR(ret);
-
-	// TODO: Delete stuff from the SYSTEM_TABLE_INDEX_NAME table also
-	// TableMetadataRow currentRow;
- //    ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, it->second.rowRID, &currentRow);
-	// RETURN_ON_ERR(ret);	
-
-	// IndexSystemRecord indexRecord;
-	// ret = _rbfm->readRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRecord.buffer, indexRid);
-	// RETURN_ON_ERR(ret);
 
 	// Finally, update our in-memory representation of the catalog
 	_catalog.erase(it);
@@ -819,7 +862,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	return rc::OK;
 }
 
-RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName, bool wipeAll)
 {
 	std::map<std::string, TableMetaData>::iterator it = _catalog.find(tableName);
 	if (it == _catalog.end())
@@ -829,6 +872,8 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 
 	// Recover the name that stores the index
 	const std::string indexName = getIndexName(tableName, attributeName);
+	vector<RID> indexRids;
+	vector<std::string> indexFileNames;
 
 	// Load in the row that is to be deleted
 	TableMetadataRow currentRow;
@@ -872,26 +917,34 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 		offset += attrNameLen;
 		pulledAttrName[attrNameLen] = 0;
 
-		if (strncmp(tableName.c_str(), pulledTableName, sourceNameLen) == 0 && strncmp(attributeName.c_str(), pulledAttrName, attrNameLen) == 0)
+		if (!wipeAll)
 		{
-			ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid);
-			RETURN_ON_ERR(ret);
+			if (strncmp(tableName.c_str(), pulledTableName, sourceNameLen) == 0 && strncmp(attributeName.c_str(), pulledAttrName, attrNameLen) == 0)
+			{
+				ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRid);
+				RETURN_ON_ERR(ret);
 
-			// If we match on the first element, then update the catalog entry
-			if (first)
-			{
-				currentRow.firstIndex = indexRow.nextIndex;
-				ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &currentRow, it->second.rowRID);
-    			RETURN_ON_ERR(ret);
-    			done = true;
+				// If we match on the first element, then update the catalog entry
+				if (first)
+				{
+					currentRow.firstIndex = indexRow.nextIndex;
+					ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_CATALOG_NAME].fileHandle, _systemTableRecordDescriptor, &currentRow, it->second.rowRID);
+	    			RETURN_ON_ERR(ret);
+	    			done = true;
+				}
+				else // otherwise, update the list internally
+				{
+					prevIndexRow.nextIndex = indexRow.nextIndex;
+					ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &prevIndexRow, prevIndexRid);
+	    			RETURN_ON_ERR(ret);
+	    			done = true;
+				}
 			}
-			else // otherwise, update the list internally
-			{
-				prevIndexRow.nextIndex = indexRow.nextIndex;
-				ret = _rbfm->updateRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, &prevIndexRow, prevIndexRid);
-    			RETURN_ON_ERR(ret);
-    			done = true;
-			}
+		}
+		else
+		{
+			indexRids.push_back(indexRid);
+			indexFileNames.push_back(getIndexName(tableName, pulledAttrName));
 		}
 		
 		// Advance...
@@ -901,11 +954,31 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 		indexRid = indexRow.nextIndex;
 	}
 
-	// After the catalog is patched, destroy the file on disk
-	ret = IndexManager::instance()->destroyFile(indexName);
-	RETURN_ON_ERR(ret);
+	// If we're wiping the index entirely, just drop every record for this index from the index table and then delete the file
+	if (wipeAll)
+	{
+		for (int i = 0; i < indexRids.size(); i++)
+		{
+			ret = _rbfm->deleteRecord(_catalog[SYSTEM_TABLE_INDEX_NAME].fileHandle, _systemTableIndexRecordDescriptor, indexRids.at(i));
+			RETURN_ON_ERR(ret);
+
+			ret = IndexManager::instance()->destroyFile(indexFileNames.at(i));
+			RETURN_ON_ERR(ret);
+		}
+	}
+	else
+	{
+		// After the catalog is patched, destroy the file on disk
+		ret = IndexManager::instance()->destroyFile(indexName);
+		RETURN_ON_ERR(ret);
+	}
 
 	return rc::OK;
+}
+
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+{
+	return destroyIndex(tableName, attributeName, false);
 }
 
 RC RelationManager::indexScan(const string &tableName,
