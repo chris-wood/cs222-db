@@ -420,11 +420,22 @@ RC RelationManager::deleteTable(const string &tableName)
 		return rc::TABLE_NOT_FOUND;
 	}
 
+	// Close and destroy the table file itself
 	RC ret = _rbfm->closeFile(it->second.fileHandle);
 	RETURN_ON_ERR(ret);
 
 	ret = _rbfm->destroyFile(tableName);
 	RETURN_ON_ERR(ret);
+
+	// Close and destroy the index files
+	for(std::map<std::string, IndexMetaData>::iterator indexIt = it->second.indexes.begin(); indexIt != it->second.indexes.end(); ++indexIt)
+	{
+		ret = _rbfm->closeFile(indexIt->second.fileHandle);
+		RETURN_ON_ERR(ret);
+
+		ret = _rbfm->destroyFile(indexIt->second.fileHandle.getFilename());
+		RETURN_ON_ERR(ret);
+	}
 
 	// Load in the row that is to be deleted
 	TableMetadataRow currentRow;
@@ -971,6 +982,9 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 				im->closeFile(indexMeta->second.fileHandle);
 			}
 
+			// And we can remove it from our in-memory representation
+			it->second.indexes.erase(indexMeta);
+
 			// Finally we can destroy the file
 			ret = IndexManager::instance()->destroyFile(indexFileNames.at(i));
 			RETURN_ON_ERR(ret);
@@ -987,6 +1001,9 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 			// Close the file
 			im->closeFile(indexMeta->second.fileHandle);
 		}
+
+		// And we can remove it from our in-memory representation
+		it->second.indexes.erase(indexMeta);
 		
 		// Finally we can destroy the file
 		ret = IndexManager::instance()->destroyFile(indexName);
