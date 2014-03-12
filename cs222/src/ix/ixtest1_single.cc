@@ -91,8 +91,6 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     // Functions tested
     // 1. Open Index file
     // 2. Insert entry **
-    // 3. Delete entry **
-    // 4. Delete entry -- when the value is not there **
     // 5. Close Index file
     // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 2****" << endl;
@@ -127,22 +125,6 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
             cout << "Failed Inserting Entry..." << endl;
             goto error_close_index;
         }
-    }
-
-    // delete entry
-    rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
-    if(rc != success)
-    {
-        cout << "Failed Deleting Entry..." << endl;
-        goto error_close_index;
-    }
-
-    // delete entry again
-    rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
-    if(rc == success) //This time it should NOT give success because entry is not there.
-    {
-        cout << "Entry deleted again...failure" << endl;
-        goto error_close_index;
     }
 
     // close index file

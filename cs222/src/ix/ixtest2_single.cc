@@ -470,15 +470,6 @@ error_return:
 
 int testCase_7(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
-    // 1. Create Index File
-    // 2. OpenIndex File
-    // 3. Insert entry
-    // 4. Scan entries, and delete entries
-    // 5. Scan close
-    // 6. CloseIndex File
-    // 7. DestroyIndex File
-    // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 7****" << endl;
 
     RC rc;
@@ -488,6 +479,8 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
     float compVal = 100.0;
     unsigned numOfTuples = 100;
     float key;
+    int expectedResultCnt = 100;
+    int actualResultCnt = 0;
 
     // create index file
     rc = indexManager->createFile(indexFileName);
@@ -540,20 +533,15 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
         goto error_close_index;
     }
 
-    // DeleteEntry in IndexScan Iterator
+    actualResultCnt = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        float key = (float)rid.pageNum;
-        rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
-        if(rc != success)
-        {
-            cout << "Failed deleting entry in Scan..." << endl;
-            goto error_close_scan;
-        }
+    	actualResultCnt++;
     }
-    cout << endl;
+    if (expectedResultCnt != actualResultCnt) {
+        cout << "Wrong result count...Failure" << endl;
+        goto error_close_index;
+    }
 
     // close scan
     rc = ix_ScanIterator.close();
@@ -580,15 +568,14 @@ int testCase_7(const string &indexFileName, const Attribute &attribute)
     }
 
     //iterate
+    actualResultCnt = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << "Entry returned: " << rid.pageNum << " " << rid.slotNum << "--- failure" << endl;
-
-        if(rid.pageNum > 100)
-        {
-            cout << "Wrong entries output...failure" << endl;
-            goto error_close_scan;
-        }
+    	actualResultCnt++;
+    }
+    if (expectedResultCnt != actualResultCnt) {
+        cout << "Wrong result count...Failure" << endl;
+        goto error_close_index;
     }
 
     //close scan
@@ -646,17 +633,6 @@ error_return:
 
 int testCase_8(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
-    // 1. Create Index File
-    // 2. OpenIndex File
-    // 3. Insert entry
-    // 4. Scan entries, and delete entries
-    // 5. Scan close
-    // 6. Insert entries again
-    // 7. Scan entries
-    // 8. CloseIndex File
-    // 9. DestroyIndex File
-    // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 8****" << endl;
 
     RC rc;
@@ -708,53 +684,13 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         }
     }
 
-    //scan
-    compVal = 200.0;
-    rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
-    if(rc == success)
-    {
-        cout << "Scan Opened Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Opening Scan..." << endl;
-        goto error_close_index;
-    }
-
-    // Test DeleteEntry in IndexScan Iterator
-    while(ix_ScanIterator.getNextEntry(rid, &key) == success)
-    {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        key = (float)rid.pageNum;
-        rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
-        if(rc != success)
-        {
-            cout << "Failed deleting entry in Scan..." << endl;
-            goto error_close_scan;
-        }
-    }
-    cout << endl;
-
-    //close scan
-    rc = ix_ScanIterator.close();
-    if(rc == success)
-    {
-        cout << "Scan Closed Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Closing Scan..." << endl;
-        goto error_close_index;
-    }
-
     // insert entry Again
     numOfTuples = 500;
     for(unsigned i = 1; i <= numOfTuples; i++)
     {
-        key = (float)i;
-        rid.pageNum = i;
-        rid.slotNum = i;
+        key = (float)i + 200;
+        rid.pageNum = i + 200;
+        rid.slotNum = i + 200;
 
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
         if(rc != success)
@@ -845,17 +781,6 @@ error_return:
 
 int testCase_9(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
-    // 1. Create Index
-    // 2. OpenIndex
-    // 3. Insert entry
-    // 4. Scan entries, and delete entries
-    // 5. Scan close
-    // 6. Insert entries again
-    // 7. Scan entries
-    // 8. CloseIndex
-    // 9. DestroyIndex
-    // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 9****" << endl;
 
     RC rc;
@@ -913,54 +838,6 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
             cout << "Failed Inserting Keys..." << endl;
             goto error_close_index;
         }
-    }
-
-    //scan
-    compVal = 20000;
-    rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
-    if(rc == success)
-    {
-        cout << "Scan Opened Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Opening Scan..." << endl;
-        goto error_close_index;
-    }
-
-    // Test DeleteEntry in IndexScan Iterator
-    count = 0;
-    while(ix_ScanIterator.getNextEntry(rid, &key) == success)
-    {
-        if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        key = A[rid.pageNum-1];
-        rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
-        if(rc != success)
-        {
-            cout << "Failed deleting entry in Scan..." << endl;
-            goto error_close_scan;
-        }
-        count++;
-    }
-    cout << "Number of deleted entries: " << count << endl;
-    if (count != 20001)
-    {
-        cout << "Wrong entries output...failure" << endl;
-        goto error_close_scan;
-    }
-
-    //close scan
-    rc = ix_ScanIterator.close();
-    if(rc == success)
-    {
-        cout << "Scan Closed Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Closing Scan..." << endl;
-        goto error_close_index;
     }
 
     // insert entry Again
@@ -1069,17 +946,6 @@ error_return:
 
 int testCase_10(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
-    // 1. Create Index
-    // 2. OpenIndex
-    // 3. Insert entry
-    // 4. Scan entries, and delete entries
-    // 5. Scan close
-    // 6. Insert entries again
-    // 7. Scan entries
-    // 8. CloseIndex
-    // 9. DestroyIndex
-    // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 10****" << endl;
 
     RC rc;
@@ -1139,54 +1005,6 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
             cout << "Failed Inserting Keys..." << endl;
             goto error_close_index;
         }
-    }
-
-    //scan
-    compVal = 30000.0;
-    rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
-    if(rc == success)
-    {
-        cout << "Scan Opened Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Opening Scan..." << endl;
-        goto error_close_index;
-    }
-
-    // Test DeleteEntry in IndexScan Iterator
-    count = 0;
-    while(ix_ScanIterator.getNextEntry(rid, &key) == success)
-    {
-        if(count % 1000 == 0)
-            cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        key = A[rid.pageNum-1];
-        rc = indexManager->deleteEntry(fileHandle, attribute, &key, rid);
-        if(rc != success)
-        {
-            cout << "Failed deleting entry in Scan..." << endl;
-            goto error_close_scan;
-        }
-        count++;
-    }
-    cout << "Number of deleted entries: " << count << endl;
-    if (count != 30001)
-    {
-        cout << "Wrong entries output...failure" << endl;
-        goto error_close_scan;
-    }
-
-    //close scan
-    rc = ix_ScanIterator.close();
-    if(rc == success)
-    {
-        cout << "Scan Closed Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Closing Scan..." << endl;
-        goto error_close_index;
     }
 
     // insert entry Again
@@ -1291,7 +1109,6 @@ error_destroy_index: //destroy index file
 error_return:
 	return fail;
 }
-
 
 int testCase_extra_1(const string &indexFileName, const Attribute &attribute)
 {
