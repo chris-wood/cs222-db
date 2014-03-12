@@ -1499,7 +1499,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		case TypeVarChar:
 			int size = 0;
 			memcpy(&size, record.key.varchar, sizeof(unsigned));
-			memcpy(key, record.key.varchar + sizeof(unsigned), size);
+			memcpy(key, record.key.varchar, sizeof(unsigned) + size);
 	}
 
 	// Advance to the next record
