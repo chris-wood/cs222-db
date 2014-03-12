@@ -98,6 +98,7 @@ class IndexManager : public RecordBasedCoreManager {
   static RC findSmallestLeafIndexEntry(FileHandle& fileHandle, RID& rid);
   static RC readRootPage(FileHandle& fileHandle, void* pageBuffer);
   static RC findLargestLeafIndexEntry(FileHandle& fileHandle, const Attribute& attribute, RID& rid);
+  static RC validateIndex(FileHandle& fileHandle, const Attribute& attribute);
   static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended);
   static RC printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended, bool restrictToPage, PageNum restrictPage);
   static RC updateRootPage(FileHandle& fileHandle, unsigned newRootPage);

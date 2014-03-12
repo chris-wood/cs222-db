@@ -1111,8 +1111,10 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 	RID lastLeftRid, prevRid = inputFooter->firstRecord;
 	curRid = inputFooter->firstRecord;
 	int skipped = 0;
-	int numToSkip = (totalEntries / 2) + 1; // only move half
-	while (skipped < numToSkip)
+	const int maxNumToSkip = totalEntries - 1;
+	bool done = false;
+
+	while (!done)
 	{
 		// Read in the record from our input buffer
 		prevRid = curRid;
@@ -1132,8 +1134,13 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		curRid = tempRecord.nextSlot;
 		++slotNum;
 
+		if (currentSize >= PAGE_SIZE/2)
+			done = true;
+		else if (skipped >= maxNumToSkip)
+			done = true;
+
 		// We know what the slot numbers will be because the page is empty initially
-		if (currentSize >= PAGE_SIZE/2 || curRid.pageNum == 0)
+		if (done || curRid.pageNum == 0)
 		{
 			tempRecord.nextSlot.pageNum = 0;
 			tempRecord.nextSlot.slotNum = 0;
@@ -1694,6 +1701,69 @@ void IndexRecord::print(AttrType type, bool isLeaf)
 RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended)
 {
 	return printIndex(fileHandle, attribute, extended, false, 0);
+}
+
+RC IndexManager::validateIndex(FileHandle& fileHandle, const Attribute& attribute)
+{
+	bool ok = true;
+	IndexManager* im = IndexManager::instance();
+	const std::vector<Attribute>& recordDescriptor = getIndexRecordDescriptor(attribute.type);
+	
+	PageNum currentPage = 1;
+	IndexRecord currEntry;
+	unsigned char pageBuffer[PAGE_SIZE] = {0};
+	IX_PageIndexFooter* footer = getIXPageIndexFooter(pageBuffer);
+
+	// Loop through all pages and print a summary of the data
+	while(currentPage < fileHandle.getNumberOfPages())
+	{
+		RC ret = fileHandle.readPage(currentPage, pageBuffer);
+		RETURN_ON_ERR(ret);
+
+		// Iterate through all slots on the page
+		RID curRid;
+		curRid.pageNum = footer->pageNumber;
+		curRid.slotNum = 0;
+		bool foundLastSlot = false;
+
+		while(curRid.slotNum < footer->numSlots)
+		{
+			ret = im->readRecord(fileHandle, recordDescriptor, curRid, &currEntry, pageBuffer);
+			if (ret != rc::OK)
+			{
+				if (ret == rc::RECORD_DELETED)
+				{
+					std::cout << "s=" << curRid.slotNum << "\tDELETED\n";
+					curRid.slotNum++;
+					continue;
+				}
+				else
+				{
+					RETURN_ON_ERR(ret);
+				}
+			}
+
+			if (currEntry.nextSlot.pageNum == 0)
+			{
+				if (foundLastSlot)
+				{
+					std::cout << "Found slot that is past the end!\n";
+					std::cout << "s=" << curRid.slotNum << "\tkey=";
+					currEntry.print(attribute.type, footer->isLeafPage);
+					std::cout << "\n";
+					ok = false;
+				}
+
+				foundLastSlot = true;
+			}
+
+			curRid.slotNum++;
+		}
+		
+		++currentPage;
+	}
+
+	return ok ? rc::OK : rc::FILE_CORRUPT;
 }
 
 RC IndexManager::printIndex(FileHandle& fileHandle, const Attribute& attribute, bool extended, bool restrictToPage, PageNum restrictPage)
