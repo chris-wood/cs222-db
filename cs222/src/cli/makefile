@@ -18,6 +18,7 @@ start.o: cli.h $(CODEROOT)/util/libutil.a
 clitest: clitest.o libcli.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a 
 start: start.o libcli.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a 
 
+# dependencies to compile used libraries
 $(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 
@@ -27,7 +28,6 @@ $(CODEROOT)/rm/librm.a: $(CODEROOT)/util/libutil.a
 $(CODEROOT)/rbf/librbf.a: $(CODEROOT)/util/libutil.a
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
 
-# dependencies to compile used libraries
 $(CODEROOT)/ix/libix.a: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/rm/librm.a $(CODEROOT)/util/libutil.a
 	$(MAKE) -C $(CODEROOT)/ix libix.a
 

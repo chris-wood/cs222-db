@@ -1,7 +1,7 @@
 
 include ../makefile.inc
 
-all: libqe.a (CODEROOT)/ix/libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/rm/librm.a $(CODEROOT)/util/libutil.a qetest
+all: libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/rm/librm.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/util/libutil.a qetest
 
 # lib file dependencies
 libqe.a: libqe.a(qe.o)
@@ -12,12 +12,14 @@ qe.o: qe.h
 qetest.o: qe.h
 
 # binary dependencies
-qetest: qetest.o libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/util/libutil.a 
+qetest: qetest.o libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/util/libutil.a 
 
 # dependencies to compile used libraries
-.PHONY: $(CODEROOT)/util/libutil.a
 $(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
+
+$(CODEROOT)/pf/libpf.a: $(CODEROOT)/util/libutil.a 
+	$(MAKE) -C $(CODEROOT)/pf libpf.a
 
 $(CODEROOT)/rbf/librbf.a: $(CODEROOT)/util/libutil.a 
 	$(MAKE) -C $(CODEROOT)/rbf librbf.a
