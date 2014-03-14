@@ -1,7 +1,7 @@
 
 include ../makefile.inc
 
-CXXFLAGS =-std=c++11
+#CXXFLAGS =-std=c++11
 
 all: libcli.a clitest start
 

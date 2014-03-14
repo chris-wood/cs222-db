@@ -1350,8 +1350,8 @@ RC CLI::printAttributes()
 
   for (std::vector<Attribute>::iterator it = attributes.begin() ; it != attributes.end(); ++it) {
     outputBuffer.push_back(it->name);
-    outputBuffer.push_back(to_string(it->type));
-    outputBuffer.push_back(to_string(it->length));
+    outputBuffer.push_back(to_string((long long int)it->type));
+	outputBuffer.push_back(to_string((long long int)it->length));
   }
 
   return this->printOutputBuffer(outputBuffer, 3);
@@ -1380,8 +1380,8 @@ RC CLI::printIndex() {
   outputBuffer.push_back("PageNum");
   outputBuffer.push_back("SlotNum");
   while (rmisi.getNextEntry(rid, key) == 0) {
-    outputBuffer.push_back(to_string(rid.pageNum));
-    outputBuffer.push_back(to_string(rid.slotNum));
+	  outputBuffer.push_back(to_string((long long int)rid.pageNum));
+	  outputBuffer.push_back(to_string((long long int)rid.slotNum));
   }
 
   return this->printOutputBuffer(outputBuffer, 2);
@@ -1722,13 +1722,13 @@ RC CLI::updateOutputBuffer(vector<string> &buffer, void *data, vector<Attribute>
         number = 0;
         memcpy(&number, (char *)data+offset, sizeof(int));
         offset += sizeof(int);
-        buffer.push_back(to_string(number));
+		buffer.push_back(to_string((long long int)number));
         break;
       case TypeReal:
         fNumber = 0;
         memcpy(&fNumber, (char *)data+offset, sizeof(float));
         offset += sizeof(float);
-        buffer.push_back(to_string(fNumber));
+		buffer.push_back(to_string((long double)fNumber));
         break;
       case TypeVarChar:
         length = 0;
