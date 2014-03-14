@@ -150,6 +150,7 @@ void CreateDeleteTest(bool print)
 
 void VeryLargeIndexTest(bool print)
 {
+	static const int NUM_ENTRIES = 10;
 	if (print)
 	{
 		cout << "* We will fill up a table with a lot of indexed data and then filter it down to a small result" << endl;
@@ -157,10 +158,47 @@ void VeryLargeIndexTest(bool print)
 	}
 
 	// Create our table and indexes
+	static const int MAX_STRING_SIZE = 100;
 	exec(print, "create table full_table i = int, r = real, s = varchar(100)");
 	exec(print, "create index i on full_table");
 	exec(print, "create index r on full_table");
 	exec(print, "create index s on full_table");
+
+	// TODO: Add random values
+	std::vector<int> iVals;
+	std::vector<float> rVals;
+	std::vector<std::string> sVals;
+	char sBuffer[PAGE_SIZE];
+
+	// Reserve our "special values"
+	int iVal, iSpecial = 1234;
+	float rVal, rSpecial = 0.999f;
+	std::string sVal, sSpecial = "foobar";
+
+	for (int i = 0; i < NUM_ENTRIES; ++i)
+	{
+		iVal = iSpecial;
+		while (iVal == iSpecial)
+		{
+			iVal = rand();
+		}
+
+		rVal = rSpecial;
+		while (rVal == rSpecial)
+		{
+			rVal = rand();
+		}
+
+		int sLen = 1 + rand() % MAX_STRING_SIZE;
+		memset(sBuffer, 0, PAGE_SIZE);
+		for (int sIndex = 0; sIndex < sLen; ++sIndex)
+		{
+			sBuffer[sIndex] = 'A' + (rand() % 20);
+		}
+		sSpecial = std::string(sBuffer);
+
+
+	}
 
 	// TODO: Test current values
 
