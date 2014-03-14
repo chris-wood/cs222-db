@@ -31,11 +31,8 @@ $(CODEROOT)/rbf/librbf.a: $(CODEROOT)/util/libutil.a
 $(CODEROOT)/ix/libix.a: $(CODEROOT)/rbf/librbf.a $(CODEROOT)/rm/librm.a $(CODEROOT)/util/libutil.a
 	$(MAKE) -C $(CODEROOT)/ix libix.a
 
-$(CODEROOT)/qe/libqe.a: $(CODEROOT)/pf/libpf.a $(CODEROOT)/rm/librm.a $(CODEROOT)/ix/libix.a $(CODEROOT)/util/libutil.a
+$(CODEROOT)/qe/libqe.a: $(CODEROOT)/rm/librm.a $(CODEROOT)/ix/libix.a $(CODEROOT)/util/libutil.a
 	$(MAKE) -C $(CODEROOT)/qe libqe.a
-
-$(CODEROOT)/pf/libpf.a: $(CODEROOT)/util/libutil.a
-	$(MAKE) -C $(CODEROOT)/pf libpf.a
 
 clean:
 	-rm clitest start *.a *.o *~
