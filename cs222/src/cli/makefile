@@ -3,7 +3,7 @@ include ../makefile.inc
 
 #CXXFLAGS =-std=c++11
 
-all: libcli.a clitest start $(CODEROOT)/util/libuti.a
+all: libcli.a clitest start $(CODEROOT)/util/libutil.a
 
 # lib file dependencies
 libcli.a: libcli.a(cli.o)  # and possibly other .o files
@@ -16,10 +16,10 @@ clitest.o: cli.h
 start.o: cli.h
 
 # binary dependencies
-clitest: clitest.o libcli.a $(CODEROOT)/util/libuti.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
-start: start.o libcli.a $(CODEROOT)/util/libuti.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
+clitest: clitest.o libcli.a $(CODEROOT)/util/libutil.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
+start: start.o libcli.a $(CODEROOT)/util/libutil.a $(CODEROOT)/qe/libqe.a $(CODEROOT)/ix/libix.a $(CODEROOT)/rm/librm.a $(CODEROOT)/rbf/librbf.a
 
-$(CODEROOT)/util/libuti.a:
+$(CODEROOT)/util/libutil.a:
 	$(MAKE) -C $(CODEROOT)/util libutil.a
 
 $(CODEROOT)/rm/librm.a:
