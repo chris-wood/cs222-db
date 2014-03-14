@@ -170,7 +170,7 @@ RC CLI::start()
     _snprintf(shell_prompt, sizeof(shell_prompt), ">>> ");
 #else
 	snprintf(shell_prompt, sizeof(shell_prompt), ">>> ");
-#endif WIN32
+#endif //WIN32
     // Display prompt and read input (n.b. input must be freed after use)...
     input = readline(shell_prompt);
 
