@@ -1606,16 +1606,15 @@ RC KeyValueData::compare(AttrType type, const KeyValueData& that, int& result)
 			break;
 
 		case TypeVarChar:
-			result = strncmp(varchar + sizeof(unsigned), that.varchar + sizeof(unsigned), size);
+			result = strncmp(varchar + sizeof(unsigned), that.varchar + sizeof(unsigned), std::min(size, that.size));
 			if (result == 0)
 			{
 				if (size < that.size)
-					return -1;
-
-				if (size > that.size)
-					return 1;
-
-				return 0;
+					result = -1;
+				else if (size > that.size)
+					result = 1;
+				else
+					return 0;
 			}
 			break;
 
