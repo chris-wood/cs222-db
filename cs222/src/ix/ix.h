@@ -28,7 +28,7 @@ struct KeyValueData
 {
 	int size;
 
-	// This is a super lazy way to not have to dynamically malloc based on the size every time
+	// This is a super lazy way to not have to dynamically allocate based on the size every time
 	// Values in unions 'overlap' so we only use MAX_KEY_SIZE bytes, but we can index into the data as an int or float
 	union
 	{

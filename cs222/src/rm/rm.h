@@ -32,7 +32,7 @@ struct TableMetadataRow
 	RID prevRow;
 	RID firstAttribute;
 	RID firstIndex;
-	char tableName[MAX_TABLENAME_SIZE]; // TODO: We could malloc this and not have this max size
+	char tableName[MAX_TABLENAME_SIZE];
 };
 
 struct IndexMetaData
@@ -56,7 +56,7 @@ struct AttributeRecord
 	RID nextAttribute;
 	AttrType type;
 	AttrLength length;
-	char name[MAX_ATTRIBUTENAME_SIZE]; // TODO: We could malloc this and not have this max size
+	char name[MAX_ATTRIBUTENAME_SIZE];
 };
 
 struct IndexSystemRecord
