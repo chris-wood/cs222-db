@@ -452,6 +452,8 @@ RC IndexManager::insertIntoNonLeaf(FileHandle& fileHandle, PageNum& page, const 
     unsigned recHeaderSize = 0;
     unsigned* recHeader = NULL;
     ret = generateRecordHeader(recordDescriptor, &entry, recHeader, recLength, recHeaderSize);
+	free(recHeader);
+	RETURN_ON_ERR(ret);
 
 	// Determine if we can fit on this page
 	unsigned targetFreeSpace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
@@ -596,6 +598,7 @@ RC IndexManager::insertIntoLeaf(FileHandle& fileHandle, PageNum& page, const Att
 	unsigned recHeaderSize = 0;
 	unsigned* recHeader = NULL;
 	ret = generateRecordHeader(recordDescriptor, &leaf, recHeader, recLength, recHeaderSize);
+	free(recHeader);
 	RETURN_ON_ERR(ret);
 
 	// Determine if we can fit on this page
@@ -1127,8 +1130,10 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		unsigned recHeaderSize = 0;
 		unsigned* recHeader = NULL;
 		ret = generateRecordHeader(recordDescriptor, &tempRecord, recHeader, recLength, recHeaderSize);
-		currentSize += recLength + sizeof(PageIndexSlot);
+		free(recHeader);
 		RETURN_ON_ERR(ret);
+
+		currentSize += recLength + sizeof(PageIndexSlot);
 
 		// Advance to next record
 		curRid = tempRecord.nextSlot;
@@ -1193,8 +1198,10 @@ RC IndexManager::deletelessSplit(FileHandle& fileHandle, const std::vector<Attri
 		unsigned recHeaderSize = 0;
 		unsigned* recHeader = NULL;
 		ret = generateRecordHeader(recordDescriptor, &tempRecord, recHeader, recLength, recHeaderSize);
-		currentSize += recLength + sizeof(PageIndexSlot);
+		free(recHeader);
 		RETURN_ON_ERR(ret);
+
+		currentSize += recLength + sizeof(PageIndexSlot);
 
 		// Advance to next record
 		curRid = tempRecord.nextSlot;

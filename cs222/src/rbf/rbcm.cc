@@ -145,6 +145,7 @@ RC RecordBasedCoreManager::generateRecordHeader(const vector<Attribute> &recordD
         unsigned attrSize = Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
         if (attrSize == 0)
         {
+			free(recHeader);
             return rc::ATTRIBUTE_INVALID_TYPE;
         }
 
@@ -164,28 +165,13 @@ RC RecordBasedCoreManager::insertRecord(FileHandle &fileHandle, const vector<Att
     unsigned recHeaderSize = 0;
     unsigned* recHeader = NULL;
     RC ret = generateRecordHeader(recordDescriptor, data, recHeader, recLength, recHeaderSize);
-    if (ret != rc::OK)
-    {
-        free(recHeader);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
-		assert(false);
-    }
+	free(recHeader);
+	RETURN_ON_ERR(ret);
     
     // Find the first page(s) with enough free space to hold this record
     PageNum pageNum;
     ret = findFreeSpace(fileHandle, recLength + sizeof(PageIndexSlot), pageNum);
-    if (ret != rc::OK)
-    {
-        free(recHeader);
-        if (ret != rc::OK)
-        {
-            return ret;
-        }
-		assert(false);
-    }
+    RETURN_ON_ERR(ret);
 
     return insertRecordToPage(fileHandle, recordDescriptor, data, pageNum, rid);
 }
@@ -213,6 +199,7 @@ RC RecordBasedCoreManager::insertRecordInplace(const vector<Attribute> &recordDe
     unsigned freespace = calculateFreespace(footer->freeSpaceOffset, footer->numSlots);
     if (recLength > freespace)
     {
+		free(recHeader);
         return rc::RECORD_EXCEEDS_PAGE_SIZE;
     }
 
@@ -608,6 +595,7 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
     // Check if deleted or on the next page
     if (realSlot->size == 0 && realSlot->nextPage == 0)
     {
+		free(recHeader);
         return rc::RECORD_DELETED;
     }
 
@@ -629,6 +617,7 @@ RC RecordBasedCoreManager::updateRecordInplace(FileHandle &fileHandle, const vec
         assert(realSlot->pageOffset + recLength < (PAGE_SIZE - _pageSlotOffset - (realFooter->numSlots * sizeof(PageIndexSlot))));
         memcpy(pageBuffer + realSlot->pageOffset, recHeader, recHeaderSize);
         memcpy(pageBuffer + realSlot->pageOffset + recHeaderSize, data, recLength - recHeaderSize);
+		free(recHeader);
 
         // Update the freespace offset in the header, as well as the index slot
         if (rid.slotNum == realFooter->numSlots - 1)
@@ -1023,6 +1012,7 @@ RC RecordBasedCoreManager::deleteRid(FileHandle& fileHandle, const RID& rid, Pag
             }
         }
         footer->numSlots -= empty;
+		free(offsets);
 
 		// Zero out all of slotIndex
 		slotIndex->pageOffset = 0;
@@ -1302,6 +1292,7 @@ RC RecordBasedCoreManager::reorganizeBufferedPage(FileHandle &fileHandle, unsign
         // Every slot is a tombstone, nothing to reorganize...
         if (offsetIndex == -1)
         {
+			free(offsets);
             return rc::PAGE_CANNOT_BE_ORGANIZED;
         }
 
@@ -1367,6 +1358,7 @@ RC RecordBasedCoreManager::reorganizeBufferedPage(FileHandle &fileHandle, unsign
 
         // Update the slot entries in the new page
         memcpy(newBuffer + PAGE_SIZE - footerSize - (newFooter->numSlots * sizeof(PageIndexSlot)), offsets, (newFooter->numSlots * sizeof(PageIndexSlot)));
+		free(offsets);
 
         // Push the changes to disk
         ret = fileHandle.writePage(pageNumber, (void*)newBuffer);
