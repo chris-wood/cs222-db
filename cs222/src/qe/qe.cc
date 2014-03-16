@@ -227,12 +227,9 @@ RC JoinerData::advance(void* data)
 	return status;
 }
 
-Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned numPages)
-: _outer(leftIn, condition.lhsAttr), _inner(rightIn, condition.rhsAttr), _condition(condition), _numPages(numPages)
+Joiner::Joiner(Iterator *leftIn, Iterator *rightIn, const Condition &condition, const unsigned /*numPages*/)
+: _outer(leftIn, condition.lhsAttr), _inner(rightIn, condition.rhsAttr), _condition(condition), _numPages(2)
 {
-	// TODO: Not sure what to do if this is false
-	assert(_condition.bRhsIsAttr);
-
 	_pageBuffer = (char*)malloc(PAGE_SIZE * _numPages);
 
 	assert(_pageBuffer != NULL);
