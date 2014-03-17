@@ -1257,6 +1257,8 @@ int testCase_12() {
 
 	// Go over the data through iterator
 	void *data = malloc(bufSize);
+	char *b = (char *) malloc(100);
+
 	while (nlJoin->getNextTuple(data) != QE_EOF) {
 		int offset = 0;
 
@@ -1270,8 +1272,7 @@ int testCase_12() {
 		offset += 4;
 		if (!QUIET_TESTS)
 			cout << "leftvarchar.B.length " << length << endl;
-
-		char *b = (char *) malloc(100);
+		
 		memcpy(b, (char *) data + offset, length);
 		b[length] = '\0';
 		offset += length;
@@ -1284,7 +1285,6 @@ int testCase_12() {
 		if (!QUIET_TESTS)
 			cout << "rightvarchar.B.length " << length << endl;
 
-		b = (char *) malloc(100);
 		memcpy(b, (char *) data + offset, length);
 		b[length] = '\0';
 		offset += length;
@@ -1308,6 +1308,7 @@ int testCase_12() {
 	delete leftIn;
 	delete rightIn;
 	free(data);
+	free(b);
 	return rc;
 }
 

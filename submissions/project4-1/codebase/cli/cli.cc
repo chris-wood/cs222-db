@@ -17,6 +17,7 @@
 #define DATABASE_FOLDER "./../../cs222/src/cli"
 #endif
 
+
 #define CVS_DELIMITERS ","
 #define CLI_TABLES "cli_tables"
 #define CLI_COLUMNS "cli_columns"
@@ -1151,7 +1152,7 @@ RC CLI::load()
 
   // read file
   ifstream ifs;
-  string file_url = string(DATABASE_FOLDER) + "/../data/" + fileName;
+  string file_url = string(DATABASE_FOLDER) + "/" + fileName;
   ifs.open (file_url, ifstream::in);
 
   if (!ifs.is_open())

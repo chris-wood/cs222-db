@@ -1,4 +1,5 @@
 #include <cassert>
+#include <sstream>
 
 #include "cli.h"
 
@@ -95,6 +96,11 @@ void CreateDeleteTest(bool print)
 	exec(print, "create index bad on bunch_of_stuff", false);
 	exec(print, "create index good on bunch_of_stuff");
 
+	// Make sure they're all added
+	exec(print, "print RM_SYS_ATTRIBUTE_TABLE.db");
+	exec(print, "print RM_SYS_CATALOG_TABLE.db");
+	exec(print, "print RM_SYS_INDEX_TABLE.db");
+
 	// Delete SOME of the indexes
 	if (print)
 		cout << "* Deleting indexes on all but one column from each table" << endl;
@@ -114,6 +120,11 @@ void CreateDeleteTest(bool print)
 	exec(print, "drop index qux on bunch_of_stuff");
 	exec(print, "drop index qux on bunch_of_stuff", false);
 	exec(print, "drop index bad on bunch_of_stuff", false);
+
+	// Visual check to see that most are deleted
+	exec(print, "print RM_SYS_ATTRIBUTE_TABLE.db");
+	exec(print, "print RM_SYS_CATALOG_TABLE.db");
+	exec(print, "print RM_SYS_INDEX_TABLE.db");
 
 	// At this point, we should only be left with bunch_of_nums.n1 bunch_of_strings.s1, and bunch_of_stuff.good
 
@@ -146,11 +157,16 @@ void CreateDeleteTest(bool print)
 	exec(print, "drop table bunch_of_nums", false);
 	exec(print, "drop table bunch_of_strings", false);
 	exec(print, "drop table bunch_of_stuff", false);
+
+	// Check the contents of the catalog
+	exec(print, "print RM_SYS_ATTRIBUTE_TABLE.db");
+	exec(print, "print RM_SYS_CATALOG_TABLE.db");
+	exec(print, "print RM_SYS_INDEX_TABLE.db");
 }
 
 void VeryLargeIndexTest(bool print)
 {
-	static const int NUM_ENTRIES = 10;
+	static const int NUM_ENTRIES = 100;
 	if (print)
 	{
 		cout << "* We will fill up a table with a lot of indexed data and then filter it down to a small result" << endl;
@@ -175,6 +191,8 @@ void VeryLargeIndexTest(bool print)
 	float rVal, rSpecial = 0.999f;
 	std::string sVal, sSpecial = "foobar";
 
+	int firstInt = 0;
+	float lastReal = 0.0;
 	for (int i = 0; i < NUM_ENTRIES; ++i)
 	{
 		iVal = iSpecial;
@@ -182,12 +200,17 @@ void VeryLargeIndexTest(bool print)
 		{
 			iVal = rand();
 		}
+		if (i == 0)
+		{
+			firstInt = iVal;
+		}
 
 		rVal = rSpecial;
 		while (rVal == rSpecial)
 		{
 			rVal = rand();
 		}
+		lastReal = rVal;
 
 		int sLen = 1 + rand() % MAX_STRING_SIZE;
 		memset(sBuffer, 0, PAGE_SIZE);
@@ -197,20 +220,95 @@ void VeryLargeIndexTest(bool print)
 		}
 		sSpecial = std::string(sBuffer);
 
+		std::ostringstream is;
+		is << iVal;
+		std::ostringstream rs;
+		rs << rVal;
 
+		string query = string("insert into full_table tuple(i = ") + string(is.str()) + ", r = " + string(rs.str()) + ", s = " + sSpecial + ")";
+		exec(print, query);
 	}
 
-	// TODO: Test current values
+	// Visually test values with filter
+	std::ostringstream is;
+	is << firstInt;
+	std::ostringstream rs;
+	rs << lastReal;
+	cout << "i = " << is.str() << endl;
+	string query = string("SELECT FILTER full_table WHERE i = ") + string(is.str());
+	exec(print, query);
+	cout << "r = " << rs.str() << endl;
+	query = string("SELECT FILTER full_table WHERE r = ") + string(rs.str());
+	exec(print, query);
 
-	// TODO: Drop indexes and start adding more values
+	// Drop indexes 
+	exec(print, "drop index i on full_table");
+	exec(print, "drop index r on full_table");
+	exec(print, "drop index s on full_table");
 
-	// TODO: Re-add indexes, and they should be on all of the new values
+	// Add some more random entries
+	for (int i = 0; i < NUM_ENTRIES; ++i)
+	{
+		iVal = iSpecial;
+		while (iVal == iSpecial)
+		{
+			iVal = rand();
+		}
+		if (i == 0)
+		{
+			firstInt = iVal;
+		}
 
-	// TODO: Test current values
+		rVal = rSpecial;
+		while (rVal == rSpecial)
+		{
+			rVal = rand();
+		}
+		lastReal = rVal;
+
+		int sLen = 1 + rand() % MAX_STRING_SIZE;
+		memset(sBuffer, 0, PAGE_SIZE);
+		for (int sIndex = 0; sIndex < sLen; ++sIndex)
+		{
+			sBuffer[sIndex] = 'A' + (rand() % 20);
+		}
+		sSpecial = std::string(sBuffer);
+
+		std::ostringstream is;
+		is << iVal;
+		std::ostringstream rs;
+		rs << rVal;
+
+		string query = string("insert into full_table tuple(i = ") + string(is.str()) + ", r = " + string(rs.str()) + ", s = " + sSpecial + ")";
+		exec(print, query);
+	}
+
+	// Re-add indexes, and they should be on all of the new values
+	exec(print, "create index i on full_table");
+	exec(print, "create index r on full_table");
+	exec(print, "create index s on full_table");
+
+	// Print the indexes
+	exec(print, "print index i on full_table");
+	exec(print, "print index r on full_table");
+	exec(print, "print index s on full_table");
+
+	// Visually test values in base table with filter
+	is << firstInt;
+	rs << lastReal;
+	cout << "i = " << is.str() << endl;
+	query = string("SELECT FILTER full_table WHERE i = ") + string(is.str());
+	exec(print, query);
+	cout << "r = " << rs.str() << endl;
+	query = string("SELECT FILTER full_table WHERE r = ") + string(rs.str());
+	exec(print, query);
 
 	// Finally clean up by deleting tables
 	exec(print, "drop table full_table");
 	exec(print, "drop table full_table", false);
+	exec(print, "drop index i on full_table", false); // should fail since the table was deleted
+	exec(print, "drop index r on full_table", false);
+	exec(print, "drop index s on full_table", false);
 }
 
 void cleanup()
