@@ -182,9 +182,6 @@
     <ClCompile Include="..\..\cs222\src\cli\cli.cc">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cs222\src\cli\start.cc">
-      <Filter>Source Files\cli</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cs222\src\readline\bind.c">
       <Filter>Source Files\readline</Filter>
     </ClCompile>

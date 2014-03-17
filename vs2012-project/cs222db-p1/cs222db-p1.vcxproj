@@ -115,7 +115,6 @@
     <ClCompile Include="..\..\..\..\GitHub\cs222-db\cs222\src\rbf\rbfm.cc" />
     <ClCompile Include="..\..\cs222\src\cli\cli.cc" />
     <ClCompile Include="..\..\cs222\src\cli\clitest_1.cc" />
-    <ClCompile Include="..\..\cs222\src\cli\start.cc" />
     <ClCompile Include="..\..\cs222\src\ix\ix.cc" />
     <ClCompile Include="..\..\cs222\src\qe\qe.cc" />
     <ClCompile Include="..\..\cs222\src\rbf\rbcm.cc" />
