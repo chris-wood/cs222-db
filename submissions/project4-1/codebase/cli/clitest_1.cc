@@ -166,7 +166,7 @@ void CreateDeleteTest(bool print)
 
 void VeryLargeIndexTest(bool print)
 {
-	static const int NUM_ENTRIES = 100;
+	static const int NUM_ENTRIES = 5000;
 	if (print)
 	{
 		cout << "* We will fill up a table with a lot of indexed data and then filter it down to a small result" << endl;
@@ -225,9 +225,14 @@ void VeryLargeIndexTest(bool print)
 		std::ostringstream rs;
 		rs << rVal;
 
+		if (print && i%100==0)
+			std::cout << ".";
+
 		string query = string("insert into full_table tuple(i = ") + string(is.str()) + ", r = " + string(rs.str()) + ", s = " + sSpecial + ")";
-		exec(print, query);
+		exec(false, query);
 	}
+
+	std::cout << std::endl;
 
 	// Visually test values with filter
 	std::ostringstream is;
@@ -279,8 +284,11 @@ void VeryLargeIndexTest(bool print)
 		std::ostringstream rs;
 		rs << rVal;
 
+		if (print && i%100==0)
+			std::cout << ".";
+
 		string query = string("insert into full_table tuple(i = ") + string(is.str()) + ", r = " + string(rs.str()) + ", s = " + sSpecial + ")";
-		exec(print, query);
+		exec(false, query);
 	}
 
 	// Re-add indexes, and they should be on all of the new values
@@ -324,6 +332,9 @@ void cleanup()
 	remove("bunch_of_strings");
 	remove("bunch_of_stuff");
 	remove("full_table");
+	remove("full_table.i");
+	remove("full_table.r");
+	remove("full_table.s");
 }
 
 int main()
