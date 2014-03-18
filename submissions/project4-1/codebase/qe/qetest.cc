@@ -12,21 +12,23 @@
 bool QUIET_TESTS = true;
 
 bool RUN_TEST_01 = true;
-bool RUN_TEST_02 = true;
-bool RUN_TEST_03 = true;
-bool RUN_TEST_04 = true;
-bool RUN_TEST_05 = true;
-bool RUN_TEST_06 = true;
-bool RUN_TEST_07 = true;
-bool RUN_TEST_08 = true;
-bool RUN_TEST_09 = true;
-bool RUN_TEST_10 = true;
-bool RUN_TEST_11 = true;
-bool RUN_TEST_12 = true;
-bool RUN_TEST_E1 = true;
-bool RUN_TEST_E2 = true;
-bool RUN_TEST_E3 = true;
-bool RUN_TEST_E4 = true;
+bool RUN_TEST_02 = false;
+bool RUN_TEST_03 = false;
+bool RUN_TEST_04 = false;
+bool RUN_TEST_05 = false;
+bool RUN_TEST_06 = false;
+bool RUN_TEST_07 = false;
+bool RUN_TEST_08 = false;
+bool RUN_TEST_09 = false;
+bool RUN_TEST_10 = false;
+bool RUN_TEST_11 = false;
+bool RUN_TEST_12 = false;
+bool RUN_TEST_E1 = false;
+bool RUN_TEST_E2 = false;
+bool RUN_TEST_E3 = false;
+bool RUN_TEST_E4 = false;
+bool RUN_TEST_X1 = true;
+bool RUN_TEST_X2 = true;
 
 #ifndef _success_
 #define _success_
@@ -1515,6 +1517,86 @@ clean_up:
     return rc;
 }
 
+RC customTest_1()
+{
+	// Functions Tested;
+	// 1. Filter -- TableScan as input, testing an index against itself
+	cout << "****In Test Case CUSTOM 1****" << endl;
+	RC rc = success;
+
+	TableScan *ts = new TableScan(*rm, "left");
+
+	// Set up condition
+	Condition cond;
+	cond.lhsAttr = "left.B";
+	cond.op = EQ_OP;
+	cond.bRhsIsAttr = true;
+	cond.rhsAttr = "left.B";
+
+	int expectedResultCnt = tupleCount;
+	int actualResultCnt = 0;
+
+	// Create Filter
+	Filter *filter = new Filter(ts, cond);
+
+	// Go over the data through iterator
+	void *data = malloc(bufSize);
+	while (filter->getNextTuple(data) != QE_EOF) {
+		memset(data, 0, bufSize);
+		++actualResultCnt;
+	}
+
+	if (expectedResultCnt != actualResultCnt) {
+		rc = fail;
+	}
+
+clean_up:
+	delete filter;
+	delete ts;
+	free(data);
+	return rc;
+}
+
+RC customTest_2()
+{
+	// Functions Tested;
+	// 1. Filter -- TableScan as input, testing an index against another attribute for equality
+	cout << "****In Test Case CUSTOM 1****" << endl;
+	RC rc = success;
+
+	TableScan *ts = new TableScan(*rm, "left");
+
+	// Set up condition
+	Condition cond;
+	cond.lhsAttr = "left.B";
+	cond.op = EQ_OP;
+	cond.bRhsIsAttr = true;
+	cond.rhsAttr = "left.A";
+
+	int expectedResultCnt = 0; // they should always be off by 10, never equal
+	int actualResultCnt = 0;
+
+	// Create Filter
+	Filter *filter = new Filter(ts, cond);
+
+	// Go over the data through iterator
+	void *data = malloc(bufSize);
+	while (filter->getNextTuple(data) != QE_EOF) {
+		memset(data, 0, bufSize);
+		++actualResultCnt;
+	}
+
+	if (expectedResultCnt != actualResultCnt) {
+		rc = fail;
+	}
+
+clean_up:
+	delete filter;
+	delete ts;
+	free(data);
+	return rc;
+}
+
 void cleanup()
 {
 	remove("RM_SYS_CATALOG_TABLE.db");
@@ -1923,6 +2005,42 @@ int main() {
 		else
 		{
 			cout << "\n!!!FAIL!!! extraTestCase_4\n";
+		}
+	}
+
+	if (RUN_TEST_X1)
+	{
+		cout << "\n\n---- ";
+		cout << "customTest_1()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (customTest_1() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+			cout << "\ncustomTest_1 SUCCESS\n";
+		}
+		else
+		{
+			cout << "\n!!!FAIL!!! customTest_1\n";
+		}
+	}
+
+	if (RUN_TEST_X2)
+	{
+		cout << "\n\n---- ";
+		cout << "customTest_2()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (customTest_2() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+			cout << "\ncustomTest_2 SUCCESS\n";
+		}
+		else
+		{
+			cout << "\n!!!FAIL!!! customTest_2\n";
 		}
 	}
 

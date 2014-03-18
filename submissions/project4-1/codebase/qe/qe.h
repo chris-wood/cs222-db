@@ -209,12 +209,13 @@ class Filter : public Iterator {
         // For attribute in vector<Attribute>, name it as rel.attr
 		void getAttributes(vector<Attribute> &attrs) const;
 
-		RC getDataOffset(const vector<Attribute>& attrs, const string& attrName, const void* data, unsigned& dataOffset);
+		RC getDataOffset(const vector<Attribute>& attrs, unsigned attrIndex, const void* data, unsigned& dataOffset);
 
 private:
 	Iterator* _input;
-	const Condition _condition;
+	Condition _condition;
 	unsigned _lhsAttrIndex;
+	unsigned _rhsAttrIndex;
 	std::vector<Attribute> _lhsAttributes;
 };
 

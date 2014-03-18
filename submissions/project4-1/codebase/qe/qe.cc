@@ -17,12 +17,16 @@ Filter::Filter(Iterator* input, const Condition &condition)
 : _input(input),
 _condition(condition)
 {
-	// TODO: What does this mean for a Filter if this is true?
-	assert(_condition.bRhsIsAttr == false);
-
 	getAttributes(_lhsAttributes);
 	RC ret = RBFM_ScanIterator::findAttributeByName(_lhsAttributes, _condition.lhsAttr, _lhsAttrIndex);
 	assert(ret == rc::OK);
+
+	if( _condition.bRhsIsAttr)
+	{
+		ret = RBFM_ScanIterator::findAttributeByName(_lhsAttributes, _condition.rhsAttr, _rhsAttrIndex);
+		assert(ret == rc::OK);
+		_condition.rhsValue.type = _lhsAttributes.at(_rhsAttrIndex).type;
+	}
 }
 
 void Filter::getAttributes(vector<Attribute> &attrs) const
@@ -30,10 +34,10 @@ void Filter::getAttributes(vector<Attribute> &attrs) const
 	return _input->getAttributes(attrs);
 }
 
-RC Filter::getDataOffset(const vector<Attribute>& attrs, const string& attrName, const void* data, unsigned& dataOffset)
+RC Filter::getDataOffset(const vector<Attribute>& attrs, unsigned attrIndex, const void* data, unsigned& dataOffset)
 {
 	dataOffset = 0;
-	for (unsigned int i = 0; i < _lhsAttrIndex; ++i)
+	for (unsigned int i = 0; i < attrIndex; ++i)
 	{
 		Attribute attr = attrs[i];
 		dataOffset += Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
@@ -184,12 +188,20 @@ RC Filter::getNextTuple(void *data)
 		}
 
 		// Find where the attribute we care about is in the returned tuple
-		unsigned dataOffset = 0;
-		ret = getDataOffset(_lhsAttributes, _condition.lhsAttr, data, dataOffset);
+		unsigned lhsDataOffset = 0;
+		ret = getDataOffset(_lhsAttributes, _lhsAttrIndex, data, lhsDataOffset);
 		RETURN_ON_ERR(ret);
 
+		// If the RHS is an attribute, load in the attribute's data
+		if (_condition.bRhsIsAttr)
+		{
+			unsigned rhsDataOffset = 0;
+			ret = getDataOffset(_lhsAttributes, _rhsAttrIndex, data, rhsDataOffset);
+			_condition.rhsValue.data = (char*)data + rhsDataOffset;
+		}
+
 		// Check if this tuple matches the condition we care about
-		if (_condition.compare((char*)data + dataOffset))
+		if (_condition.compare((char*)data + lhsDataOffset))
 		{
 			ret = rc::OK;
 		}
