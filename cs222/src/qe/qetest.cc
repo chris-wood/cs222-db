@@ -11,7 +11,7 @@
 
 bool QUIET_TESTS = true;
 
-bool RUN_TEST_01 = false;
+bool RUN_TEST_01 = true;
 bool RUN_TEST_02 = false;
 bool RUN_TEST_03 = false;
 bool RUN_TEST_04 = false;

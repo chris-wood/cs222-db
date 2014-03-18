@@ -213,8 +213,9 @@ class Filter : public Iterator {
 
 private:
 	Iterator* _input;
-	const Condition _condition;
+	Condition _condition;
 	unsigned _lhsAttrIndex;
+	unsigned _rhsAttrIndex;
 	std::vector<Attribute> _lhsAttributes;
 };
 
