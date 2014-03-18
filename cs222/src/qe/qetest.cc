@@ -28,6 +28,7 @@ bool RUN_TEST_E2 = false;
 bool RUN_TEST_E3 = false;
 bool RUN_TEST_E4 = false;
 bool RUN_TEST_X1 = true;
+bool RUN_TEST_X2 = true;
 
 #ifndef _success_
 #define _success_
@@ -1556,6 +1557,46 @@ clean_up:
 	return rc;
 }
 
+RC customTest_2()
+{
+	// Functions Tested;
+	// 1. Filter -- TableScan as input, testing an index against another attribute for equality
+	cout << "****In Test Case CUSTOM 1****" << endl;
+	RC rc = success;
+
+	TableScan *ts = new TableScan(*rm, "left");
+
+	// Set up condition
+	Condition cond;
+	cond.lhsAttr = "left.B";
+	cond.op = EQ_OP;
+	cond.bRhsIsAttr = true;
+	cond.rhsAttr = "left.A";
+
+	int expectedResultCnt = 0; // they should always be off by 10, never equal
+	int actualResultCnt = 0;
+
+	// Create Filter
+	Filter *filter = new Filter(ts, cond);
+
+	// Go over the data through iterator
+	void *data = malloc(bufSize);
+	while (filter->getNextTuple(data) != QE_EOF) {
+		memset(data, 0, bufSize);
+		++actualResultCnt;
+	}
+
+	if (expectedResultCnt != actualResultCnt) {
+		rc = fail;
+	}
+
+clean_up:
+	delete filter;
+	delete ts;
+	free(data);
+	return rc;
+}
+
 void cleanup()
 {
 	remove("RM_SYS_CATALOG_TABLE.db");
@@ -1972,16 +2013,34 @@ int main() {
 		cout << "\n\n---- ";
 		cout << "customTest_1()" << endl;
 
-		g_nTotalGradExtraPoint += 5;
-		g_nTotalUndergradExtraPoint += 5;
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
 		if (customTest_1() == success) {
-			g_nGradExtraPoint += 5;
-			g_nUndergradExtraPoint += 5;
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
 			cout << "\ncustomTest_1 SUCCESS\n";
 		}
 		else
 		{
 			cout << "\n!!!FAIL!!! customTest_1\n";
+		}
+	}
+
+	if (RUN_TEST_X2)
+	{
+		cout << "\n\n---- ";
+		cout << "customTest_2()" << endl;
+
+		g_nTotalGradPoint += 3;
+		g_nTotalUndergradPoint += 3;
+		if (customTest_2() == success) {
+			g_nGradPoint += 3;
+			g_nUndergradPoint += 3;
+			cout << "\ncustomTest_2 SUCCESS\n";
+		}
+		else
+		{
+			cout << "\n!!!FAIL!!! customTest_2\n";
 		}
 	}
 

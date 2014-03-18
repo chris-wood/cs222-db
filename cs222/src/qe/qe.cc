@@ -34,10 +34,10 @@ void Filter::getAttributes(vector<Attribute> &attrs) const
 	return _input->getAttributes(attrs);
 }
 
-RC Filter::getDataOffset(const vector<Attribute>& attrs, const string& attrName, const void* data, unsigned& dataOffset)
+RC Filter::getDataOffset(const vector<Attribute>& attrs, unsigned attrIndex, const void* data, unsigned& dataOffset)
 {
 	dataOffset = 0;
-	for (unsigned int i = 0; i < _lhsAttrIndex; ++i)
+	for (unsigned int i = 0; i < attrIndex; ++i)
 	{
 		Attribute attr = attrs[i];
 		dataOffset += Attribute::sizeInBytes(attr.type, (char*)data + dataOffset);
@@ -189,14 +189,14 @@ RC Filter::getNextTuple(void *data)
 
 		// Find where the attribute we care about is in the returned tuple
 		unsigned lhsDataOffset = 0;
-		ret = getDataOffset(_lhsAttributes, _condition.lhsAttr, data, lhsDataOffset);
+		ret = getDataOffset(_lhsAttributes, _lhsAttrIndex, data, lhsDataOffset);
 		RETURN_ON_ERR(ret);
 
 		// If the RHS is an attribute, load in the attribute's data
 		if (_condition.bRhsIsAttr)
 		{
 			unsigned rhsDataOffset = 0;
-			ret = getDataOffset(_lhsAttributes, _condition.rhsAttr, data, rhsDataOffset);
+			ret = getDataOffset(_lhsAttributes, _rhsAttrIndex, data, rhsDataOffset);
 			_condition.rhsValue.data = (char*)data + rhsDataOffset;
 		}
 
