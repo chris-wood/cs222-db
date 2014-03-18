@@ -316,6 +316,10 @@ RC RelationManager::loadTableMetadata()
 		// Advance to the next row to read in more table data
 		currentRID = currentRow.nextRow;
 
+		char pulledTableName[MAX_TABLENAME_SIZE] = {0};
+		char pulledAttrName[MAX_ATTRIBUTENAME_SIZE] = {0};
+		char pulledIndexName[MAX_INDEXNAME_SIZE] = {0};
+
 		// Now read in the indices for this 
 		IndexSystemRecord indexRow;
 		RID indexRid = currentRow.firstIndex;
@@ -328,14 +332,12 @@ RC RelationManager::loadTableMetadata()
 			int offset = 0;
 			int sourceNameLen = 0;
 			memcpy(&sourceNameLen, indexRow.buffer + offset, sizeof(int));
-			char* pulledTableName = (char*)malloc(sourceNameLen + 1);
 			memcpy(pulledTableName, indexRow.buffer + offset + sizeof(int), sourceNameLen);
 			offset += sourceNameLen + sizeof(int);
 			pulledTableName[sourceNameLen] = 0;
 
 			int indexNameLen = 0;
 			memcpy(&indexNameLen, indexRow.buffer + offset, sizeof(int));
-			char* pulledIndexName = (char*)malloc(indexNameLen + 1);
 			memcpy(pulledIndexName, indexRow.buffer + offset + sizeof(int), indexNameLen);
 			offset += indexNameLen + sizeof(int);
 			pulledIndexName[indexNameLen] = 0;
@@ -343,7 +345,6 @@ RC RelationManager::loadTableMetadata()
 
 			int attrNameLen = 0;
 			memcpy(&attrNameLen, indexRow.buffer + offset, sizeof(int));
-			char* pulledAttrName = (char*)malloc(attrNameLen + 1);
 			memcpy(pulledAttrName, indexRow.buffer + offset + sizeof(int), attrNameLen);
 			offset += attrNameLen;
 			pulledAttrName[attrNameLen] = 0;
@@ -898,6 +899,10 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	IndexSystemRecord indexRow;
 	indexRid = currentRow.firstIndex;
 
+	char pulledTableName[MAX_TABLENAME_SIZE] = {0};
+	char pulledAttrName[MAX_ATTRIBUTENAME_SIZE] = {0};
+	char pulledIndexName[MAX_INDEXNAME_SIZE] = {0};
+
 	bool first = true;
 	bool done = false;
 	indexRid = currentRow.firstIndex;
@@ -909,21 +914,18 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 		int offset = 0;
 		int sourceNameLen = 0;
 		memcpy(&sourceNameLen, indexRow.buffer + offset, sizeof(int));
-		char* pulledTableName = (char*)malloc(sourceNameLen + 1);
 		memcpy(pulledTableName, indexRow.buffer + offset + sizeof(int), sourceNameLen);
 		offset += sourceNameLen + sizeof(int);
 		pulledTableName[sourceNameLen] = 0;
 
 		int indexNameLen = 0;
 		memcpy(&indexNameLen, indexRow.buffer + offset, sizeof(int));
-		char* pulledIndexName = (char*)malloc(indexNameLen + 1);
 		memcpy(pulledIndexName, indexRow.buffer + offset + sizeof(int), indexNameLen);
 		offset += indexNameLen + sizeof(int);
 		pulledIndexName[indexNameLen] = 0;
 
 		int attrNameLen = 0;
 		memcpy(&attrNameLen, indexRow.buffer + offset, sizeof(int));
-		char* pulledAttrName = (char*)malloc(attrNameLen + 1);
 		memcpy(pulledAttrName, indexRow.buffer + offset + sizeof(int), attrNameLen);
 		offset += attrNameLen;
 		pulledAttrName[attrNameLen] = 0;
